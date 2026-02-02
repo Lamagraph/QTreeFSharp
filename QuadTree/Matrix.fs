@@ -10,36 +10,45 @@ type qtree<'value> = //when 'TCell: equality> =
     | Leaf of 'value
 
 
-[<Measure>] type columnId
-[<Measure>] type rowId
-[<Measure>] type nvals
+[<Measure>]
+type columnId
+
+[<Measure>]
+type rowId
+
+[<Measure>]
+type nvals
 
 [<Struct>]
-type SparseMatrix<'value> =  
-   
-   val nrows: uint<rowId>
-   
-   val ncols: uint<columnId>
-   
-   val nvals: uint<nvals>
+type SparseMatrix<'value> =
 
-   val storage: qtree<Option<'value>>
+    val nrows: uint<rowId>
 
-   new(_nrows, _ncols, _nvals, _storage ) = {nrows = _nrows; ncols=_ncols; nvals = _nvals; storage = _storage}
+    val ncols: uint<columnId>
+
+    val nvals: uint<nvals>
+
+    val storage: qtree<Option<'value>>
+
+    new(_nrows, _ncols, _nvals, _storage) =
+        { nrows = _nrows
+          ncols = _ncols
+          nvals = _nvals
+          storage = _storage }
 
 
-let fromCoo size (coo:List<uint<columnId>*uint<rowId>*'value>) = 
-    let groupedByColumns = 
-        List.groupBy (fun (i,j,v) -> i) coo
+let fromCoo size (coo: List<uint<columnId> * uint<rowId> * 'value>) =
+    let groupedByColumns =
+        List.groupBy (fun (i, j, v) -> i) coo
         |> List.sortBy fst
-        |> List.map (fun (x,l) -> x, List.sortBy (fun (_,j,_) -> j) l)
+        |> List.map (fun (x, l) -> x, List.sortBy (fun (_, j, _) -> j) l)
+
     0
 
 let mkNode x1 x2 x3 x4 =
     match (x1, x2, x3, x4) with
-    | Leaf(v1), Leaf(v2), Leaf(v3) , Leaf(v4) when v1 = v2 && v2 = v3 && v3 = v4
-            -> Leaf (v1)
-    | _ -> Node (x1, x2, x3, x4)
+    | Leaf(v1), Leaf(v2), Leaf(v3), Leaf(v4) when v1 = v2 && v2 = v3 && v3 = v4 -> Leaf(v1)
+    | _ -> Node(x1, x2, x3, x4)
 
 (*
 let rec map (op: 'TCell1 -> 'TCell2)  (m1:Matrix<'TCell1>) =
