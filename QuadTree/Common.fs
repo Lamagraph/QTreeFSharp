@@ -123,6 +123,7 @@ let getNearestUpperPowerOfTwo (x: uint64) =
             if x = v then v
             elif x < v then find left v
             elif x <= rightBound then rightBound
-            else find right
+            else failwith "Unfinished"
+        | _ -> failwith "Unfinished"
 
     find treeOfPowersOfTwo 9223372036854776000UL
