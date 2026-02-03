@@ -57,7 +57,6 @@ let ``Simple Vector.map2. Length is power of two.`` () =
 
     Assert.True(eq)
 
-
 [<Fact>]
 let ``Simple Vector.map2. Length is not power of two.`` () =
     let v1 =
@@ -100,3 +99,63 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
     let eq = actual = expected
 
     Assert.True(eq)
+
+[<Fact>]
+let ``Conversion identity`` () =
+    let id = toCoordinateList << fromCoordinateList
+
+    let dataLength = 10UL<dataLength>
+
+    let data =
+        [ 0UL<index>, 3; 3UL<index>, -1; 7UL<index>, 2; 8UL<index>, 2; 9UL<index>, 2 ]
+
+    let coordinates = CoordinateList(dataLength, data)
+
+    let expected = coordinates
+    let actual = id coordinates
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple addition`` () =
+    let dataLength = 10UL<dataLength>
+
+    let d1 = [ 0UL<index>, 2; 9UL<index>, 1 ]
+    let d2 = [ 0UL<index>, 3; 8UL<index>, 1 ]
+
+    let expected =
+        let expectedList = [ 0UL<index>, 5; 8UL<index>, 1; 9UL<index>, 1 ]
+        CoordinateList(dataLength, expectedList)
+
+    let actual =
+        let c1 = CoordinateList(dataLength, d1)
+        let c2 = CoordinateList(dataLength, d2)
+        let v1 = fromCoordinateList c1
+        let v2 = fromCoordinateList c2
+
+        let addition o1 o2 =
+            match o1, o2 with
+            | Some x, Some y -> Some(x + y)
+            | Some x, None
+            | None, Some x -> Some x
+            | None, None -> None
+
+        let result =
+            match map2 v1 v2 addition with
+            | Result.Success x -> x
+            | _ -> failwith "Unreachable"
+
+        toCoordinateList result
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Condensation of empty`` () =
+    let clist = CoordinateList(10UL<dataLength>, [])
+
+    let actual = fromCoordinateList clist
+
+    let expected =
+        SparseVector(clist.length, 0UL<nvals>, Storage(16UL<storageSize>, btree.Leaf <| UserValue None))
+
+    Assert.Equal(expected, actual)

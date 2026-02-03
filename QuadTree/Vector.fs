@@ -38,10 +38,64 @@ let foldValues state f tree =
     | Leaf
 *)
 
+
 let mkNode t1 t2 =
     match (t1, t2) with
     | Leaf(v1), Leaf(v2) when v1 = v2 -> Leaf(v1)
     | _ -> Node(t1, t2)
+
+[<Measure>]
+type index
+
+[<Struct>]
+type CoordinateList<'value> =
+    val length: uint64<dataLength>
+    val data: (uint64<index> * 'value) list
+    new(_length, _data) = { length = _length; data = _data }
+
+let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
+    let length = lst.length
+    let nvals = (uint64 <| List.length lst.data) * 1UL<nvals>
+    let size = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
+
+    let rec traverse coordinates pointer size =
+        match coordinates with
+        | [] -> Leaf <| UserValue None, []
+        | (idx, _) :: _ when idx > pointer + size -> Leaf <| UserValue None, coordinates
+        | (idx, value) :: xs when idx = pointer && size = 1UL<index> -> Leaf << UserValue <| Some value, xs
+        | _ ->
+            let halfSize = size / 2UL
+
+            let left, lCoordinates = traverse coordinates pointer halfSize
+            let right, rCoordinates = traverse lCoordinates (pointer + halfSize) halfSize
+
+            mkNode left right, rCoordinates
+
+    let sortedCoordinates = List.sort lst.data
+    let tree, _ = traverse sortedCoordinates 0UL<index> ((uint64 size) * 1UL<index>)
+
+    SparseVector(length, nvals, Storage(size, tree))
+
+let toCoordinateList (vector: SparseVector<'a>) =
+    let length = vector.length
+
+    let rec traverse tree accum (pointer: uint64<index>) (size: uint64<index>) =
+        match tree with
+        | Leaf Dummy
+        | Leaf(UserValue(None)) -> accum
+        | Leaf(UserValue(Some value)) ->
+            accum
+            @ [ for idx in 0UL .. uint64 (size - 1UL<index>) -> (pointer + idx * 1UL<index>, value) ]
+        | Node(left, right) ->
+            let halfSize = size / 2UL
+            let lAccum = traverse left accum pointer halfSize
+            let rAccum = traverse right lAccum (pointer + halfSize) halfSize
+            rAccum
+
+    let lst =
+        traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
+
+    CoordinateList(length, lst)
 
 let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     let len1 = vector1.length
