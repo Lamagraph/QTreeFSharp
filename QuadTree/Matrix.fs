@@ -1,5 +1,6 @@
 ﻿module Matrix
 
+open Common
 (*
 | x1 | x2 |
 ----------
@@ -16,8 +17,6 @@ type columnId
 [<Measure>]
 type rowId
 
-[<Measure>]
-type nvals
 
 [<Struct>]
 type SparseMatrix<'value> =

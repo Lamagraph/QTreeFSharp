@@ -1,5 +1,9 @@
 module Common
 
+[<Measure>]
+type nvals
+
+
 type BinSearchTree<'value> =
     | Leaf of 'value
     | Node of BinSearchTree<'value> * 'value * BinSearchTree<'value>
@@ -117,13 +121,19 @@ let treeOfPowersOfTwo =
     )
 
 let getNearestUpperPowerOfTwo (x: uint64) =
+    let MAX = 9223372036854776000UL
+
     let rec find tree rightBound =
         match tree with
         | BinSearchTree.Node(left, v, right) ->
             if x = v then v
             elif x < v then find left v
-            elif x <= rightBound then rightBound
-            else failwith "Unfinished"
-        | _ -> failwith "Unfinished"
+            else find right rightBound
+        | BinSearchTree.Leaf(v) -> if x <= v then v else rightBound
 
-    find treeOfPowersOfTwo 9223372036854776000UL
+    if x = MAX then
+        MAX
+    elif x < MAX then
+        find treeOfPowersOfTwo 9223372036854776000UL
+    else
+        failwithf "Argument is too large. Must be not greater then %A" MAX

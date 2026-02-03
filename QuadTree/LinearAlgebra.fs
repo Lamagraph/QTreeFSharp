@@ -12,7 +12,7 @@ let rec multScalar op_add (x: uint) y =
         if x % 2u = 0u then res else op_add res v
 
 let vxm op_add op_mult (vector: SparseVector<'a>) (matrix: SparseMatrix<'b>) =
-    if vector.length = uint matrix.nrows then
+    if uint64 vector.length = uint64 matrix.nrows then
         let inner len vector matrix =
             match (vector, matrix) with
             | btree.Leaf(v1), qtree.Leaf(v2) ->
