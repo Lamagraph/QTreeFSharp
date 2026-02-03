@@ -3,7 +3,7 @@ module Vector
 open Common
 
 type 'value btree =
-    | Leaf of 'value
+    | Leaf of 'value treeValue
     | Node of 'value btree * 'value btree
 
 [<Measure>]
@@ -29,16 +29,6 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-(*let nvals (vector:SparseVector<'a>) =
-    let compute
-    match vector.nvals with
-    | Some(i) -> i
-    | None -> 
-
-let nvals vector =
-    match vector with
-    | SparseVector(_,nvals,_) -> nvals
-    *)
 (*
 let foldValues state f tree =
     match tree with
@@ -68,7 +58,8 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                 let new_t1, nvals1 = inner (size / 2UL) t1 t3
                 let new_t2, nvals2 = inner (size / 2UL) t2 t4
                 (mkNode new_t1 new_t2), nvals1 + nvals2
-            | Leaf(v1), Leaf(v2) ->
+            | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
                 let res = f v1 v2
 
                 let nnz =
@@ -76,7 +67,7 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                     | None -> 0UL<nvals>
                     | _ -> (uint64 size) * 1UL<nvals>
 
-                Leaf(res), nnz
+                Leaf(UserValue(res)), nnz
 
         let storage, nvals =
             inner vector1.storage.size vector1.storage.data vector2.storage.data
