@@ -59,6 +59,7 @@ let mkNode x1 x2 x3 x4 =
 
 type COOEntry<'value> = uint64 * uint64 * 'value
 
+[<Struct>]
 type CoordinateList<'value> =
     val nrows: uint64<nrows>
     val ncols: uint64<ncols>
