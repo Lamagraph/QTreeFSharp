@@ -155,7 +155,15 @@ let ``Condensation of empty`` () =
 
     let actual = fromCoordinateList clist
 
+    // 16 elements total None and Dummy: NNNNNNNN | NN DD | DDDD
+    let tree =
+
+        btree.Node(
+            btree.Leaf <| UserValue None,
+            btree.Node(btree.Node(btree.Leaf <| UserValue None, btree.Leaf Dummy), btree.Leaf Dummy)
+        )
+
     let expected =
-        SparseVector(clist.length, 0UL<nvals>, Storage(16UL<storageSize>, btree.Leaf <| UserValue None))
+        SparseVector(clist.length, 0UL<nvals>, Storage(16UL<storageSize>, tree))
 
     Assert.Equal(expected, actual)

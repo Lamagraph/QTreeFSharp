@@ -56,11 +56,12 @@ type CoordinateList<'value> =
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
     let length = lst.length
     let nvals = (uint64 <| List.length lst.data) * 1UL<nvals>
-    let size = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
+    let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
 
     let rec traverse coordinates pointer size =
         match coordinates with
-        | [] -> Leaf <| UserValue None, []
+        | [] when uint64 (pointer + size) < uint64 (length) -> Leaf <| UserValue None, []
+        | [] when uint64 pointer >= uint64 length -> Leaf Dummy, []
         | (idx, _) :: _ when idx > pointer + size -> Leaf <| UserValue None, coordinates
         | (idx, value) :: xs when idx = pointer && size = 1UL<index> -> Leaf << UserValue <| Some value, xs
         | _ ->
@@ -72,9 +73,11 @@ let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
             mkNode left right, rCoordinates
 
     let sortedCoordinates = List.sort lst.data
-    let tree, _ = traverse sortedCoordinates 0UL<index> ((uint64 size) * 1UL<index>)
 
-    SparseVector(length, nvals, Storage(size, tree))
+    let tree, _ =
+        traverse sortedCoordinates 0UL<index> ((uint64 storageSize) * 1UL<index>)
+
+    SparseVector(length, nvals, Storage(storageSize, tree))
 
 let toCoordinateList (vector: SparseVector<'a>) =
     let length = vector.length
