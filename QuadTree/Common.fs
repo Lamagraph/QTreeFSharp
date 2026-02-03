@@ -3,6 +3,10 @@ module Common
 [<Measure>]
 type nvals
 
+type 'value treeValue =
+    | Dummy
+    | UserValue of 'value
+
 
 type BinSearchTree<'value> =
     | Leaf of 'value

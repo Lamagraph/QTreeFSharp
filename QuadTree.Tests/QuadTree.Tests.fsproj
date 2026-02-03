@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Tests.fs" />
     <Compile Include="Tests.Vector.fs" />
+    <Compile Include="Tests.Matrix.fs" />
   </ItemGroup>
 
   <ItemGroup>
