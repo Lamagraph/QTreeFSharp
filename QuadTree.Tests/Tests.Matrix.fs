@@ -226,3 +226,53 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
     let eq = actual = expected
 
     Assert.True(eq)
+
+[<Fact>]
+let ``Conversion identity`` () =
+    let id = toCoordinateList << fromCoordinateList
+
+    let nrows = 10UL<nrows>
+    let ncols = 12UL<ncols>
+
+    let data = [ 0UL, 3UL, 10; 3UL, 3UL, 33; 9UL, 2UL, 5; 3UL, 11UL, 1 ]
+
+    let coordinates = CoordinateList(nrows, ncols, data)
+
+    let expected = coordinates
+    let actual = id coordinates
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple addition`` () =
+    let nrows = 10UL<nrows>
+    let ncols = 12UL<ncols>
+
+    let d1 = [ 0UL, 3UL, 4; 9UL, 2UL, 5; 3UL, 11UL, 2 ]
+    let d2 = [ 0UL, 3UL, 6; 3UL, 3UL, 33; 3UL, 11UL, -1 ]
+
+    let expected =
+        let expectedList = [ 0UL, 3UL, 10; 3UL, 3UL, 33; 9UL, 2UL, 5; 3UL, 11UL, 1 ]
+        CoordinateList(nrows, ncols, expectedList)
+
+    let actual =
+        let c1 = CoordinateList(nrows, ncols, d1)
+        let c2 = CoordinateList(nrows, ncols, d2)
+        let m1 = fromCoordinateList c1
+        let m2 = fromCoordinateList c2
+
+        let addition o1 o2 =
+            match o1, o2 with
+            | Some x, Some y -> Some(x + y)
+            | Some x, None
+            | None, Some x -> Some x
+            | None, None -> None
+
+        let result =
+            match map2 m1 m2 addition with
+            | Result.Success x -> x
+            | _ -> failwith "Unreachable"
+
+        toCoordinateList result
+
+    Assert.Equal(expected, actual)
