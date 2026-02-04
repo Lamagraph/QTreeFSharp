@@ -340,3 +340,120 @@ let ``Simple vxm. 3 * (3x5)`` () =
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple mxm`` () =
+    // 222D
+    // 222D
+    // 222D
+    // DDDD
+    let tree =
+        qtree.Node(
+            qtree.Leaf << UserValue <| Some 2,
+            qtree.Node(
+                qtree.Leaf << UserValue <| Some 2,
+                qtree.Leaf Dummy,
+                qtree.Leaf << UserValue <| Some 2,
+                qtree.Leaf Dummy
+            ),
+            qtree.Node(
+                qtree.Leaf << UserValue <| Some 2,
+                qtree.Leaf << UserValue <| Some 2,
+                qtree.Leaf Dummy,
+                qtree.Leaf Dummy
+            ),
+            qtree.Node(qtree.Leaf << UserValue <| Some 2, qtree.Leaf Dummy, qtree.Leaf Dummy, qtree.Leaf Dummy)
+        )
+
+    let tree_expected =
+        qtree.Node(
+            qtree.Leaf << UserValue <| Some 12,
+            qtree.Node(
+                qtree.Leaf << UserValue <| Some 12,
+                qtree.Leaf Dummy,
+                qtree.Leaf << UserValue <| Some 12,
+                qtree.Leaf Dummy
+            ),
+            qtree.Node(
+                qtree.Leaf << UserValue <| Some 12,
+                qtree.Leaf << UserValue <| Some 12,
+                qtree.Leaf Dummy,
+                qtree.Leaf Dummy
+            ),
+            qtree.Node(qtree.Leaf << UserValue <| Some 12, qtree.Leaf Dummy, qtree.Leaf Dummy, qtree.Leaf Dummy)
+        )
+
+    let m1 =
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 9UL<nvals>, Matrix.Storage(4UL<storageSize>, tree))
+
+    let m2 = m1
+
+    let expected =
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 9UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
+
+    let op_add o1 o2 =
+        match o1, o2 with
+        | Some x, Some y -> Some <| x + y
+        | Some x, None
+        | None, Some x -> Some x
+        | None, None -> None
+
+    let op_mult o1 o2 =
+        match o1, o2 with
+        | Some x, Some y -> Some <| x * y
+        | _ -> None
+
+    let actual =
+        match LinearAlgebra.mxm op_add op_mult m1 m2 with
+        | Result.Success m -> m
+        | _ -> failwith "Unreachable"
+
+    Assert.Equal(expected.storage.data, actual.storage.data)
+
+[<Fact>]
+let ``Sparse mxm`` () =
+    let m1 =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 1
+              1UL<rowindex>, 1UL<colindex>, 2
+              2UL<rowindex>, 2UL<colindex>, 3 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    let m2 =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 3
+              1UL<rowindex>, 1UL<colindex>, 2
+              2UL<rowindex>, 2UL<colindex>, 1 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    let expected =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 3
+              1UL<rowindex>, 1UL<colindex>, 4
+              2UL<rowindex>, 2UL<colindex>, 3 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    let op_add o1 o2 =
+        match o1, o2 with
+        | Some x, Some y -> Some <| x + y
+        | Some x, None
+        | None, Some x -> Some x
+        | None, None -> None
+
+    let op_mult o1 o2 =
+        match o1, o2 with
+        | Some x, Some y -> Some <| x * y
+        | _ -> None
+
+    let actual =
+        match LinearAlgebra.mxm op_add op_mult m1 m2 with
+        | Result.Success m -> m
+        | Result.Failure e -> failwith (e.ToString())
+
+    Assert.Equal(expected, actual)
