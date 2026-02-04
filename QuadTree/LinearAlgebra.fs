@@ -72,7 +72,23 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
         | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
     if uint64 vector.length = uint64 matrix.nrows then
-        match inner vector.storage.size vector.storage.data matrix.storage.data with
+        let vector_storage =
+            if uint64 vector.storage.size < uint64 matrix.storage.hSize then
+                let rec increaseStorage storage_data (current_size: uint64<Vector.storageSize>) bound =
+                    if current_size = bound then
+                        storage_data
+                    else
+                        increaseStorage
+                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
+                            (current_size * 2UL)
+                            bound
+
+                let target_size = uint64 matrix.storage.hSize * 1UL<Vector.storageSize>
+                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
+            else
+                vector.storage
+
+        match inner vector_storage.size vector_storage.data matrix.storage.data with
         | Result.Failure x -> Result.Failure x
         | Result.Success(storage, nvals) ->
             (Vector.SparseVector(
