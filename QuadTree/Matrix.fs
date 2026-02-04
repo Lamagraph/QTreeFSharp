@@ -57,7 +57,13 @@ let mkNode x1 x2 x3 x4 =
     | Leaf(v1), Leaf(v2), Leaf(v3), Leaf(v4) when v1 = v2 && v2 = v3 && v3 = v4 -> Leaf(v1)
     | _ -> Node(x1, x2, x3, x4)
 
-type COOEntry<'value> = uint64 * uint64 * 'value
+[<Measure>]
+type rowindex
+
+[<Measure>]
+type colindex
+
+type COOEntry<'value> = uint64<rowindex> * uint64<colindex> * 'value
 
 [<Struct>]
 type CoordinateList<'value> =
@@ -71,7 +77,10 @@ type CoordinateList<'value> =
           list = _list }
 
 let private getQuadrantCoords (px, py) halfSize =
-    (px, py), (px + halfSize, py), (px, py + halfSize), (px + halfSize, py + halfSize)
+    (px, py),
+    (px + halfSize * 1UL<rowindex>, py),
+    (px, py + halfSize * 1UL<colindex>),
+    (px + halfSize * 1UL<rowindex>, py + halfSize * 1UL<colindex>)
 
 let fromCoordinateList (coo: CoordinateList<'a>) =
     let nvals = (uint64 <| List.length coo.list) * 1UL<nvals>
@@ -83,12 +92,16 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
 
     let isEntryInQuadrant (px, py) size (entry: COOEntry<'a>) =
         let (i, j, _) = entry
-        i >= px && j >= py && i < px + size && j < py + size
+
+        i >= px
+        && j >= py
+        && i < px + size * 1UL<rowindex>
+        && j < py + size * 1UL<colindex>
 
     let rec traverse coordinates (px, py) size =
         match coordinates with
-        | [] when px + size < uint64 nrows && py + size < uint64 ncols -> Leaf <| UserValue None
-        | [] when px >= uint64 nrows || py >= uint64 ncols -> Leaf Dummy
+        | [] when (uint64 px) + size < uint64 nrows && (uint64 py) + size < uint64 ncols -> Leaf <| UserValue None
+        | [] when uint64 px >= uint64 nrows || uint64 py >= uint64 ncols -> Leaf Dummy
         | (i, j, value) :: _ when px = i && py = j && size = 1UL -> Leaf << UserValue <| Some value
         | _ ->
             let halfSize = size / 2UL
@@ -104,7 +117,7 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
                 (traverse swCoo swp halfSize)
                 (traverse seCoo sep halfSize)
 
-    let tree = traverse coo.list (0UL, 0UL) storageSize
+    let tree = traverse coo.list (0UL<rowindex>, 0UL<colindex>) storageSize
 
     SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageVSize>, storageSize * 1UL<storageHSize>, tree))
 
@@ -117,8 +130,8 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
         | Leaf Dummy
         | Leaf(UserValue None) -> []
         | Leaf(UserValue(Some value)) ->
-            [ for i in px .. px + size - 1UL do
-                  for j in py .. py + size - 1UL -> (i, j, value) ]
+            [ for i in uint64 px .. (uint64 px) + size - 1UL do
+                  for j in uint64 py .. (uint64 py) + size - 1UL -> (i * 1UL<rowindex>, j * 1UL<colindex>, value) ]
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
             let nwp, nep, swp, sep = getQuadrantCoords (px, py) halfSize
@@ -129,7 +142,10 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
             @ traverse se sep halfSize
 
     let coo =
-        traverse matrix.storage.data (0UL, 0UL) (max (uint64 matrix.storage.hSize) (uint64 matrix.storage.vSize))
+        traverse
+            matrix.storage.data
+            (0UL<rowindex>, 0UL<colindex>)
+            (max (uint64 matrix.storage.hSize) (uint64 matrix.storage.vSize))
 
     CoordinateList(nrows, ncols, coo)
 

@@ -234,7 +234,11 @@ let ``Conversion identity`` () =
     let nrows = 10UL<nrows>
     let ncols = 12UL<ncols>
 
-    let data = [ 0UL, 3UL, 10; 3UL, 3UL, 33; 9UL, 2UL, 5; 3UL, 11UL, 1 ]
+    let data =
+        [ 0UL<rowindex>, 3UL<colindex>, 10
+          3UL<rowindex>, 3UL<colindex>, 33
+          9UL<rowindex>, 2UL<colindex>, 5
+          3UL<rowindex>, 11UL<colindex>, 1 ]
 
     let coordinates = CoordinateList(nrows, ncols, data)
 
@@ -248,11 +252,23 @@ let ``Simple addition`` () =
     let nrows = 10UL<nrows>
     let ncols = 12UL<ncols>
 
-    let d1 = [ 0UL, 3UL, 4; 9UL, 2UL, 5; 3UL, 11UL, 2 ]
-    let d2 = [ 0UL, 3UL, 6; 3UL, 3UL, 33; 3UL, 11UL, -1 ]
+    let d1 =
+        [ 0UL<rowindex>, 3UL<colindex>, 4
+          9UL<rowindex>, 2UL<colindex>, 5
+          3UL<rowindex>, 11UL<colindex>, 2 ]
+
+    let d2 =
+        [ 0UL<rowindex>, 3UL<colindex>, 6
+          3UL<rowindex>, 3UL<colindex>, 33
+          3UL<rowindex>, 11UL<colindex>, -1 ]
 
     let expected =
-        let expectedList = [ 0UL, 3UL, 10; 3UL, 3UL, 33; 9UL, 2UL, 5; 3UL, 11UL, 1 ]
+        let expectedList =
+            [ 0UL<rowindex>, 3UL<colindex>, 10
+              3UL<rowindex>, 3UL<colindex>, 33
+              9UL<rowindex>, 2UL<colindex>, 5
+              3UL<rowindex>, 11UL<colindex>, 1 ]
+
         CoordinateList(nrows, ncols, expectedList)
 
     let actual =
