@@ -44,9 +44,7 @@ let ``Simple Vector.map. Length is power of two.`` () =
 
     let actual = Vector.map v f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Simple Vector.map. Length is not power of two.`` () =
@@ -77,9 +75,7 @@ let ``Simple Vector.map. Length is not power of two.`` () =
 
     let actual = Vector.map v f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 
 [<Fact>]
@@ -121,9 +117,7 @@ let ``Simple Vector.map2. Length is power of two.`` () =
 
     let actual = Vector.map2 v1 v2 f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Simple Vector.map2. Length is not power of two.`` () =
@@ -164,9 +158,7 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
 
     let actual = Vector.map2 v1 v2 f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Conversion identity`` () =

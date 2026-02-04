@@ -76,9 +76,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 (*
 2,2,2,D
@@ -158,9 +156,7 @@ let ``Simple vxm. 3 * (3x4)`` () =
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 
 (*
@@ -232,6 +228,4 @@ let ``Simple vxm. 4 * (4x3).`` () =
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)

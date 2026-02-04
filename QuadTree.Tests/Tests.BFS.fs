@@ -68,6 +68,4 @@ let ``Simple level bfs.`` () =
 
     let actual = Graph.BFS.bfs_level graph startVertices
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)

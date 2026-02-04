@@ -103,9 +103,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
 
     let actual = Matrix.map2 m1 m2 f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 (*
 N,1,1,D
@@ -223,9 +221,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
 
     let actual = Matrix.map2 m1 m2 f
 
-    let eq = actual = expected
-
-    Assert.True(eq)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Conversion identity`` () =
