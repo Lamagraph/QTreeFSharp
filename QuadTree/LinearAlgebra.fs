@@ -101,7 +101,20 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
     else
         (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
 
-let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b>) =
+let rec shrink tree (size: uint64<storageSize>) =
+    match tree with
+    | Matrix.qtree.Node(nw, ne, sw, se) when ne = sw && ne = Matrix.qtree.Leaf Dummy -> shrink nw (size / 2UL)
+    | _ -> tree, size
+
+let rec expand tree expandRatio =
+    match expandRatio with
+    | 1UL<storageSize> -> tree
+    | _ ->
+        expand
+            (Matrix.mkNode tree (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy))
+            (expandRatio / 2UL)
+
+let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'a>) =
     let rec multiply size m1 m2 =
         let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
             let halfSize = size / 2UL
@@ -202,15 +215,25 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
             divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2)
         | Matrix.qtree.Leaf Dummy, _
         | _, Matrix.qtree.Leaf Dummy -> Result.Success(Matrix.qtree.Leaf Dummy, 0UL<nvals>)
-        | _ -> Result.Failure(Matrix.Error.InconsistentStructureOfStorages(m1, m2))
 
     if uint64 m1.ncols = uint64 m2.nrows then
         let nrows = m1.nrows
         let ncols = m2.ncols
-        let storageSize = m1.storage.size
+        let storageSize = max m1.storage.size m2.storage.size
 
-        match multiply (uint64 storageSize) m1.storage.data m2.storage.data with
+        let m1_tree, m2_tree =
+            if m1.storage.size < m2.storage.size then
+                expand (m1.storage.data) (m2.storage.size / (uint64 m1.storage.size)), m2.storage.data
+            else if m1.storage.size > m2.storage.size then
+                m1.storage.data, expand (m2.storage.data) (m1.storage.size / (uint64 m2.storage.size))
+            else
+                m1.storage.data, m2.storage.data
+
+        match multiply (uint64 storageSize) m1_tree m2_tree with
         | Result.Success(tree, nvals) ->
+            // in case the resulting storageSize can be smaller
+            // e.g. (2x3) * (3x2) matrices
+            let tree, storageSize = shrink tree storageSize
             Result.Success(Matrix.SparseMatrix(nrows, ncols, nvals, Matrix.Storage(storageSize, tree)))
         | Result.Failure(e) -> Result.Failure(e)
     else

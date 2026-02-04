@@ -17,6 +17,20 @@ N,N,3,N
 =
 6,6,14,10
 *)
+
+let op_add x y =
+    match (x, y) with
+    | Some(a), Some(b) -> Some(a + b)
+    | Some(a), _
+    | _, Some(a) -> Some(a)
+    | _ -> None
+
+let op_mult x y =
+    match (x, y) with
+    | Some(a), Some(b) -> Some(a * b)
+    | _ -> None
+
+
 [<Fact>]
 let ``Simple vxm. All sizes are power of two.`` () =
     let m =
@@ -51,18 +65,6 @@ let ``Simple vxm. All sizes are power of two.`` () =
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 4UL<nvals>, store)
-
-    let op_add x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a + b)
-        | Some(a), _
-        | _, Some(a) -> Some(a)
-        | _ -> None
-
-    let op_mult x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a * b)
-        | _ -> None
 
     let expected =
         let tree =
@@ -132,18 +134,6 @@ let ``Simple vxm. 3 * (3x4)`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(3UL<dataLength>, 3UL<nvals>, store)
 
-    let op_add x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a + b)
-        | Some(a), _
-        | _, Some(a) -> Some(a)
-        | _ -> None
-
-    let op_mult x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a * b)
-        | _ -> None
-
     let expected =
         let tree =
             Vector.btree.Node(
@@ -204,17 +194,6 @@ let ``Simple vxm. 4 * (4x3).`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 4UL<nvals>, store)
 
-    let op_add x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a + b)
-        | Some(a), _
-        | _, Some(a) -> Some(a)
-        | _ -> None
-
-    let op_mult x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a * b)
-        | _ -> None
 
     let expected =
         let tree =
@@ -309,18 +288,6 @@ let ``Simple vxm. 3 * (3x5)`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(3UL<dataLength>, 3UL<nvals>, store)
 
-    let op_add x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a + b)
-        | Some(a), _
-        | _, Some(a) -> Some(a)
-        | _ -> None
-
-    let op_mult x y =
-        match (x, y) with
-        | Some(a), Some(b) -> Some(a * b)
-        | _ -> None
-
     let expected =
         let tree =
             Vector.btree.Node(
@@ -391,18 +358,6 @@ let ``Simple mxm`` () =
     let expected =
         SparseMatrix(3UL<nrows>, 3UL<ncols>, 9UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
 
-    let op_add o1 o2 =
-        match o1, o2 with
-        | Some x, Some y -> Some <| x + y
-        | Some x, None
-        | None, Some x -> Some x
-        | None, None -> None
-
-    let op_mult o1 o2 =
-        match o1, o2 with
-        | Some x, Some y -> Some <| x * y
-        | _ -> None
-
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
         | Result.Success m -> m
@@ -439,17 +394,100 @@ let ``Sparse mxm`` () =
         let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
         Matrix.fromCoordinateList clist
 
-    let op_add o1 o2 =
-        match o1, o2 with
-        | Some x, Some y -> Some <| x + y
-        | Some x, None
-        | None, Some x -> Some x
-        | None, None -> None
+    let actual =
+        match LinearAlgebra.mxm op_add op_mult m1 m2 with
+        | Result.Success m -> m
+        | Result.Failure e -> failwith (e.ToString())
 
-    let op_mult o1 o2 =
-        match o1, o2 with
-        | Some x, Some y -> Some <| x * y
-        | _ -> None
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Shrinking mxm`` () =
+    // 2 x 3
+    // 1 0 2
+    // 0 3 0
+    let m1 =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 1
+              0UL<rowindex>, 2UL<colindex>, 2
+              1UL<rowindex>, 1UL<colindex>, 3 ]
+
+        let clist = Matrix.CoordinateList(2UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    // 3 x 2
+    // 0 4
+    // 5 0
+    // 6 0
+    let m2 =
+        let d =
+            [ 0UL<rowindex>, 1UL<colindex>, 4
+              1UL<rowindex>, 0UL<colindex>, 5
+              2UL<rowindex>, 0UL<colindex>, 6 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 2UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    // 2 x 2
+    // 12 4
+    // 15 0
+    let expected =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 12
+              0UL<rowindex>, 1UL<colindex>, 4
+              1UL<rowindex>, 0UL<colindex>, 15 ]
+
+        let clist = Matrix.CoordinateList(2UL<nrows>, 2UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    let actual =
+        match LinearAlgebra.mxm op_add op_mult m1 m2 with
+        | Result.Success m -> m
+        | Result.Failure e -> failwith (e.ToString())
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Expanding mxm`` () =
+    // 3 x 2
+    // 1 0
+    // 0 2
+    // 3 0
+    let m1 =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 1
+              1UL<rowindex>, 1UL<colindex>, 2
+              2UL<rowindex>, 0UL<colindex>, 3 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 2UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+    // 2 x 3
+    // 4 5 6
+    // 0 0 0
+    let m2 =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 4
+              0UL<rowindex>, 1UL<colindex>, 5
+              0UL<rowindex>, 2UL<colindex>, 6 ]
+
+        let clist = Matrix.CoordinateList(2UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
+
+    // 3 x 3
+    // 4 5 6
+    // 0 0 0
+    // 12 15 18
+    let expected =
+        let d =
+            [ 0UL<rowindex>, 0UL<colindex>, 4
+              0UL<rowindex>, 1UL<colindex>, 5
+              0UL<rowindex>, 2UL<colindex>, 6
+              2UL<rowindex>, 0UL<colindex>, 12
+              2UL<rowindex>, 1UL<colindex>, 15
+              2UL<rowindex>, 2UL<colindex>, 18 ]
+
+        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        Matrix.fromCoordinateList clist
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
