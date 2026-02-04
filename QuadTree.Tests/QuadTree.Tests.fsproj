@@ -10,6 +10,7 @@
     <Compile Include="Tests.Vector.fs" />
     <Compile Include="Tests.Matrix.fs" />
     <Compile Include="Tests.LinearAlgebra.fs" />
+    <Compile Include="Tests.BFS.fs" />
   </ItemGroup>
 
   <ItemGroup>

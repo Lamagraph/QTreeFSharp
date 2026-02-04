@@ -29,8 +29,9 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error<'value1, 'value2> = InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
-
+type Error<'value1, 'value2> =
+    | InconsistentStructureOfStorages of btree<Option<'value1>> * btree<Option<'value2>>
+    | InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
 
 (*
 let foldValues state f tree =
@@ -100,26 +101,16 @@ let toCoordinateList (vector: SparseVector<'a>) =
 
     CoordinateList(length, lst)
 
-let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
-    let len1 = vector1.length
-
-    let rec inner (size: uint64<storageSize>) vector1 vector2 =
-        match (vector1, vector2) with
-        | Node(t1, t2), Leaf(_) ->
-            let new_t1, nvals1 = inner (size / 2UL) t1 vector2
-            let new_t2, nvals2 = inner (size / 2UL) t2 vector2
-            (mkNode new_t1 new_t2), nvals1 + nvals2
-        | Leaf(_), Node(t1, t2) ->
-            let new_t1, nvals1 = inner (size / 2UL) vector1 t1
-            let new_t2, nvals2 = inner (size / 2UL) vector1 t2
-            (mkNode new_t1 new_t2), nvals1 + nvals2
-        | Node(t1, t2), Node(t3, t4) ->
-            let new_t1, nvals1 = inner (size / 2UL) t1 t3
-            let new_t2, nvals2 = inner (size / 2UL) t2 t4
-            (mkNode new_t1 new_t2), nvals1 + nvals2
-        | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
-            let res = f v1 v2
+let map (vector: SparseVector<'a>) f =
+    let rec inner (size: uint64<storageSize>) vector =
+        match vector with
+        | Node(x1, x2) ->
+            let t1, nvals1 = inner (size / 2UL) x1
+            let t2, nvals2 = inner (size / 2UL) x2
+            (mkNode t1 t2), nvals1 + nvals2
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            let res = f v
 
             let nnz =
                 match res with
@@ -128,12 +119,45 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 
             Leaf(UserValue(res)), nnz
 
+    let storage, nvals = inner vector.storage.size vector.storage.data
+
+    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+
+let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
+    let len1 = vector1.length
+
+    let rec inner (size: uint64<storageSize>) vector1 vector2 =
+        let _do x1 x2 y1 y2 =
+            let new_size = size / 2UL
+
+            match (inner new_size x1 y1), (inner new_size x2 y2) with
+            | Result.Success((t1, nvals1)), Result.Success((t2, nvals2)) ->
+                ((mkNode t1 t2), nvals1 + nvals2) |> Result.Success
+            | Result.Failure(e), _
+            | _, Result.Failure(e) -> Result.Failure(e)
+
+        match (vector1, vector2) with
+        | Node(x1, x2), Leaf(_) -> _do x1 x2 vector2 vector2
+        | Leaf(_), Node(y1, y2) -> _do vector1 vector1 y1 y2
+        | Node(x1, x2), Node(y1, y2) -> _do x1 x2 y1 y2
+        | Leaf(Dummy), Leaf(Dummy) -> Result.Success(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
+            let res = f v1 v2
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * 1UL<nvals>
+
+            Result.Success(Leaf(UserValue(res)), nnz)
+
+        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+
     if len1 = vector2.length then
-
-        let storage, nvals =
-            inner vector1.storage.size vector1.storage.data vector2.storage.data
-
-        Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
+        match inner vector1.storage.size vector1.storage.data vector2.storage.data with
+        | Result.Failure(e) -> Result.Failure(e)
+        | Result.Success((storage, nvals)) ->
+            Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
     else
         Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
 
