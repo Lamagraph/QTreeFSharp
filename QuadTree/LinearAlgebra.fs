@@ -18,7 +18,7 @@ let rec multScalar op_add (x: uint64) y =
 
 let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
 
-    let rec inner (size: uint64<Vector.storageSize>) vector matrix =
+    let rec inner (size: uint64<storageSize>) vector matrix =
         let _do x1 x2 y1 y2 y3 y4 =
             let new_size = size / 2UL
 
@@ -73,8 +73,8 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
 
     if uint64 vector.length = uint64 matrix.nrows then
         let vector_storage =
-            if uint64 vector.storage.size < uint64 matrix.storage.hSize then
-                let rec increaseStorage storage_data (current_size: uint64<Vector.storageSize>) bound =
+            if uint64 vector.storage.size < uint64 matrix.storage.size then
+                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
                     if current_size = bound then
                         storage_data
                     else
@@ -83,7 +83,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
                             (current_size * 2UL)
                             bound
 
-                let target_size = uint64 matrix.storage.hSize * 1UL<Vector.storageSize>
+                let target_size = matrix.storage.size
                 Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
             else
                 vector.storage
@@ -94,7 +94,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
             (Vector.SparseVector(
                 (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
                 nvals,
-                (Vector.Storage((uint64 matrix.storage.hSize) * 1UL<Vector.storageSize>, storage))
+                (Vector.Storage(matrix.storage.size, storage))
             ))
             |> Result.Success
     else

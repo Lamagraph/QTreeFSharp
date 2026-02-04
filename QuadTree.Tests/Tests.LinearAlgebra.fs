@@ -43,7 +43,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
                 )
             )
 
-        let store = Matrix.Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
 
     let v =
@@ -119,7 +119,7 @@ let ``Simple vxm. 3 * (3x4)`` () =
                 )
             )
 
-        let store = Matrix.Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 4UL<ncols>, 8UL<nvals>, store)
 
     let v =
@@ -195,7 +195,7 @@ let ``Simple vxm. 4 * (4x3).`` () =
                 )
             )
 
-        let store = Matrix.Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 3UL<ncols>, 7UL<nvals>, store)
 
     let v =
@@ -296,7 +296,7 @@ let ``Simple vxm. 3 * (3x5)`` () =
                 Matrix.qtree.Leaf(Dummy)
             )
 
-        let store = Matrix.Storage(8UL<storageVSize>, 8UL<storageHSize>, tree)
+        let store = Matrix.Storage(8UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 5UL<ncols>, 9UL<nvals>, store)
 
     let v =

@@ -17,22 +17,13 @@ type ncols
 [<Measure>]
 type nrows
 
-[<Measure>]
-type storageVSize
-
-[<Measure>]
-type storageHSize
-
 [<Struct>]
 type Storage<'value> =
-    val vSize: uint64<storageVSize>
-    val hSize: uint64<storageHSize>
+    // Storage is always size-x-size square.
+    val size: uint64<storageSize>
     val data: qtree<'value>
 
-    new(_vSize, _hSize, _data) =
-        { vSize = _vSize
-          hSize = _hSize
-          data = _data }
+    new(_size, _data) = { size = _size; data = _data }
 
 [<Struct>]
 type SparseMatrix<'value> =
@@ -119,7 +110,7 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
 
     let tree = traverse coo.list (0UL<rowindex>, 0UL<colindex>) storageSize
 
-    SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageVSize>, storageSize * 1UL<storageHSize>, tree))
+    SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageSize>, tree))
 
 let toCoordinateList (matrix: SparseMatrix<'a>) =
     let nrows = matrix.nrows
@@ -142,25 +133,16 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
             @ traverse se sep halfSize
 
     let coo =
-        traverse
-            matrix.storage.data
-            (0UL<rowindex>, 0UL<colindex>)
-            (max (uint64 matrix.storage.hSize) (uint64 matrix.storage.vSize))
+        traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size)
 
     CoordinateList(nrows, ncols, coo)
 
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
-    let rec inner (vSize: uint64<storageVSize>) (hSize: uint64<storageHSize>) matrix1 matrix2 =
+    let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
         let _do x1 x2 x3 x4 y1 y2 y3 y4 =
-            let new_vSize = vSize / 2UL
-            let new_hSize = hSize / 2UL
+            let new_size = size / 2UL
 
-            match
-                (inner new_vSize new_hSize x1 y1),
-                (inner new_vSize new_hSize x2 y2),
-                (inner new_vSize new_hSize x3 y3),
-                (inner new_vSize new_hSize x4 y4)
-            with
+            match (inner new_size x1 y1), (inner new_size x2 y2), (inner new_size x3 y3), (inner new_size x4 y4) with
             | Result.Success((new_t1, nvals1)),
               Result.Success((new_t2, nvals2)),
               Result.Success((new_t3, nvals3)),
@@ -180,7 +162,7 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             let nnz =
                 match res with
                 | None -> 0UL<nvals>
-                | _ -> (uint64 vSize) * (uint64 hSize) * 1UL<nvals>
+                | _ -> (uint64 size) * (uint64 size) * 1UL<nvals>
 
             (Leaf(UserValue(res)), nnz) |> Result.Success
 
@@ -190,15 +172,10 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
         | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
-        match inner matrix1.storage.vSize matrix1.storage.hSize matrix1.storage.data matrix2.storage.data with
+        match inner matrix1.storage.size matrix1.storage.data matrix2.storage.data with
         | Result.Failure x -> Result.Failure x
         | Result.Success(storage, nvals) ->
-            (SparseMatrix(
-                matrix1.nrows,
-                matrix1.ncols,
-                nvals,
-                (Storage(matrix1.storage.vSize, matrix1.storage.hSize, storage))
-            ))
+            (SparseMatrix(matrix1.nrows, matrix1.ncols, nvals, (Storage(matrix1.storage.size, storage))))
             |> Result.Success
     else
         (Error.InconsistentSizeOfArguments(matrix1, matrix2)) |> Result.Failure
@@ -248,30 +225,3 @@ let compose opAdd (opMult: 'TCell1 -> 'TCell2 -> 'TCell3) (m1:Matrix<'TCell1>) (
     else failwith $"Matrices should be of equals size, but m1.Size = {m1.Size} and m2.Size = {m2.Size}"
 
 *)
-
-(*
-module UserCode =
-open MyLibrary
-
-type CellOfMyMatrix<'TVal> =
-    | EmptyCell
-    | FilledCell of 'TVal
-    
-let veryUsefulFunction m1 m2 m3 =
-    let op1 x y =
-        match (x,y) with
-        | EmptyCell, EmptyCell -> true
-        | _ -> false
-    let op2 x y =
-        match (x,y) with
-        | true, FilledCell x -> FilledCell (x + 1)
-        | false, FilledCell x ->
-            let res = x - 1
-            if res = 0 then EmptyCell else FilledCell res
-        | _ -> EmptyCell
-    map2 op2 (map2 op1 m1 m2) m3
-    
-let veryUsefulFunction2 m1 m2 m3 =
-    let op1 = (+)
-    let op2  = (*)
-    map2 op2 (map2 op1 m1 m2) m3*)

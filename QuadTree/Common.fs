@@ -3,6 +3,9 @@ module Common
 [<Measure>]
 type nvals
 
+[<Measure>]
+type storageSize
+
 type 'value treeValue =
     | Dummy
     | UserValue of 'value
