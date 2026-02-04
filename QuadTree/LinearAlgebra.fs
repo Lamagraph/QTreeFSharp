@@ -7,6 +7,7 @@ type Error<'value1, 'value2, 'value3> =
     | InconsistentSizeOfArguments of Vector.SparseVector<'value1> * Matrix.SparseMatrix<'value2>
     | VectorAdditionProblem of Vector.Error<'value3, 'value3>
 
+
 let rec multScalar op_add (x: uint64) y =
     if x = 1UL then
         y
@@ -99,3 +100,118 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
             |> Result.Success
     else
         (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
+
+let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b>) =
+    let rec multiply size m1 m2 =
+        let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
+            let halfSize = size / 2UL
+
+            // Double check this code
+            let nw1xnw2, ne1xsw2, nw1xne2, ne1xse2, sw1xnw2, se1xsw2, sw1xne2, se1xse2 =
+                (multiply halfSize nw1 nw2),
+                (multiply halfSize ne1 sw2),
+                (multiply halfSize nw1 ne2),
+                (multiply halfSize ne1 se2),
+                (multiply halfSize sw1 nw2),
+                (multiply halfSize se1 sw2),
+                (multiply halfSize sw1 ne2),
+                (multiply halfSize se1 se2)
+
+            match nw1xnw2, ne1xsw2, nw1xne2, ne1xse2, sw1xnw2, se1xsw2, sw1xne2, se1xse2 with
+            | Result.Success(tnw1xnw2, nvals_nw1xnw2),
+              Result.Success(tne1xsw2, nvals_ne1xsw2),
+              Result.Success(tnw1xne2, nvals_nw1xne2),
+              Result.Success(tne1xse2, nvals_ne1xse2),
+              Result.Success(tsw1xnw2, nvals_sw1xnw2),
+              Result.Success(tse1xsw2, nvals_se1xsw2),
+              Result.Success(tsw1xne2, nvals_sw1xne2),
+              Result.Success(tse1xse2, nvals_se1xse2) ->
+                let nrows = halfSize * 1UL<Matrix.nrows>
+                let ncols = halfSize * 1UL<Matrix.ncols>
+                let storageSize = halfSize * 1UL<storageSize>
+
+                let nw1xnw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_nw1xnw2, Matrix.Storage(storageSize, tnw1xnw2))
+
+                let ne1xsw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_ne1xsw2, Matrix.Storage(storageSize, tne1xsw2))
+
+                let nw1xne2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_nw1xne2, Matrix.Storage(storageSize, tnw1xne2))
+
+                let ne1xse2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_ne1xse2, Matrix.Storage(storageSize, tne1xse2))
+
+                let sw1xnw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_sw1xnw2, Matrix.Storage(storageSize, tsw1xnw2))
+
+                let se1xsw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_se1xsw2, Matrix.Storage(storageSize, tse1xsw2))
+
+                let sw1xne2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_sw1xne2, Matrix.Storage(storageSize, tsw1xne2))
+
+                let se1xse2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_se1xse2, Matrix.Storage(storageSize, tse1xse2))
+
+                let mAdd m1 (m2: Matrix.SparseMatrix<_>) =
+                    match m2.storage.data with
+                    | Matrix.qtree.Leaf Dummy -> Result.Success m1
+                    | _ -> Matrix.map2 m1 m2 op_add
+
+                let rnw = mAdd nw1xnw2 ne1xsw2
+                let rne = mAdd nw1xne2 ne1xse2
+                let rsw = mAdd sw1xnw2 se1xsw2
+                let rse = mAdd sw1xne2 se1xse2
+
+                match rnw, rne, rsw, rse with
+                | Result.Success(nw), Result.Success(ne), Result.Success(sw), Result.Success(se) ->
+                    Result.Success(
+                        Matrix.mkNode nw.storage.data ne.storage.data sw.storage.data se.storage.data,
+                        nw.nvals + ne.nvals + sw.nvals + se.nvals
+                    )
+                | Result.Failure(e), _, _, _
+                | _, Result.Failure(e), _, _
+                | _, _, Result.Failure(e), _
+                | _, _, _, Result.Failure(e) -> Result.Failure(e)
+
+            | Result.Failure(e), _, _, _, _, _, _, _
+            | _, Result.Failure(e), _, _, _, _, _, _
+            | _, _, Result.Failure(e), _, _, _, _, _
+            | _, _, _, Result.Failure(e), _, _, _, _
+            | _, _, _, _, Result.Failure(e), _, _, _
+            | _, _, _, _, _, Result.Failure(e), _, _
+            | _, _, _, _, _, _, Result.Failure(e), _
+            | _, _, _, _, _, _, _, Result.Failure(e) -> Result.Failure(e)
+
+        match m1, m2 with
+        | Matrix.qtree.Leaf(UserValue v1), Matrix.qtree.Leaf(UserValue v2) ->
+            let res = multScalar op_add (uint64 size) (op_mult v1 v2)
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> size * size * 1UL<nvals>
+
+            Result.Success(Matrix.qtree.Leaf(UserValue res), nnz)
+        | Matrix.qtree.Leaf(UserValue(_)), Matrix.qtree.Node(nw2, ne2, sw2, se2) ->
+            divided (m1, m1, m1, m1) (nw2, ne2, sw2, se2)
+        | Matrix.qtree.Node(nw1, ne1, sw1, se1), Matrix.qtree.Leaf(UserValue(_)) ->
+            divided (nw1, ne1, sw1, se1) (m2, m2, m2, m2)
+        | Matrix.qtree.Node(nw1, ne1, sw1, se1), Matrix.qtree.Node(nw2, ne2, sw2, se2) ->
+            divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2)
+        | Matrix.qtree.Leaf Dummy, _
+        | _, Matrix.qtree.Leaf Dummy -> Result.Success(Matrix.qtree.Leaf Dummy, 0UL<nvals>)
+        | _ -> Result.Failure(Matrix.Error.InconsistentStructureOfStorages(m1, m2))
+
+    if uint64 m1.ncols = uint64 m2.nrows then
+        let nrows = m1.nrows
+        let ncols = m2.ncols
+        let storageSize = m1.storage.size
+
+        match multiply (uint64 storageSize) m1.storage.data m2.storage.data with
+        | Result.Success(tree, nvals) ->
+            Result.Success(Matrix.SparseMatrix(nrows, ncols, nvals, Matrix.Storage(storageSize, tree)))
+        | Result.Failure(e) -> Result.Failure(e)
+    else
+        Matrix.Error.InconsistentSizeOfArguments(m1, m2) |> Result.Failure
