@@ -76,11 +76,11 @@ type CoordinateList<'value> =
           ncols = _ncols
           list = _list }
 
-let private getQuadrantCoords (px, py) halfSize =
-    (px, py),
-    (px + halfSize * 1UL<rowindex>, py),
-    (px, py + halfSize * 1UL<colindex>),
-    (px + halfSize * 1UL<rowindex>, py + halfSize * 1UL<colindex>)
+let private getQuadrantCoords (pr, pc) halfSize =
+    (pr, pc), // NORTH WEST
+    (pr, pc + halfSize * 1UL<colindex>), // NORTH EAST
+    (pr + halfSize * 1UL<rowindex>, pc), // SOUTH WEST
+    (pr + halfSize * 1UL<rowindex>, pc + halfSize * 1UL<colindex>) // SOUTH EAST
 
 let fromCoordinateList (coo: CoordinateList<'a>) =
     let nvals = (uint64 <| List.length coo.list) * 1UL<nvals>
@@ -90,22 +90,22 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
     // the resulting matrix is always square
     let storageSize = getNearestUpperPowerOfTwo (max (uint64 nrows) (uint64 ncols))
 
-    let isEntryInQuadrant (px, py) size (entry: COOEntry<'a>) =
+    let isEntryInQuadrant (pr, pc) size (entry: COOEntry<'a>) =
         let (i, j, _) = entry
 
-        i >= px
-        && j >= py
-        && i < px + size * 1UL<rowindex>
-        && j < py + size * 1UL<colindex>
+        i >= pr
+        && j >= pc
+        && i < pr + size * 1UL<rowindex>
+        && j < pc + size * 1UL<colindex>
 
-    let rec traverse coordinates (px, py) size =
+    let rec traverse coordinates (pr, pc) size =
         match coordinates with
-        | [] when (uint64 px) + size < uint64 nrows && (uint64 py) + size < uint64 ncols -> Leaf <| UserValue None
-        | [] when uint64 px >= uint64 nrows || uint64 py >= uint64 ncols -> Leaf Dummy
-        | (i, j, value) :: _ when px = i && py = j && size = 1UL -> Leaf << UserValue <| Some value
+        | [] when (uint64 pr) + size < uint64 nrows && (uint64 pc) + size < uint64 ncols -> Leaf <| UserValue None
+        | [] when uint64 pr >= uint64 nrows || uint64 pc >= uint64 ncols -> Leaf Dummy
+        | (i, j, value) :: _ when pr = i && pc = j && size = 1UL -> Leaf << UserValue <| Some value
         | _ ->
             let halfSize = size / 2UL
-            let nwp, nep, swp, sep = getQuadrantCoords (px, py) halfSize
+            let nwp, nep, swp, sep = getQuadrantCoords (pr, pc) halfSize
             let nwCoo = coordinates |> List.filter (isEntryInQuadrant nwp halfSize)
             let neCoo = coordinates |> List.filter (isEntryInQuadrant nep halfSize)
             let swCoo = coordinates |> List.filter (isEntryInQuadrant swp halfSize)
@@ -125,16 +125,16 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     let nrows = matrix.nrows
     let ncols = matrix.ncols
 
-    let rec traverse tree (px, py) size =
+    let rec traverse tree (pr, pc) size =
         match tree with
         | Leaf Dummy
         | Leaf(UserValue None) -> []
         | Leaf(UserValue(Some value)) ->
-            [ for i in uint64 px .. (uint64 px) + size - 1UL do
-                  for j in uint64 py .. (uint64 py) + size - 1UL -> (i * 1UL<rowindex>, j * 1UL<colindex>, value) ]
+            [ for i in uint64 pr .. (uint64 pr) + size - 1UL do
+                  for j in uint64 pc .. (uint64 pc) + size - 1UL -> (i * 1UL<rowindex>, j * 1UL<colindex>, value) ]
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
-            let nwp, nep, swp, sep = getQuadrantCoords (px, py) halfSize
+            let nwp, nep, swp, sep = getQuadrantCoords (pr, pc) halfSize
 
             traverse nw nwp halfSize
             @ traverse ne nep halfSize

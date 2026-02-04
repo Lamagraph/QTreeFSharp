@@ -239,6 +239,7 @@ let ``Conversion identity`` () =
           3UL<rowindex>, 3UL<colindex>, 33
           9UL<rowindex>, 2UL<colindex>, 5
           3UL<rowindex>, 11UL<colindex>, 1 ]
+        |> List.sort
 
     let coordinates = CoordinateList(nrows, ncols, data)
 
@@ -268,6 +269,7 @@ let ``Simple addition`` () =
               3UL<rowindex>, 3UL<colindex>, 33
               9UL<rowindex>, 2UL<colindex>, 5
               3UL<rowindex>, 11UL<colindex>, 1 ]
+            |> List.sort
 
         CoordinateList(nrows, ncols, expectedList)
 
@@ -292,3 +294,28 @@ let ``Simple addition`` () =
         toCoordinateList result
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Condensation of empty`` () =
+    let clist = CoordinateList(2UL<nrows>, 3UL<ncols>, [])
+
+    let actual = fromCoordinateList clist
+
+    // 2 * 3 = 5
+    // 4 * 4 None and Dummy
+    // NN N D
+    // NN N D
+    // DDDD
+    // DDDD
+    let tree =
+        qtree.Node(
+            qtree.Leaf <| UserValue None,
+            qtree.Node(qtree.Leaf <| UserValue None, qtree.Leaf Dummy, qtree.Leaf <| UserValue None, qtree.Leaf Dummy),
+            qtree.Leaf Dummy,
+            qtree.Leaf Dummy
+        )
+
+    let expected =
+        SparseMatrix(2UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageVSize>, 4UL<storageHSize>, tree))
+
+    Assert.Equal(expected.storage.data, actual.storage.data)
