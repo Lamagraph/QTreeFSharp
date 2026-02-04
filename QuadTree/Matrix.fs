@@ -81,7 +81,7 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
     // the resulting matrix is always square
     let storageSize = getNearestUpperPowerOfTwo (max (uint64 nrows) (uint64 ncols))
 
-    let predicate (px, py) size (entry: COOEntry<'a>) =
+    let isEntryInQuadrant (px, py) size (entry: COOEntry<'a>) =
         let (i, j, _) = entry
         i >= px && j >= py && i < px + size && j < py + size
 
@@ -93,10 +93,10 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
         | _ ->
             let halfSize = size / 2UL
             let nwp, nep, swp, sep = getQuadrantCoords (px, py) halfSize
-            let nwCoo = coordinates |> List.filter (predicate nwp halfSize)
-            let neCoo = coordinates |> List.filter (predicate nep halfSize)
-            let swCoo = coordinates |> List.filter (predicate swp halfSize)
-            let seCoo = coordinates |> List.filter (predicate sep halfSize)
+            let nwCoo = coordinates |> List.filter (isEntryInQuadrant nwp halfSize)
+            let neCoo = coordinates |> List.filter (isEntryInQuadrant nep halfSize)
+            let swCoo = coordinates |> List.filter (isEntryInQuadrant swp halfSize)
+            let seCoo = coordinates |> List.filter (isEntryInQuadrant sep halfSize)
 
             mkNode
                 (traverse nwCoo nwp halfSize)
