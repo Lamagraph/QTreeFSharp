@@ -9,9 +9,6 @@ type 'value btree =
 [<Measure>]
 type dataLength
 
-[<Measure>]
-type storageSize
-
 [<Struct>]
 type Storage<'value> =
     val size: uint64<storageSize>

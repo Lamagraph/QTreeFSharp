@@ -43,7 +43,7 @@ let ``Simple level bfs.`` () =
                 )
             )
 
-        let store = Matrix.Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
 
     let startVertices =

@@ -12,8 +12,7 @@ let printMatrix (matrix: SparseMatrix<_>) =
     printfn "   Columns: %A" matrix.ncols
     printfn "   Nvals: %A" matrix.nvals
     printfn "   Storage:"
-    printfn "      vSize: %A" matrix.storage.vSize
-    printfn "      hSize: %A" matrix.storage.hSize
+    printfn "      size: %A" matrix.storage.size
     printfn "      Data: %A" matrix.storage.data
 
 
@@ -59,7 +58,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
                 )
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
 
     let m2 =
@@ -71,7 +70,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
                 Matrix.qtree.Leaf(UserValue(None))
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 12UL<nvals>, store)
 
     let f x y =
@@ -98,7 +97,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
                 Matrix.qtree.Leaf(UserValue(None))
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         Result.Success(SparseMatrix(4UL<nrows>, 4UL<ncols>, 6UL<nvals>, store))
 
     let actual = Matrix.map2 m1 m2 f
@@ -152,7 +151,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
                 )
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 3UL<ncols>, 6UL<nvals>, store)
 
     let m2 =
@@ -179,7 +178,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
                 )
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 3UL<ncols>, 8UL<nvals>, store)
 
     let f x y =
@@ -216,7 +215,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
                 )
             )
 
-        let store = Storage(4UL<storageVSize>, 4UL<storageHSize>, tree)
+        let store = Storage(4UL<storageSize>, tree)
         Result.Success(SparseMatrix(3UL<nrows>, 3UL<ncols>, 5UL<nvals>, store))
 
     let actual = Matrix.map2 m1 m2 f
@@ -312,7 +311,7 @@ let ``Condensation of empty`` () =
         )
 
     let expected =
-        SparseMatrix(2UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageVSize>, 4UL<storageHSize>, tree))
+        SparseMatrix(2UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageSize>, tree))
 
     Assert.Equal(expected.storage.data, actual.storage.data)
 
@@ -347,6 +346,6 @@ let ``Condensation of sparse`` () =
         )
 
     let expected =
-        SparseMatrix(4UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageVSize>, 4UL<storageHSize>, tree))
+        SparseMatrix(4UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageSize>, tree))
 
     Assert.Equal(expected.storage.data, actual.storage.data)
