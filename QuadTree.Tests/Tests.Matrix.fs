@@ -319,3 +319,38 @@ let ``Condensation of empty`` () =
         SparseMatrix(2UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageVSize>, 4UL<storageHSize>, tree))
 
     Assert.Equal(expected.storage.data, actual.storage.data)
+
+[<Fact>]
+let ``Condensation of sparse`` () =
+    let clist =
+        CoordinateList(4UL<nrows>, 3UL<ncols>, [ 0UL<rowindex>, 2UL<colindex>, 2; 3UL<rowindex>, 2UL<colindex>, 4 ])
+
+    let actual = fromCoordinateList clist
+
+    // NN2D
+    // NNND
+    // NNND
+    // NN4D
+
+    let tree =
+        qtree.Node(
+            qtree.Leaf <| UserValue None,
+            qtree.Node(
+                qtree.Leaf << UserValue <| Some 2,
+                qtree.Leaf Dummy,
+                qtree.Leaf <| UserValue None,
+                qtree.Leaf Dummy
+            ),
+            qtree.Leaf <| UserValue None,
+            qtree.Node(
+                qtree.Leaf <| UserValue None,
+                qtree.Leaf Dummy,
+                qtree.Leaf << UserValue <| Some 4,
+                qtree.Leaf Dummy
+            )
+        )
+
+    let expected =
+        SparseMatrix(4UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageVSize>, 4UL<storageHSize>, tree))
+
+    Assert.Equal(expected.storage.data, actual.storage.data)
