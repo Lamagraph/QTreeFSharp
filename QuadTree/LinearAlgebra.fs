@@ -102,8 +102,12 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
         (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
 
 
+type MXMError<'value1, 'value2, 'value3> =
+    | InconsistentSizeOfArguments of Matrix.SparseMatrix<'value1> * Matrix.SparseMatrix<'value2>
+    | MatrixAdditionProblem of Matrix.Error<'value3, 'value3>
 
-let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'a>) =
+
+let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b>) =
 
     let rec shrink tree (size: uint64<storageSize>) =
         match tree with
@@ -189,7 +193,7 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'a
                 | Result.Failure(e), _, _, _
                 | _, Result.Failure(e), _, _
                 | _, _, Result.Failure(e), _
-                | _, _, _, Result.Failure(e) -> Result.Failure(e)
+                | _, _, _, Result.Failure(e) -> Result.Failure(MXMError.MatrixAdditionProblem(e))
 
             | Result.Failure(e), _, _, _, _, _, _, _
             | _, Result.Failure(e), _, _, _, _, _, _
@@ -240,4 +244,4 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'a
             Result.Success(Matrix.SparseMatrix(nrows, ncols, nvals, Matrix.Storage(storageSize, tree)))
         | Result.Failure(e) -> Result.Failure(e)
     else
-        Matrix.Error.InconsistentSizeOfArguments(m1, m2) |> Result.Failure
+        MXMError.InconsistentSizeOfArguments(m1, m2) |> Result.Failure
