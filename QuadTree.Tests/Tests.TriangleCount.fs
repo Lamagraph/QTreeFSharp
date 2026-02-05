@@ -11,14 +11,15 @@ open Graph.TriangleCount
 let ``7V Triangle count`` () =
     // Lower triangle
 
-    //   0 1 2 3 4 5 6
-    // 0 0 0 0 0 0 0 0
-    // 1 1 0 0 0 0 0 0
-    // 2 0 0 0 0 0 0 0
-    // 3 1 1 1 0 0 0 0
-    // 4 0 1 0 0 0 0 0
-    // 5 0 0 1 1 1 0 0
-    // 6 0 1 1 1 1 0 0
+    //     0 1 2 3 4 5 6
+    //
+    // 0   0 1 0 1 0 0 0
+    // 1   1 0 0 1 1 0 1
+    // 2   0 0 0 1 0 1 1
+    // 3   1 1 1 0 0 1 1
+    // 4   0 1 0 0 0 1 1
+    // 5   0 0 1 1 1 0 0
+    // 6   0 1 1 1 1 0 0
 
     let g =
         let d =
@@ -33,7 +34,20 @@ let ``7V Triangle count`` () =
               6UL<rowindex>, 1UL<colindex>, ()
               6UL<rowindex>, 2UL<colindex>, ()
               6UL<rowindex>, 3UL<colindex>, ()
-              6UL<rowindex>, 4UL<colindex>, () ]
+              6UL<rowindex>, 4UL<colindex>, ()
+
+              0UL<rowindex>, 1UL<colindex>, ()
+              0UL<rowindex>, 3UL<colindex>, ()
+              1UL<rowindex>, 3UL<colindex>, ()
+              2UL<rowindex>, 3UL<colindex>, ()
+              1UL<rowindex>, 4UL<colindex>, ()
+              2UL<rowindex>, 5UL<colindex>, ()
+              3UL<rowindex>, 5UL<colindex>, ()
+              4UL<rowindex>, 5UL<colindex>, ()
+              1UL<rowindex>, 6UL<colindex>, ()
+              2UL<rowindex>, 6UL<colindex>, ()
+              3UL<rowindex>, 6UL<colindex>, ()
+              4UL<rowindex>, 6UL<colindex>, () ]
 
         fromCoordinateList (CoordinateList(7UL<nrows>, 7UL<ncols>, d))
 
