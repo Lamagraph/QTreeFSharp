@@ -9,7 +9,6 @@ open Graph.TriangleCount
 
 [<Fact>]
 let ``7V Triangle count`` () =
-    // Lower triangle
 
     //     0 1 2 3 4 5 6
     //
