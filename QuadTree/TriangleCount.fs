@@ -36,7 +36,7 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
 
     let result =
         match CMasked with
-        | Result.Success matrix -> Result.Success(Matrix.fold op_add None matrix)
+        | Result.Success matrix -> Result.Success(Matrix.foldAssociative op_add None matrix)
         | Result.Failure e -> Result.Failure e
 
     result

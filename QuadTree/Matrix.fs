@@ -180,20 +180,22 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     else
         (Error.InconsistentSizeOfArguments(matrix1, matrix2)) |> Result.Failure
 
-let fold (folder: 'State option -> 'T option -> 'State option) (state: 'State option) (matrix: SparseMatrix<'T>) =
-    let rec traverse tree (size: uint64<storageSize>) (state: 'State option) =
+let foldAssociative (folder: 'T option -> 'T option -> 'T option) (state: 'T option) (matrix: SparseMatrix<'T>) =
+    let rec traverse tree (size: uint64<storageSize>) (state: 'T option) =
         match tree with
         | Leaf Dummy -> state
         | Leaf(UserValue v) ->
             let area = (uint64 size) * (uint64 size)
 
-            let rec foldArea count accum =
-                if count = 0UL then
+            let rec foldValue size accum =
+                if size = 1UL then
                     accum
                 else
-                    foldArea (count - 1UL) (folder accum v)
+                    let halfSize = size / 2UL
 
-            foldArea area state
+                    foldValue halfSize (folder accum accum)
+
+            folder state (foldValue area v)
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
 

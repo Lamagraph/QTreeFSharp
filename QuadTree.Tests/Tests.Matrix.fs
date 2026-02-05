@@ -282,7 +282,7 @@ let ``fold -> sum`` () =
 
     let expected = 18
 
-    let actual = Option.get <| Matrix.fold op_add None m1
+    let actual = Option.get <| Matrix.foldAssociative op_add None m1
 
     Assert.Equal(expected, actual)
 
@@ -412,6 +412,6 @@ let ``Fold sum`` () =
 
     let expected = 6
 
-    let actual = fold op_add None m1 |> Option.get
+    let actual = foldAssociative op_add None m1 |> Option.get
 
     Assert.Equal(expected, actual)
