@@ -7,9 +7,9 @@ type TriangleCountError<'value1, 'value2, 'value3> =
     | MaskingError of Matrix.Error<'value3, 'value2>
 
 // Assume non-oriented graph adjacency matrix
-// Some () -> edge, None -> no edge
+// Some _ -> edge, None -> no edge
 // Computes triangle count
-let triangle_count (graph: Matrix.SparseMatrix<unit>) =
+let triangle_count (graph: Matrix.SparseMatrix<_>) =
     let graph = Matrix.getLowerTriangle graph
 
     let op_add o1 o2 =
@@ -21,7 +21,7 @@ let triangle_count (graph: Matrix.SparseMatrix<unit>) =
 
     let op_mult o1 o2 =
         match o1, o2 with
-        | Some(), Some() -> Some 1UL
+        | Some _, Some _ -> Some 1UL
         | _ -> None
 
     let C = LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
@@ -40,3 +40,5 @@ let triangle_count (graph: Matrix.SparseMatrix<unit>) =
         | Result.Failure e -> Result.Failure e
 
     result
+
+
