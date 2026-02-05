@@ -185,13 +185,15 @@ let fold (folder: 'State option -> 'T option -> 'State option) (state: 'State op
         match tree with
         | Leaf Dummy -> state
         | Leaf(UserValue v) ->
-            let mutable accum = state
             let area = (uint64 size) * (uint64 size)
 
-            for _ in 1UL .. area do
-                accum <- folder accum v
+            let rec foldArea count accum =
+                if count = 0UL then
+                    accum
+                else
+                    foldArea (count - 1UL) (folder accum v)
 
-            accum
+            foldArea area state
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
 

@@ -392,3 +392,26 @@ let ``2x3 transposition`` () =
     let actual = transpose m1
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Fold sum`` () =
+    // 2N2D
+    // N2ND
+    // DDDD
+    // DDDD
+    let tree =
+        qtree.Node(
+            qtree.Node(leaf_v 2, leaf_n (), leaf_n (), leaf_v 2),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_n (), leaf_d ()),
+            leaf_d (),
+            leaf_d ()
+        )
+
+    let m1 =
+        SparseMatrix(2UL<nrows>, 3UL<ncols>, 3UL<nvals>, Matrix.Storage(4UL<storageSize>, tree))
+
+    let expected = 6
+
+    let actual = fold op_add None m1 |> Option.get
+
+    Assert.Equal(expected, actual)
