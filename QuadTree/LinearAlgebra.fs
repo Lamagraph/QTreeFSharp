@@ -101,20 +101,23 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
     else
         (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
 
-let rec shrink tree (size: uint64<storageSize>) =
-    match tree with
-    | Matrix.qtree.Node(nw, ne, sw, se) when ne = sw && ne = Matrix.qtree.Leaf Dummy -> shrink nw (size / 2UL)
-    | _ -> tree, size
 
-let rec expand tree expandRatio =
-    match expandRatio with
-    | 1UL<storageSize> -> tree
-    | _ ->
-        expand
-            (Matrix.mkNode tree (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy))
-            (expandRatio / 2UL)
 
 let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'a>) =
+
+    let rec shrink tree (size: uint64<storageSize>) =
+        match tree with
+        | Matrix.qtree.Node(nw, ne, sw, _) when ne = sw && ne = Matrix.qtree.Leaf Dummy -> shrink nw (size / 2UL)
+        | _ -> tree, size
+
+    let rec expand tree expandRatio =
+        match expandRatio with
+        | 1UL<storageSize> -> tree
+        | _ ->
+            expand
+                (Matrix.mkNode tree (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy))
+                (expandRatio / 2UL)
+
     let rec multiply size m1 m2 =
         let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
             let halfSize = size / 2UL
