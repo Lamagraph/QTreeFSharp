@@ -17,6 +17,7 @@ let printMatrix (matrix: SparseMatrix<_>) =
 
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
+let leaf_d () = qtree.Leaf Dummy
 
 let op_add x y =
     match (x, y) with
@@ -50,38 +51,17 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
     let m1 =
         let tree =
             Matrix.qtree.Node(
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(UserValue(Some(2)))
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(UserValue(Some(3)))
-                ),
-                Matrix.qtree.Leaf(UserValue(None)),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(UserValue(None))
-                )
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
             )
 
         let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
 
     let m2 =
-        let tree =
-            Matrix.qtree.Node(
-                Matrix.qtree.Leaf(UserValue(Some(1))),
-                Matrix.qtree.Leaf(UserValue(Some(2))),
-                Matrix.qtree.Leaf(UserValue(Some(3))),
-                Matrix.qtree.Leaf(UserValue(None))
-            )
+        let tree = Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
 
         let store = Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 12UL<nvals>, store)
@@ -94,20 +74,10 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
     let expected =
         let tree =
             Matrix.qtree.Node(
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(UserValue(Some(4))),
-                    Matrix.qtree.Leaf(UserValue(Some(3)))
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(4))),
-                    Matrix.qtree.Leaf(UserValue(Some(5)))
-                ),
-                Matrix.qtree.Leaf(UserValue(None)),
-                Matrix.qtree.Leaf(UserValue(None))
+                Matrix.qtree.Node(leaf_n (), leaf_v 2, leaf_v 4, leaf_v 3),
+                Matrix.qtree.Node(leaf_v 3, leaf_n (), leaf_v 4, leaf_v 5),
+                leaf_n (),
+                leaf_n ()
             )
 
         let store = Storage(4UL<storageSize>, tree)
@@ -138,30 +108,10 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
     let m1 =
         let tree =
             Matrix.qtree.Node(
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(UserValue(Some(2)))
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(1))),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                )
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 2, leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_d (), leaf_d ())
             )
 
         let store = Storage(4UL<storageSize>, tree)
@@ -170,25 +120,10 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
     let m2 =
         let tree =
             Matrix.qtree.Node(
-                Matrix.qtree.Leaf(UserValue(Some(1))),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                )
+                leaf_v 1,
+                Matrix.qtree.Node(leaf_v 2, leaf_d (), leaf_v 2, leaf_d ()),
+                Matrix.qtree.Node(leaf_v 3, leaf_v 3, leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ())
             )
 
         let store = Storage(4UL<storageSize>, tree)
@@ -202,30 +137,10 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
     let expected =
         let tree =
             Matrix.qtree.Node(
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(Some(2))),
-                    Matrix.qtree.Leaf(UserValue(Some(4))),
-                    Matrix.qtree.Leaf(UserValue(Some(3)))
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(Some(3))),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(UserValue(Some(4))),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                ),
-                Matrix.qtree.Node(
-                    Matrix.qtree.Leaf(UserValue(None)),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Leaf(Dummy)
-                )
+                Matrix.qtree.Node(leaf_n (), leaf_v 2, leaf_v 4, leaf_v 3),
+                Matrix.qtree.Node(leaf_v 3, leaf_d (), leaf_v 4, leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ())
             )
 
         let store = Storage(4UL<storageSize>, tree)
@@ -316,12 +231,7 @@ let ``Condensation of empty`` () =
     // DDDD
     // DDDD
     let tree =
-        qtree.Node(
-            qtree.Leaf <| UserValue None,
-            qtree.Node(qtree.Leaf <| UserValue None, qtree.Leaf Dummy, qtree.Leaf <| UserValue None, qtree.Leaf Dummy),
-            qtree.Leaf Dummy,
-            qtree.Leaf Dummy
-        )
+        qtree.Node(leaf_n (), qtree.Node(leaf_n (), leaf_d (), leaf_n (), leaf_d ()), leaf_d (), leaf_d ())
 
     let expected =
         SparseMatrix(2UL<nrows>, 3UL<ncols>, 0UL<nvals>, Storage(4UL<storageSize>, tree))
@@ -342,20 +252,10 @@ let ``Condensation of sparse`` () =
 
     let tree =
         qtree.Node(
-            qtree.Leaf <| UserValue None,
-            qtree.Node(
-                qtree.Leaf << UserValue <| Some 2,
-                qtree.Leaf Dummy,
-                qtree.Leaf <| UserValue None,
-                qtree.Leaf Dummy
-            ),
-            qtree.Leaf <| UserValue None,
-            qtree.Node(
-                qtree.Leaf <| UserValue None,
-                qtree.Leaf Dummy,
-                qtree.Leaf << UserValue <| Some 4,
-                qtree.Leaf Dummy
-            )
+            leaf_n (),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_n (), leaf_d ()),
+            leaf_n (),
+            qtree.Node(leaf_n (), leaf_d (), leaf_v 4, leaf_d ())
         )
 
     let expected =
@@ -372,9 +272,9 @@ let ``fold -> sum`` () =
     let tree =
         qtree.Node(
             leaf_v 2,
-            qtree.Node(leaf_v 2, qtree.Leaf Dummy, leaf_v 2, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 2, leaf_v 2, qtree.Leaf Dummy, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 2, qtree.Leaf Dummy, qtree.Leaf Dummy, qtree.Leaf Dummy)
+            qtree.Node(leaf_v 2, leaf_d (), leaf_v 2, leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_v 2, leaf_d (), leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_d (), leaf_d ())
         )
 
     let m1 =
@@ -413,5 +313,82 @@ let ``4x4 lower triangle`` () =
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 10UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
 
     let actual = getLowerTriangle m1
+
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``3x3 lower triangle`` () =
+    // 222 D
+    // N22 D
+    // NN2 D
+
+    // DDD D
+    let tree =
+        qtree.Node(
+            qtree.Node(leaf_v 2, leaf_v 2, leaf_n (), leaf_v 2),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_v 2, leaf_d ()),
+            qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_d (), leaf_d ())
+        )
+
+
+    // 2NN D
+    // N2N D
+    // NN2 D
+
+    // DDD D
+    let tree_expected =
+        qtree.Node(
+            qtree.Node(leaf_v 2, leaf_n (), leaf_n (), leaf_v 2),
+            qtree.Node(leaf_n (), leaf_d (), leaf_n (), leaf_d ()),
+            qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_d (), leaf_d ())
+        )
+
+    let m1 =
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 6UL<nvals>, Matrix.Storage(4UL<storageSize>, tree))
+
+    let expected =
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 3UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
+
+    let actual = getLowerTriangle m1
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``2x3 transposition`` () =
+    // 2N2D
+    // N2ND
+    // DDDD
+    // DDDD
+    let tree =
+        qtree.Node(
+            qtree.Node(leaf_v 2, leaf_n (), leaf_n (), leaf_v 2),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_n (), leaf_d ()),
+            leaf_d (),
+            leaf_d ()
+        )
+
+
+    // 2NDD
+    // N2DD
+    // 2NDD
+    // DDDD
+    let tree_expected =
+        qtree.Node(
+            qtree.Node(leaf_v 2, leaf_n (), leaf_n (), leaf_v 2),
+            leaf_d (),
+            qtree.Node(leaf_v 2, leaf_n (), leaf_d (), leaf_d ()),
+            leaf_d ()
+        )
+
+    let m1 =
+        SparseMatrix(2UL<nrows>, 3UL<ncols>, 3UL<nvals>, Matrix.Storage(4UL<storageSize>, tree))
+
+    let expected =
+        SparseMatrix(3UL<nrows>, 2UL<ncols>, 3UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
+
+    let actual = transpose m1
 
     Assert.Equal(expected, actual)

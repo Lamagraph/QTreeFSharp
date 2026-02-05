@@ -40,5 +40,3 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
         | Result.Failure e -> Result.Failure e
 
     result
-
-

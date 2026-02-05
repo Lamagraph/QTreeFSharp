@@ -32,6 +32,13 @@ let op_mult x y =
 
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
+let leaf_d () = qtree.Leaf Dummy
+
+let vleaf_v v =
+    Vector.btree.Leaf << UserValue <| Some v
+
+let vleaf_n () = Vector.btree.Leaf << UserValue <| None
+let vleaf_d () = Vector.btree.Leaf Dummy
 
 [<Fact>]
 let ``Simple vxm. All sizes are power of two.`` () =
@@ -40,7 +47,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
             Matrix.qtree.Node(
                 Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
                 Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
-                Matrix.qtree.Leaf(UserValue(None)),
+                leaf_n (),
                 Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
             )
 
@@ -48,17 +55,13 @@ let ``Simple vxm. All sizes are power of two.`` () =
         SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
 
     let v =
-        let tree = Vector.btree.Leaf(UserValue(Some(2)))
+        let tree = vleaf_v 2
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 4UL<nvals>, store)
 
     let expected =
-        let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(6))),
-                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(14))), Vector.btree.Leaf(UserValue(Some(10))))
-            )
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
@@ -84,29 +87,21 @@ let ``Simple vxm. 3 * (3x4)`` () =
             Matrix.qtree.Node(
                 Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
                 Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
-                Matrix.qtree.Node(leaf_n (), leaf_n (), Matrix.qtree.Leaf(Dummy), Matrix.qtree.Leaf(Dummy)),
-                Matrix.qtree.Node(leaf_v 1, leaf_v 2, Matrix.qtree.Leaf(Dummy), Matrix.qtree.Leaf(Dummy))
+                Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_d (), leaf_d ())
             )
 
         let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 4UL<ncols>, 8UL<nvals>, store)
 
     let v =
-        let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(2))),
-                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(Dummy))
-            )
+        let tree = Vector.btree.Node(vleaf_v 2, Vector.btree.Node(vleaf_v 2, vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(3UL<dataLength>, 3UL<nvals>, store)
 
     let expected =
-        let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(6))),
-                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(8))), Vector.btree.Leaf(UserValue(Some(10))))
-            )
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
@@ -132,27 +127,23 @@ let ``Simple vxm. 4 * (4x3).`` () =
         let tree =
             Matrix.qtree.Node(
                 Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
-                Matrix.qtree.Node(leaf_v 1, Matrix.qtree.Leaf(Dummy), leaf_v 2, Matrix.qtree.Leaf(Dummy)),
-                Matrix.qtree.Leaf(UserValue(None)),
-                Matrix.qtree.Node(leaf_v 1, Matrix.qtree.Leaf(Dummy), leaf_v 3, Matrix.qtree.Leaf(Dummy))
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 2, leaf_d ()),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 3, leaf_d ())
             )
 
         let store = Matrix.Storage(4UL<storageSize>, tree)
         SparseMatrix(4UL<nrows>, 3UL<ncols>, 7UL<nvals>, store)
 
     let v =
-        let tree = Vector.btree.Leaf(UserValue(Some(2)))
+        let tree = vleaf_v 2
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 4UL<nvals>, store)
 
 
     let expected =
-        let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(6))),
-                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(14))), Vector.btree.Leaf(Dummy))
-            )
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
@@ -184,33 +175,24 @@ let ``Simple vxm. 3 * (3x5)`` () =
                 Matrix.qtree.Node(
                     Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
                     Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
-                    Matrix.qtree.Node(leaf_n (), leaf_n (), Matrix.qtree.Leaf(Dummy), Matrix.qtree.Leaf(Dummy)),
-                    Matrix.qtree.Node(leaf_v 1, leaf_v 2, Matrix.qtree.Leaf(Dummy), Matrix.qtree.Leaf(Dummy))
+                    Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                    Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_d (), leaf_d ())
                 ),
                 Matrix.qtree.Node(
-                    Matrix.qtree.Node(leaf_n (), Matrix.qtree.Leaf(Dummy), leaf_v 1, Matrix.qtree.Leaf(Dummy)),
-                    Matrix.qtree.Leaf(Dummy),
-                    Matrix.qtree.Node(
-                        leaf_n (),
-                        Matrix.qtree.Leaf(Dummy),
-                        Matrix.qtree.Leaf(Dummy),
-                        Matrix.qtree.Leaf(Dummy)
-                    ),
-                    Matrix.qtree.Leaf(Dummy)
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_v 1, leaf_d ()),
+                    leaf_d (),
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ()),
+                    leaf_d ()
                 ),
-                Matrix.qtree.Leaf(Dummy),
-                Matrix.qtree.Leaf(Dummy)
+                leaf_d (),
+                leaf_d ()
             )
 
         let store = Matrix.Storage(8UL<storageSize>, tree)
         SparseMatrix(3UL<nrows>, 5UL<ncols>, 9UL<nvals>, store)
 
     let v =
-        let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(2))),
-                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(Dummy))
-            )
+        let tree = Vector.btree.Node(vleaf_v 2, Vector.btree.Node(vleaf_v 2, vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         SparseVector(3UL<dataLength>, 3UL<nvals>, store)
@@ -218,14 +200,8 @@ let ``Simple vxm. 3 * (3x5)`` () =
     let expected =
         let tree =
             Vector.btree.Node(
-                Vector.btree.Node(
-                    Vector.btree.Leaf(UserValue(Some(6))),
-                    Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(8))), Vector.btree.Leaf(UserValue(Some(10))))
-                ),
-                Vector.btree.Node(
-                    Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(Dummy)),
-                    Vector.btree.Leaf(Dummy)
-                )
+                Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10)),
+                Vector.btree.Node(Vector.btree.Node(vleaf_v 2, vleaf_d ()), vleaf_d ())
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
@@ -244,17 +220,17 @@ let ``Simple mxm`` () =
     let tree =
         qtree.Node(
             leaf_v 2,
-            qtree.Node(leaf_v 2, qtree.Leaf Dummy, leaf_v 2, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 2, leaf_v 2, qtree.Leaf Dummy, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 2, qtree.Leaf Dummy, qtree.Leaf Dummy, qtree.Leaf Dummy)
+            qtree.Node(leaf_v 2, leaf_d (), leaf_v 2, leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_v 2, leaf_d (), leaf_d ()),
+            qtree.Node(leaf_v 2, leaf_d (), leaf_d (), leaf_d ())
         )
 
     let tree_expected =
         qtree.Node(
             leaf_v 12,
-            qtree.Node(leaf_v 12, qtree.Leaf Dummy, leaf_v 12, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 12, leaf_v 12, qtree.Leaf Dummy, qtree.Leaf Dummy),
-            qtree.Node(leaf_v 12, qtree.Leaf Dummy, qtree.Leaf Dummy, qtree.Leaf Dummy)
+            qtree.Node(leaf_v 12, leaf_d (), leaf_v 12, leaf_d ()),
+            qtree.Node(leaf_v 12, leaf_v 12, leaf_d (), leaf_d ()),
+            qtree.Node(leaf_v 12, leaf_d (), leaf_d (), leaf_d ())
         )
 
     let m1 =
