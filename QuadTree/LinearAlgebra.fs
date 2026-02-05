@@ -231,7 +231,7 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
         let m1_tree, m2_tree =
             if m1.storage.size < m2.storage.size then
                 expand (m1.storage.data) (m2.storage.size / (uint64 m1.storage.size)), m2.storage.data
-            else if m1.storage.size > m2.storage.size then
+            elif m1.storage.size > m2.storage.size then
                 m1.storage.data, expand (m2.storage.data) (m1.storage.size / (uint64 m2.storage.size))
             else
                 m1.storage.data, m2.storage.data
