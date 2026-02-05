@@ -122,7 +122,7 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
                 (Matrix.mkNode tree (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy))
                 (expandRatio / 2UL)
 
-    let rec multiply size m1 m2 =
+    let rec multiply (size: uint64<storageSize>) m1 m2 =
         let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
             let halfSize = size / 2UL
 
@@ -146,9 +146,9 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
               Result.Success(tse1xsw2, nvals_se1xsw2),
               Result.Success(tsw1xne2, nvals_sw1xne2),
               Result.Success(tse1xse2, nvals_se1xse2) ->
-                let nrows = halfSize * 1UL<Matrix.nrows>
-                let ncols = halfSize * 1UL<Matrix.ncols>
-                let storageSize = halfSize * 1UL<storageSize>
+                let nrows = (uint64 halfSize) * 1UL<Matrix.nrows>
+                let ncols = (uint64 halfSize) * 1UL<Matrix.ncols>
+                let storageSize = halfSize
 
                 let nw1xnw2 =
                     Matrix.SparseMatrix(nrows, ncols, nvals_nw1xnw2, Matrix.Storage(storageSize, tnw1xnw2))
@@ -211,7 +211,7 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
             let nnz =
                 match res with
                 | None -> 0UL<nvals>
-                | _ -> size * size * 1UL<nvals>
+                | _ -> (uint64 <| size * size) * 1UL<nvals>
 
             Result.Success(Matrix.qtree.Leaf(UserValue res), nnz)
         | Matrix.qtree.Leaf(UserValue(_)), Matrix.qtree.Node(nw2, ne2, sw2, se2) ->
@@ -236,7 +236,7 @@ let mxm op_add op_mult (m1: Matrix.SparseMatrix<'a>) (m2: Matrix.SparseMatrix<'b
             else
                 m1.storage.data, m2.storage.data
 
-        match multiply (uint64 storageSize) m1_tree m2_tree with
+        match multiply storageSize m1_tree m2_tree with
         | Result.Success(tree, nvals) ->
             // in case the resulting storageSize can be smaller
             // e.g. (2x3) * (3x2) matrices
