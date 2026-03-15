@@ -13,6 +13,7 @@
         <Compile Include="LinearAlgebra.fs"/>
         <Compile Include="BFS.fs"/>
         <Compile Include="TriangleCount.fs"/>
+        <Compile Include="SSSP.fs"/>
     </ItemGroup>
 
 </Project>
