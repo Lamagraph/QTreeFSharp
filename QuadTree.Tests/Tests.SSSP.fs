@@ -73,20 +73,30 @@ let ``Simple SSSP.`` () =
 let ``SSSP with recalculation`` () =
     let graph =
         let clist =
-            Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>, 
-            [ 
-                0UL<rowindex>, 1UL<colindex>, 1.0
-                1UL<rowindex>, 2UL<colindex>, 1.0
-                2UL<rowindex>, 3UL<colindex>, 1.0
-                2UL<rowindex>, 4UL<colindex>, 4.0
-                3UL<rowindex>, 4UL<colindex>, 2.0
-                0UL<rowindex>, 3UL<colindex>, 6.0 
-                ])
+            Matrix.CoordinateList(
+                5UL<nrows>,
+                5UL<ncols>,
+                [ 0UL<rowindex>, 1UL<colindex>, 1.0
+                  1UL<rowindex>, 2UL<colindex>, 1.0
+                  2UL<rowindex>, 3UL<colindex>, 1.0
+                  2UL<rowindex>, 4UL<colindex>, 4.0
+                  3UL<rowindex>, 4UL<colindex>, 2.0
+                  0UL<rowindex>, 3UL<colindex>, 6.0 ]
+            )
 
         Matrix.fromCoordinateList clist
 
     let expected =
-        let clist = Vector.CoordinateList(5UL<dataLength>,[(0UL<index>,0.0); (1UL<index>,1.0);(2UL<index>,2.0);(3UL<index>,3.0);(4UL<index>,5.0)])
+        let clist =
+            Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 0.0)
+                  (1UL<index>, 1.0)
+                  (2UL<index>, 2.0)
+                  (3UL<index>, 3.0)
+                  (4UL<index>, 5.0) ]
+            )
+
         Result.Success(Vector.fromCoordinateList clist)
 
     let actual = Graph.SSSP.sssp graph 0UL
