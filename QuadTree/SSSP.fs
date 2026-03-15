@@ -10,7 +10,7 @@ type Error<'t1, 't2> =
 let sssp graph (startVertex: uint64) =
     let op_add x y =
         match (x, y) with
-        | Some(u), Some(v) -> Some(min u v) 
+        | Some(u), Some(v) -> Some(min u v)
         | Some(v), _
         | _, Some(v) -> Some(v)
         | _ -> None
@@ -19,7 +19,7 @@ let sssp graph (startVertex: uint64) =
         match (x, y) with
         | Some(u), Some(v) -> Some(u + v)
         | _ -> None
-    
+
     let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
         if frontier.nvals > 0UL<nvals> then
 
@@ -28,9 +28,9 @@ let sssp graph (startVertex: uint64) =
             match new_frontier with
             | Result.Failure(e) -> Result.Failure(NewFrontierCalculationProblem(e))
             | Result.Success(new_frontier) ->
-                let op_min x y = 
-                    match (x,y) with 
-                    | Some v, Some u -> if v < u then Some v else None 
+                let op_min x y =
+                    match (x, y) with
+                    | Some v, Some u -> if v < u then Some v else None
                     | Some v, _ -> Some v
                     | _ -> None
 
@@ -45,11 +45,11 @@ let sssp graph (startVertex: uint64) =
                     match visited with
                     | Result.Failure(e) -> Result.Failure(VisitedCalculationProblem(e))
                     | Result.Success(visited) -> inner frontier visited
-        else 
+        else
             Result.Success visited
 
-    let frontier = 
-        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>,[startVertex * 1UL<Vector.index>, 0.0])
+    let frontier =
+        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
         |> Vector.fromCoordinateList
 
     inner frontier frontier
