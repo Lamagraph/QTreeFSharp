@@ -68,7 +68,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
         | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(_)) -> _do x1 x2 matrix matrix matrix matrix
         | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
 
-        | Vector.btree.Leaf(Dummy), Matrix.qtree.Leaf(Dummy)
+        | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Result.Success(Vector.btree.Leaf(Dummy), 0UL<nvals>)
         | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
