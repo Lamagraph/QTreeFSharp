@@ -3,7 +3,7 @@ module QuadTree.Benchmarks.Utils
 open System.IO
 open BenchmarkDotNet.Configs
 
-type MyConfig() as this =
+type MyConfig() =
     inherit ManualConfig()
 
 let DIR_WITH_MATRICES = "../../../../../../../data/"

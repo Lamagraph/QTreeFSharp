@@ -8,7 +8,7 @@ type Benchmark() =
     let mutable matrix = Unchecked.defaultof<Matrix.SparseMatrix<double>>
 
 
-    [<Params("494_bus.mtx")>]
+    [<Params("494_bus.mtx", "arc130.mtx")>]
     member val MatrixName = "" with get, set
 
     [<GlobalSetup>]
