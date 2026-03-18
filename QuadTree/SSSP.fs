@@ -20,8 +20,8 @@ let sssp graph (startVertex: uint64) =
         | Some(u), Some(v) -> Some(u + v)
         | _ -> None
 
-    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
-        if frontier.nvals > 0UL<nvals> then
+    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iter_num =
+        if frontier.nvals > 0UL<nvals> && iter_num <= int frontier.length then
 
             let new_frontier = LinearAlgebra.vxm op_add op_mult frontier graph
 
@@ -44,7 +44,7 @@ let sssp graph (startVertex: uint64) =
 
                     match visited with
                     | Result.Failure(e) -> Result.Failure(VisitedCalculationProblem(e))
-                    | Result.Success(visited) -> inner frontier visited
+                    | Result.Success(visited) -> inner frontier visited (iter_num + 1)
         else
             Result.Success visited
 
@@ -52,4 +52,4 @@ let sssp graph (startVertex: uint64) =
         Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
         |> Vector.fromCoordinateList
 
-    inner frontier frontier
+    inner frontier frontier 0
