@@ -9,6 +9,9 @@ type 'value btree =
 [<Measure>]
 type dataLength
 
+[<Measure>]
+type index
+
 [<Struct>]
 type Storage<'value> =
     val size: uint64<storageSize>
@@ -42,8 +45,6 @@ let mkNode t1 t2 =
     | Leaf(v1), Leaf(v2) when v1 = v2 -> Leaf(v1)
     | _ -> Node(t1, t2)
 
-[<Measure>]
-type index
 
 [<Struct>]
 type CoordinateList<'value> =
@@ -98,6 +99,8 @@ let toCoordinateList (vector: SparseVector<'a>) =
 
     CoordinateList(length, lst)
 
+
+
 let map (vector: SparseVector<'a>) f =
     let rec inner (size: uint64<storageSize>) vector =
         match vector with
@@ -128,16 +131,16 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2) with
-            | Ok((t1, nvals1)), Ok((t2, nvals2)) ->
-                ((mkNode t1 t2), nvals1 + nvals2) |> Ok
-            | Error(e), _
-            | _, Error(e) -> Error(e)
+            | Result.Success((t1, nvals1)), Result.Success((t2, nvals2)) ->
+                ((mkNode t1 t2), nvals1 + nvals2) |> Result.Success
+            | Result.Failure(e), _
+            | _, Result.Failure(e) -> Result.Failure(e)
 
         match (vector1, vector2) with
         | Node(x1, x2), Leaf(_) -> _do x1 x2 vector2 vector2
         | Leaf(_), Node(y1, y2) -> _do vector1 vector1 y1 y2
         | Node(x1, x2), Node(y1, y2) -> _do x1 x2 y1 y2
-        | Leaf(Dummy), Leaf(Dummy) -> Ok(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(Dummy), Leaf(Dummy) -> Result.Success(Leaf(Dummy), 0UL<nvals>)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f v1 v2
 
@@ -146,17 +149,55 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                 | None -> 0UL<nvals>
                 | _ -> (uint64 size) * 1UL<nvals>
 
-            Ok(Leaf(UserValue(res)), nnz)
+            Result.Success(Leaf(UserValue(res)), nnz)
 
-        | (x, y) -> Error Error.InconsistentStructureOfStorages
+        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
     if len1 = vector2.length then
         match inner vector1.storage.size vector1.storage.data vector2.storage.data with
-        | Error(e) -> Error(e)
-        | Ok((storage, nvals)) ->
-            Ok(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
+        | Result.Failure(e) -> Result.Failure(e)
+        | Result.Success((storage, nvals)) ->
+            Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
     else
-        Error Error.InconsistentSizeOfArguments
+        Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
 
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
+
+
+/// Returns None if index out of range
+let private unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
+    let originalIndex = index
+    let rec getFromTree (tree : btree<Option<'a>>) (size : uint64<storageSize>) (index : uint64<index>) =
+        match tree with 
+        | Leaf Dummy -> None
+        | Leaf (UserValue v) -> v 
+        | Node(l: Option<'a> btree, r) ->
+                let halfSize = size / 2UL
+                if uint64 index < uint64 halfSize then
+                    getFromTree l halfSize index
+                else
+                    getFromTree r halfSize ((uint64 index - uint64 halfSize)*1UL<index>)
+    getFromTree v.storage.data v.storage.size index
+
+/// Gather: w[i] = v[idx[i]]
+let gather (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>) : SparseVector<'value> =
+    map idx (fun i -> 
+        match i with 
+        | Some  i-> unsafeGet v i 
+        | None -> None)
+
+(*
+let private merge_sort (v:SparseVector<'a>) (compare: 'a -> 'a -> bool) (collapse_equals: 'a -> 'a -> 'a) =
+    let rec inner (tree : btree<Option<'a>>) = 
+        match tree with
+        | Leaf v1, Leaf v2 -> 
+*)
+(*
+/// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
+let scatter (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>)
+            (op : Option<'value> -> Option<'value> -> Option<'value>) : SparseVector<'value> =
+    map2 idx v (fun i v-> match (i,v) with Some (i), Some(v) -> Some (i,v) | _ -> None )
+
+*)
+
