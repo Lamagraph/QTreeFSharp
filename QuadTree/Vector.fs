@@ -9,6 +9,9 @@ type 'value btree =
 [<Measure>]
 type dataLength
 
+[<Measure>]
+type index
+
 [<Struct>]
 type Storage<'value> =
     val size: uint64<storageSize>
@@ -29,6 +32,7 @@ type SparseVector<'value> =
 type Error<'value1, 'value2> =
     | InconsistentStructureOfStorages of btree<Option<'value1>> * btree<Option<'value2>>
     | InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
+    | IndexOutOfRange of SparseVector<'value1> * uint64<index>
 
 (*
 let foldValues state f tree =
@@ -42,8 +46,7 @@ let mkNode t1 t2 =
     | Leaf(v1), Leaf(v2) when v1 = v2 -> Leaf(v1)
     | _ -> Node(t1, t2)
 
-[<Measure>]
-type index
+
 
 [<Struct>]
 type CoordinateList<'value> =
@@ -97,6 +100,8 @@ let toCoordinateList (vector: SparseVector<'a>) =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
 
     CoordinateList(length, lst)
+
+
 
 let map (vector: SparseVector<'a>) f =
     let rec inner (size: uint64<storageSize>) vector =
@@ -160,3 +165,41 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
+
+
+/// Returns None if index out of range
+let private unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
+    let originalIndex = index
+    let rec getFromTree (tree : btree<Option<'a>>) (size : uint64<storageSize>) (index : uint64<index>) =
+        match tree with 
+        | Leaf Dummy -> None
+        | Leaf (UserValue v) -> v 
+        | Node(l: Option<'a> btree, r) ->
+                let halfSize = size / 2UL
+                if uint64 index < uint64 halfSize then
+                    getFromTree l halfSize index
+                else
+                    getFromTree r halfSize ((uint64 index - uint64 halfSize)*1UL<index>)
+    getFromTree v.storage.data v.storage.size index
+
+/// Gather: w[i] = v[idx[i]]
+let gather (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>) : SparseVector<'value> =
+    map idx (fun i -> 
+        match i with 
+        | Some  i-> unsafeGet v i 
+        | None -> None)
+
+(*
+let private merge_sort (v:SparseVector<'a>) (compare: 'a -> 'a -> bool) (collapse_equals: 'a -> 'a -> 'a) =
+    let rec inner (tree : btree<Option<'a>>) = 
+        match tree with
+        | Leaf v1, Leaf v2 -> 
+*)
+(*
+/// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
+let scatter (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>)
+            (op : Option<'value> -> Option<'value> -> Option<'value>) : SparseVector<'value> =
+    map2 idx v (fun i v-> match (i,v) with Some (i), Some(v) -> Some (i,v) | _ -> None )
+
+*)
+
