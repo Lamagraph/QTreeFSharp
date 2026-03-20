@@ -227,3 +227,37 @@ let ``Condensation of empty`` () =
         SparseVector(clist.length, 0UL<nvals>, Storage(16UL<storageSize>, tree))
 
     Assert.Equal(expected, actual)
+
+
+[<Fact>]    
+let ``Gather``() =
+    let data = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 0.0)
+                  (1UL<index>, 1.0)
+                  (4UL<index>, 5.0) ]
+        )
+        |> Vector.fromCoordinateList
+
+    let indices = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 1UL<index>)
+                  (1UL<index>, 4UL<index>)
+                  (3UL<index>, 1UL<index>) ]
+        )
+        |> Vector.fromCoordinateList
+
+    let actual = Vector.gather data indices
+
+    let expected = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 1.0)
+                  (1UL<index>, 5.0)
+                  (3UL<index>, 1.0) ]
+        )
+        |> Vector.fromCoordinateList
+
+    Assert.Equal(expected, actual)
