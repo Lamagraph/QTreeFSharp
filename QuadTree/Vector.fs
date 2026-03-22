@@ -168,6 +168,29 @@ let map (vector: SparseVector<'a>) f =
 
     SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
 
+let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseVector<'a> =
+    let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
+
+    let rec build (pointer: uint64<index>) (size: uint64<storageSize>) =
+        if uint64 pointer >= uint64 length then
+            Leaf Dummy, 0UL<nvals>
+        elif size = 1UL<storageSize> then
+            if uint64 pointer >= uint64 length then
+                Leaf Dummy, 0UL<nvals>
+            else
+                let v = f pointer
+                Leaf(UserValue v), (match v with Some _ -> 1UL<nvals> | None -> 0UL<nvals>)
+        else
+            let halfSize = size / 2UL
+            let left, nvals1 = build pointer halfSize
+            let newPointer = (uint64 pointer + uint64 halfSize) * 1UL<index>
+            let right, nvals2 = build newPointer halfSize
+            mkNode left right, nvals1 + nvals2
+
+    let storage, nvals = build 0UL<index> storageSize
+
+    SparseVector(length, nvals, Storage(storageSize, storage))
+
 let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     let len1 = vector1.length
 
