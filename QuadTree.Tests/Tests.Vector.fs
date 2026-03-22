@@ -261,3 +261,139 @@ let ``Gather``() =
         |> Vector.fromCoordinateList
 
     Assert.Equal(expected, actual)
+(*
+[<Fact>]    
+let ``Scatter``() =
+    let data = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 4.0)
+                  (2UL<index>, 5.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+
+    let indices = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 3UL<index>)
+                  (2UL<index>, 3UL<index>)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+
+    let result = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (3UL<index>, 1.0)
+                  (4UL<index>, 3.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.scatter result data indices (fun x y -> match (x,y) with | (Some x, Some y) -> Some (x + y) | Some x, _ | _, Some x -> Some x | _ -> None)
+    printVector actual
+    let expected = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (3UL<index>, 10.0)
+                  (4UL<index>, 3.0)
+                 ]
+        )
+        |> Vector.fromCoordinateList
+
+    Assert.Equal(expected, actual)*)
+
+let compare x y = 
+    match (x,y)  with
+    | Some x, None -> -1
+    | Some x, Some y -> if x < y then -1 elif x > y then 1 else 0
+    | None, Some x -> 1
+    | _ -> 0
+
+[<Fact>]    
+let ``Sort one element vector``() =
+    let data = 
+        Vector.CoordinateList(
+                1UL<dataLength>,
+                [ (0UL<index>, 0.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.mergeSort data compare
+    Assert.Equal(data, actual)
+
+[<Fact>]    
+let ``Sort vector of two equal elements``() =
+    let data = 
+        Vector.CoordinateList(
+                2UL<dataLength>,
+                [ (0UL<index>, 0.0);(1UL<index>, 0.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.mergeSort data compare
+    Assert.Equal(data, actual)
+
+[<Fact>]    
+let ``Sort vector of three equal elements``() =
+    let data = 
+        Vector.CoordinateList(
+                3UL<dataLength>,
+                [ (0UL<index>, 2.0);(1UL<index>, 2.0);(2UL<index>, 2.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    
+    let actual = Vector.mergeSort data compare
+    Assert.Equal(data, actual)
+
+
+[<Fact>]    
+let ``Sort vector of three different unordered elements``() =
+    let data = 
+        Vector.CoordinateList(
+                3UL<dataLength>,
+                [ (0UL<index>, 2.0);(1UL<index>, 1.0);(2UL<index>, 4.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let expected = 
+        Vector.CoordinateList(
+                3UL<dataLength>,
+                [ (0UL<index>, 1.0);(1UL<index>, 2.0);(2UL<index>, 4.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.mergeSort data compare
+    Assert.Equal(expected, actual)
+    
+
+
+[<Fact>]    
+let ``Sort long vector with one element``() =
+    let data = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 0.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.mergeSort data compare
+    printVector actual
+    Assert.Equal(data, actual)
+
+
+
+[<Fact>]    
+let ``Sort sorted vector``() =
+    let data = 
+        Vector.CoordinateList(
+                5UL<dataLength>,
+                [ (0UL<index>, 0.0); (1UL<index>, 0.0)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.mergeSort data compare
+    Assert.Equal(data, actual)
+
+    
