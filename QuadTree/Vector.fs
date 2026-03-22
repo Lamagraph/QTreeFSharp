@@ -34,25 +34,57 @@ type Error<'value1, 'value2> =
     | InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
     | IndexOutOfRange of SparseVector<'value1> * uint64<index>
 
-(*
-let foldValues state f tree =
-    match tree with
-    | Leaf
-*)
-
 
 let mkNode t1 t2 =
     match (t1, t2) with
     | Leaf(v1), Leaf(v2) when v1 = v2 -> Leaf(v1)
     | _ -> Node(t1, t2)
 
-
-
 [<Struct>]
 type CoordinateList<'value> =
     val length: uint64<dataLength>
     val data: (uint64<index> * 'value) list
     new(_length, _data) = { length = _length; data = _data }
+
+let update (vector: SparseVector<_>) i v op =
+    let rec inner vector (i:uint64<index>)  size =
+        match vector  with
+        | Leaf (UserValue x) -> 
+            if size = 1UL<storageSize> 
+            then
+                let res = op x v
+                let deltaNNZ = 
+                    match (res, x) with
+                    | Some _, None -> 1L
+                    | None , Some _ -> -1L
+                    | _ -> 0 
+                Leaf (UserValue  (op x v)), deltaNNZ 
+            else 
+                let halfSize = size / 2UL 
+                if uint64 i < uint64 halfSize
+                then
+                    let newVector, deltaNNZ = inner vector i halfSize 
+                    (mkNode newVector vector), deltaNNZ
+                else 
+                    let newVector, deltaNNZ = inner vector ((uint64 i - uint64 halfSize)*1UL<index>) halfSize
+                    (mkNode vector newVector), deltaNNZ
+        | Node (x1,x2) -> 
+            let halfSize = size / 2UL 
+            if uint64 i < uint64 halfSize
+            then 
+                let newVector, deltaNNZ = inner x1 i halfSize
+                (mkNode newVector x2), deltaNNZ
+            else 
+                let newVector, deltaNNZ = inner x2 ((uint64 i - uint64 halfSize)*1UL<index>) halfSize
+                (mkNode x1 newVector), deltaNNZ
+        | _ -> failwith "Unreachable. But seams that index out of range."
+    
+    if uint64 i <= uint64 vector.length
+    then
+        let storage, deltaNNZ =  inner vector.storage.data i vector.storage.size
+        let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
+        Result.Success (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
+    else Result.Failure <| Error.IndexOutOfRange (vector,i)
 
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
     let length = lst.length
@@ -95,13 +127,24 @@ let toCoordinateList (vector: SparseVector<'a>) =
             let lAccum = traverse left accum pointer halfSize
             let rAccum = traverse right lAccum (pointer + halfSize) halfSize
             rAccum
-
+ 
     let lst =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
 
     CoordinateList(length, lst)
 
+let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state:'b) =
+    let rec inner state (size: uint64<storageSize>) vector= 
+        match vector with
+        | Leaf (UserValue (Some v)) -> 
+            let lst = List.replicate (int size) v 
+            List.fold f state lst
+        | Node (x1, x2) ->
+            let halfSize = size / 2UL
+            inner (inner state halfSize  x1) halfSize x2
+        | _ -> state
 
+    inner state vector.storage.size vector.storage.data
 
 let map (vector: SparseVector<'a>) f =
     let rec inner (size: uint64<storageSize>) vector =
@@ -189,17 +232,64 @@ let gather (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>) : Spar
         | Some  i-> unsafeGet v i 
         | None -> None)
 
-(*
-let private merge_sort (v:SparseVector<'a>) (compare: 'a -> 'a -> bool) (collapse_equals: 'a -> 'a -> 'a) =
-    let rec inner (tree : btree<Option<'a>>) = 
+let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) : SparseVector<'a> =
+    let storageSize = v.storage.size
+    let nvals = v.nvals
+
+    // Extract values from tree
+    let rec extract tree =
         match tree with
-        | Leaf v1, Leaf v2 -> 
+        | Leaf Dummy -> []
+        | Leaf(UserValue None) -> []
+        | Leaf(UserValue v) -> [v]
+        | Node(l, r) -> extract l @ extract r
+
+    // Place sorted values into original tree structure
+    let rec place tree sortedVals =
+        match tree, sortedVals with
+        | Leaf Dummy, rest -> Leaf Dummy, rest
+        | Leaf(UserValue None), rest -> Leaf(UserValue None), rest
+        | Leaf(UserValue _), v::rest -> Leaf(UserValue v), rest
+        | Leaf(UserValue _), [] -> Leaf Dummy, []
+        | Node(l, r), vals ->
+            let l', r1 = place l vals
+            let r', r2 = place r r1
+            mkNode l' r', r2
+
+    let values = extract v.storage.data
+    let sortedVals = List.sortWith (fun a b -> compare a b) values
+    let newTree, _ = place v.storage.data sortedVals
+
+    SparseVector(v.length, nvals, Storage(storageSize, newTree))
+
+(*let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) : SparseVector<'a> =
+    let rec merge t1 t2 =
+        match (t1, t2) with
+        | Leaf (UserValue v1), Leaf (UserValue v2) -> 
+            if compare v1 v2 <= 0 then mkNode t1 t2 else mkNode  (Leaf (UserValue v2)) (Leaf (UserValue v1))
+        | Leaf (UserValue v1), Leaf Dummy -> tree
+
+    let rec inner tree =
+        match tree with
+        | Node (Leaf (UserValue v1), Leaf (UserValue v2) ) -> 
+            if compare v1 v2 <= 0 then tree else Node  (Leaf (UserValue v2), Leaf (UserValue v1))
+        | Node (Leaf (UserValue v1), Leaf Dummy) -> tree
+        | Node (n1, n2) -> 
+        let newLeft = inner n1
+        let newRight = inner n2
+        merge mewLeft newRight 
 *)
-(*
+
 /// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
-let scatter (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>)
-            (op : Option<'value> -> Option<'value> -> Option<'value>) : SparseVector<'value> =
-    map2 idx v (fun i v-> match (i,v) with Some (i), Some(v) -> Some (i,v) | _ -> None )
-
-*)
-
+let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVector<uint64<index>>)
+            (op: Option<'value> -> 'value -> Option<'value>) =
+    let pairsVec = map2 idx v (fun i v -> match i, v with Some i, Some v -> Some(i, v) | _ -> None)
+    match pairsVec with
+    | Result.Success pv -> 
+        foldValues pv (fun state (idx, v) -> 
+            match state with 
+            | Result.Success state -> update state idx v op
+            | Result.Failure x -> Result.Failure x)
+         (Result.Success w)
+        |> Result.Success  
+    | Result.Failure x -> Result.Failure x
