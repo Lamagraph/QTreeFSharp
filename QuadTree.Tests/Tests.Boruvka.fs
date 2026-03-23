@@ -74,6 +74,7 @@ let ``Boruvka MST.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
+        |> Result.Success
 
     let actual = Graph.Boruvka.mst graph
 

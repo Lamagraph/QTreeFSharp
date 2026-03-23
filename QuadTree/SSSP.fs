@@ -4,8 +4,8 @@ open Common
 
 type Error<'t1, 't2> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | FrontierCalculationProblem of Vector.Error<'t1, 't1>
-    | VisitedCalculationProblem of Vector.Error<'t1, 't1>
+    | FrontierCalculationProblem of Vector.Error<'t1, 't1, 't1>
+    | VisitedCalculationProblem of Vector.Error<'t1, 't1, 't1>
 
 let sssp graph (startVertex: uint64) =
     let op_add x y =

@@ -4,8 +4,8 @@ open Common
 
 type Error<'t1, 't2> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | FrontierCalculationProblem of Vector.Error<'t1, 't1>
-    | VisitedCalculationProblem of Vector.Error<'t1, 't1>
+    | FrontierCalculationProblem of Vector.Error<'t1, 't1, 't1>
+    | VisitedCalculationProblem of Vector.Error<'t1, 't1, 't1>
 
 let bfs_level graph startVertices =
     let rec inner level (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =

@@ -5,7 +5,7 @@ open Common
 type Error<'value1, 'value2, 'value3> =
     | InconsistentStructureOfStorages of Vector.btree<Option<'value1>> * Matrix.qtree<Option<'value2>>
     | InconsistentSizeOfArguments of Vector.SparseVector<'value1> * Matrix.SparseMatrix<'value2>
-    | VectorAdditionProblem of Vector.Error<'value3, 'value3>
+    | VectorAdditionProblem of Vector.Error<'value3, 'value3, 'value3>
 
 
 let rec multScalar op_add (x: uint64) y =
