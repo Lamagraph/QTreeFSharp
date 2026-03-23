@@ -30,6 +30,7 @@ let op_mult x y =
     | Some(a), Some(b) -> Some(a * b)
     | _ -> None
 
+
 let op_add_i x y =
     match (x, y) with
     | Some(a), Some(b) -> Some(min a b)
@@ -38,9 +39,8 @@ let op_add_i x y =
     | _ -> None
 
 let op_mult_i (i,x) (row,col,y) =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(i , row, col)
-    | _ -> None    
+    Some(i,row,col)
+    
 
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
@@ -226,15 +226,20 @@ let ``Simple vxm. 3 * (3x5)`` () =
 (*
 2,2,2,D
 *
-N,1,1,N
-3,2,2,3
-N,N,1,2
-N,N,3,N
+N,1,1,N,N,D,D,D
+3,2,2,3,1,D,D,D
+N,N,1,2,N,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
 =
-6,6,14,10
+// 6,6,8,10,2,D,D,D
+(1,1,0),(0,0,1),(0,0,2),(1,1,3),(1,1,4)
 *)
 [<Fact>]
-let ``Simple vxmi. 3 * (3x5)`` () =
+let ``Simple vxmi_values. 3 * (3x5)`` () =
     let m =
         let tree =
             Matrix.qtree.Node(
@@ -266,24 +271,20 @@ let ``Simple vxmi. 3 * (3x5)`` () =
     let expected =
         let tree =
             Vector.btree.Node(
-                Vector.btree.Node(
-                    Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>),
-                                     vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,0UL<Matrix.colindex>)),
-                    Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>),
-                                     vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>))
-                ),
-                Vector.btree.Node(
-                    Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>), vleaf_d ()),
-                    Vector.btree.Node(vleaf_d (), vleaf_d ())
-                )
+                Vector.btree.Node(Vector.btree.Node(vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,0UL<Matrix.colindex>)
+                                                   , vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>))
+                                 , Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,2UL<Matrix.colindex>)
+                                                    , vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,3UL<Matrix.colindex>))),
+                Vector.btree.Node(Vector.btree.Node(vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,4UL<Matrix.colindex>), vleaf_d ()), vleaf_d ())
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
         Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxmi op_add_i op_mult_i v m
+    let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
 
     Assert.Equal(expected, actual)
+
 
 [<Fact>]
 let ``Simple mxm`` () =
