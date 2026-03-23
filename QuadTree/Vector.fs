@@ -83,8 +83,8 @@ let update (vector: SparseVector<_>) i v op =
     then
         let storage, deltaNNZ =  inner vector.storage.data i vector.storage.size
         let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
-        Result.Success (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
-    else Result.Failure <| Error.IndexOutOfRange (vector,i)
+        Ok (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
+    else Error Error.InconsistentSizeOfArguments
 
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
     let length = lst.length
@@ -132,6 +132,9 @@ let toCoordinateList (vector: SparseVector<'a>) =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
 
     CoordinateList(length, lst)
+
+let empty length =
+    fromCoordinateList (CoordinateList(length,[]))
 
 let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state:'b) =
     let rec inner state (size: uint64<storageSize>) vector= 
@@ -199,16 +202,16 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2) with
-            | Result.Success((t1, nvals1)), Result.Success((t2, nvals2)) ->
-                ((mkNode t1 t2), nvals1 + nvals2) |> Result.Success
-            | Result.Failure(e), _
-            | _, Result.Failure(e) -> Result.Failure(e)
+            | Ok((t1, nvals1)), Ok((t2, nvals2)) ->
+                ((mkNode t1 t2), nvals1 + nvals2) |> Ok
+            | Error(e), _
+            | _, Error(e) -> Error(e)
 
         match (vector1, vector2) with
         | Node(x1, x2), Leaf(_) -> _do x1 x2 vector2 vector2
         | Leaf(_), Node(y1, y2) -> _do vector1 vector1 y1 y2
         | Node(x1, x2), Node(y1, y2) -> _do x1 x2 y1 y2
-        | Leaf(Dummy), Leaf(Dummy) -> Result.Success(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(Dummy), Leaf(Dummy) -> Ok(Leaf(Dummy), 0UL<nvals>)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f v1 v2
 
@@ -217,17 +220,17 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                 | None -> 0UL<nvals>
                 | _ -> (uint64 size) * 1UL<nvals>
 
-            Result.Success(Leaf(UserValue(res)), nnz)
+            Ok(Leaf(UserValue(res)), nnz)
 
-        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+        | (x, y) -> Error Error.InconsistentStructureOfStorages
 
     if len1 = vector2.length then
         match inner vector1.storage.size vector1.storage.data vector2.storage.data with
-        | Result.Failure(e) -> Result.Failure(e)
-        | Result.Success((storage, nvals)) ->
-            Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
+        | Error(e) -> Error(e)
+        | Ok((storage, nvals)) ->
+            Ok(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
     else
-        Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
+        Error Error.InconsistentSizeOfArguments
 
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
@@ -303,16 +306,17 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
         merge mewLeft newRight 
 *)
 
+//type ScatterError<'a> = 
+
 /// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
 let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVector<uint64<index>>)
-            (op: Option<'value> -> 'value -> Option<'value>) =
+            (op: Option<'value> -> Option<'value> -> Option<'value>) =
     let pairsVec = map2 idx v (fun i v -> match i, v with Some i, Some v -> Some(i, v) | _ -> None)
     match pairsVec with
-    | Result.Success pv -> 
+    | Ok pv -> 
         foldValues pv (fun state (idx, v) -> 
             match state with 
-            | Result.Success state -> update state idx v op
-            | Result.Failure x -> Result.Failure x)
-         (Result.Success w)
-        |> Result.Success  
-    | Result.Failure x -> Result.Failure x
+            | Ok state -> update state idx (Some v) op
+            | Error x -> Error x)
+         (Ok w)
+    | Error x -> Error Error.InconsistentStructureOfStorages
