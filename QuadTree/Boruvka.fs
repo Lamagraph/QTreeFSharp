@@ -123,7 +123,7 @@ let mst graph =
             Result.Success visited
 
     let frontier =
-        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
+        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ 0UL * 1UL<Vector.index>, 0.0 ])
         |> Vector.fromCoordinateList
 
     inner frontier frontier 0
