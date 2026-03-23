@@ -111,11 +111,14 @@ let vxmi_values
     (op_mult: uint64<Vector.index> * 'a -> uint64<Matrix.rowindex> * uint64<Matrix.colindex> * 'b -> Option<'c>)
     (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
 
-    let rec inner (size: uint64<storageSize>) vector matrix =
+    let rec inner (size: uint64<storageSize>) vector (vectorIdx: uint64<Vector.index>) matrix (rowIdx: uint64<Matrix.rowindex>) (colIdx: uint64<Matrix.colindex>) =
         let _do x1 x2 y1 y2 y3 y4 =
             let new_size = size / 2UL
 
-            match (inner new_size x1 y1), (inner new_size x1 y2), (inner new_size x2 y3), (inner new_size x2 y4) with
+            match (inner new_size x1 vectorIdx y1 rowIdx colIdx), 
+                  (inner new_size x1 vectorIdx y2 rowIdx (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)), 
+                  (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y3 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) colIdx), 
+                  (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y4 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)) with
             | Result.Success((t1, nvals1)),
               Result.Success((t2, nvals2)),
               Result.Success((t3, nvals3)),
@@ -149,7 +152,7 @@ let vxmi_values
         | Vector.btree.Leaf(UserValue(Some(v1))), Matrix.qtree.Leaf(UserValue(Some(v2))) ->
             if size = 1UL<storageSize> 
             then 
-                let res = op_mult v1 v2
+                let res = op_mult (vectorIdx, v1) (rowIdx, colIdx, v2)
 
                 let nnz =
                     match res with
@@ -158,7 +161,7 @@ let vxmi_values
 
                 Result.Success(Vector.btree.Leaf(UserValue(res)), nnz)
             else 
-                inner size (Vector.btree.Node(vector,vector))(Matrix.qtree.Node(matrix, matrix,matrix,matrix))
+                inner size (Vector.btree.Node(vector,vector)) vectorIdx (Matrix.qtree.Node(matrix, matrix,matrix,matrix)) rowIdx colIdx
 
         | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
         | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> _do x1 x2 matrix matrix matrix matrix
@@ -187,7 +190,7 @@ let vxmi_values
             else
                 vector.storage
 
-        match inner vector_storage.size vector_storage.data matrix.storage.data with
+        match inner vector_storage.size vector_storage.data 0UL<Vector.index> matrix.storage.data 0UL<Matrix.rowindex> 0UL<Matrix.colindex> with
         | Result.Failure x -> Result.Failure x
         | Result.Success(storage, nvals) ->
             (Vector.SparseVector(
