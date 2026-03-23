@@ -4,8 +4,8 @@ open Common
 
 type Error<'t1, 't2> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | FrontierCalculationProblem of Vector.Error<'t1, 't1>
-    | VisitedCalculationProblem of Vector.Error<'t1, 't1>
+    | EdgesCalculationProblem of Vector.Error<'t1, 't1>
+    | CEdgesCalculationProblem of Vector.Error<'t1, 't1>
 
 (*
 Вход: граф G = (V, E, w), матрица смежности S, n = |V|
@@ -81,46 +81,47 @@ while S ≠ ∅ do {
 return T
 *)
 
-let mst graph =
+let mst (graph:Matrix.SparseMatrix<_>) =
     let op_add x y =
         match (x, y) with
-        | Some(u), Some(v) -> Some(min u v)
-        | Some(v), _
-        | _, Some(v) -> Some(v)
+        | Some(a), Some(b) -> Some(min a b)
+        | Some(a), _
+        | _, Some(a) -> Some(a)
         | _ -> None
 
-    let op_mult x y =
-        match (x, y) with
-        | Some(u), Some(v) -> Some(u + v)
-        | _ -> None
+    let op_mult (i,x) (row,col,w) =
+        Some(w,row)
+    
+    let length = uint64 graph.nrows * 1UL<Vector.dataLength>
+    let parent = Vector.init  length (fun i -> Some i)
+    let iota = Vector.init  length (fun i -> Some (uint64 i))
+    
+    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) =
+        if graph.nvals > 0UL<nvals> then
 
-    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iter_num =
-        if frontier.nvals > 0UL<nvals> && iter_num <= int frontier.length then
-
-            let new_frontier = LinearAlgebra.vxm op_add op_mult frontier graph
-
-            match new_frontier with
-            | Result.Failure(e) -> Result.Failure(NewFrontierCalculationProblem(e))
-            | Result.Success(new_frontier) ->
+            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
+            
+            match edges with
+            | Result.Failure(e) -> Result.Failure(EdgesCalculationProblem(e))
+            | Result.Success(edges) ->
                 let op_min x y =
                     match (x, y) with
                     | Some v, Some u -> if v < u then Some v else None
                     | Some v, _ -> Some v
                     | _ -> None
 
-                let frontier = Vector.map2 new_frontier visited op_min
+                let cedges = 
+                    Vector.scatter (Vector.empty length) edges parent op_add
 
-                match frontier with
-                | Result.Failure(e) -> Result.Failure(FrontierCalculationProblem(e))
-                | Result.Success(frontier) ->
+                match cedges with
+                | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
+                | Result.Success(cedges) ->
 
-                    let visited = Vector.map2 visited frontier op_add
+                    let t = Vector.gather cedges parent
 
-                    match visited with
-                    | Result.Failure(e) -> Result.Failure(VisitedCalculationProblem(e))
-                    | Result.Success(visited) -> inner frontier visited (iter_num + 1)
+                
         else
-            Result.Success visited
+            Result.Success tree
 
     let frontier =
         Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ 0UL * 1UL<Vector.index>, 0.0 ])

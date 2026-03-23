@@ -13,6 +13,7 @@
     <Compile Include="Tests.BFS.fs" />
     <Compile Include="Tests.TriangleCount.fs" />
     <Compile Include="Tests.SSSP.fs" />
+    <Compile Include="Tests.Boruvka.fs" />
   </ItemGroup>
 
   <ItemGroup>
