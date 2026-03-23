@@ -2,10 +2,10 @@ module Graph.Boruvka
 
 open Common
 
-type Error<'t1, 't2> =
+type Error<'t1, 't2, 't3, 't4> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | EdgesCalculationProblem of Vector.Error<'t1, 't1>
-    | CEdgesCalculationProblem of Vector.Error<'t1, 't1>
+    | EdgesCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't3>
+    | CEdgesCalculationProblem of Vector.Error<'t1, 't4, 't4>
 
 (*
 Вход: граф G = (V, E, w), матрица смежности S, n = |V|
@@ -14,13 +14,13 @@ type Error<'t1, 't2> =
 iota <- [0, 1, 2, ..., n-1]    // вектор индексов
 
 parent[u] <- u    для всех u in 0..n-1
-T <- ∅
+T <- empty
 
-while S ≠ ∅ do {
+while S not empty do {
 
     // Шаг 1. Минимальное ребро каждой вершины
     //        mxv над полукольцом combMin:
-    //        edge[u] = min{ (w, parent[v]) | (u,v,w) ∈ S }
+    //        edge[u] = min{ (w, parent[v]) | (u,v,w) in S }
 
     edge <- mxv(S, parent)
 
@@ -119,12 +119,10 @@ let mst (graph:Matrix.SparseMatrix<_>) =
 
                     let t = Vector.gather cedges parent
 
+                    inner graph
+
                 
         else
             Result.Success tree
 
-    let frontier =
-        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ 0UL * 1UL<Vector.index>, 0.0 ])
-        |> Vector.fromCoordinateList
-
-    inner frontier frontier 0
+    inner graph
