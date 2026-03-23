@@ -29,10 +29,11 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error<'value1, 'value2> =
+type Error<'value1, 'value2, 'a> =
     | InconsistentStructureOfStorages of btree<Option<'value1>> * btree<Option<'value2>>
     | InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
     | IndexOutOfRange of SparseVector<'value1> * uint64<index>
+    | ScatterError of 'a
 
 
 let mkNode t1 t2 =
@@ -132,6 +133,9 @@ let toCoordinateList (vector: SparseVector<'a>) =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
 
     CoordinateList(length, lst)
+
+let empty length =
+    fromCoordinateList (CoordinateList(length,[]))
 
 let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state:'b) =
     let rec inner state (size: uint64<storageSize>) vector= 
@@ -303,16 +307,17 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
         merge mewLeft newRight 
 *)
 
+//type ScatterError<'a> = 
+
 /// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
 let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVector<uint64<index>>)
-            (op: Option<'value> -> 'value -> Option<'value>) =
+            (op: Option<'value> -> Option<'value> -> Option<'value>) =
     let pairsVec = map2 idx v (fun i v -> match i, v with Some i, Some v -> Some(i, v) | _ -> None)
     match pairsVec with
     | Result.Success pv -> 
         foldValues pv (fun state (idx, v) -> 
             match state with 
-            | Result.Success state -> update state idx v op
+            | Result.Success state -> update state idx (Some v) op
             | Result.Failure x -> Result.Failure x)
          (Result.Success w)
-        |> Result.Success  
-    | Result.Failure x -> Result.Failure x
+    | Result.Failure x -> Result.Failure <| ScatterError x
