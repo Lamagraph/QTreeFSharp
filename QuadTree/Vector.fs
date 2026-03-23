@@ -171,6 +171,33 @@ let map (vector: SparseVector<'a>) f =
 
     SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
 
+
+let mapi (vector: SparseVector<'a>) f =
+    let rec inner (size: uint64<storageSize>) vector =
+        match vector with
+        | Node(x1, x2) ->
+            let t1, nvals1 = inner (size / 2UL) x1
+            let t2, nvals2 = inner (size / 2UL) x2
+            (mkNode t1 t2), nvals1 + nvals2
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            if size = 1UL<storageSize>
+            then 
+                let res = f v
+
+                let nnz =
+                    match res with
+                    | None -> 0UL<nvals>
+                    | _ -> 1UL<nvals>
+
+                Leaf(UserValue(res)), nnz
+            else inner size (Node (vector,vector))
+
+    let storage, nvals = inner vector.storage.size vector.storage.data
+
+    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+
+
 let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseVector<'a> =
     let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
 
