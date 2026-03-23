@@ -77,6 +77,96 @@ let ``Simple Vector.map. Length is not power of two.`` () =
 
     Assert.Equal(expected, actual)
 
+[<Fact>]
+let ``Simple Vector.mapi. Length is power of two, multiply by index.`` () =
+    let v =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(8UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 1); (2UL<index>, 1); (3UL<index>, 1); (4UL<index>, 2); (5UL<index>, 2); (6UL<index>, 2); (7UL<index>, 2) ])
+        )
+
+    let f (idx: uint64<index>) x =
+        match x with
+        | Some(a) -> Some(a * int idx)
+        | _ -> None
+
+    let expected =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(8UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2); (3UL<index>, 3); (4UL<index>, 8); (5UL<index>, 10); (6UL<index>, 12); (7UL<index>, 14) ])
+        )
+
+    let actual = Vector.mapi v f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.mapi. Length is not power of two.`` () =
+    // Build vector [1, 1, 1, 1, 1, 1] with dummy at end
+    let v =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 1); (2UL<index>, 1); (3UL<index>, 1); (4UL<index>, 1); (5UL<index>, 1) ])
+        )
+
+    // f idx x = x * idx
+    let f (idx: uint64<index>) x =
+        match x with
+        | Some(a) -> Some(a * int idx)
+        | _ -> None
+
+    // Expected: [0, 1, 2, 3, 4, 5] (1*idx for each position)
+    let expected =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2); (3UL<index>, 3); (4UL<index>, 4); (5UL<index>, 5) ])
+        )
+
+    let actual = Vector.mapi v f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.mapi. Uniform leaf expansion.`` () =
+    // Vector of length 1 with value 5
+    let v =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    // f idx x = x + idx (5 + 0 = 5)
+    let f (idx: uint64<index>) x =
+        match x with
+        | Some(a) -> Some(a + int idx)
+        | _ -> None
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let actual = Vector.mapi v f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.mapi. All indices identity.`` () =
+    // Vector with values matching their indices
+    let v =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(
+                4UL<dataLength>,
+                [ (0UL<index>, 0); (2UL<index>, 2) ]
+            )
+        )
+
+    let f (idx: uint64<index>) x =
+        match x with
+        | Some(a) when a = int idx -> Some a
+        | _ -> None
+
+    let actual = Vector.mapi v f
+    let outputCL = Vector.toCoordinateList actual
+
+    Assert.Equal(2UL<nvals>, actual.nvals)
+    Assert.Equal<list<uint64<index> * int>>([ (0UL<index>, 0); (2UL<index>, 2) ], outputCL.data)
+
 
 [<Fact>]
 let ``Simple Vector.map2. Length is power of two.`` () =
