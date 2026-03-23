@@ -173,27 +173,26 @@ let map (vector: SparseVector<'a>) f =
 
 
 let mapi (vector: SparseVector<'a>) f =
-    let rec inner (size: uint64<storageSize>) vector =
+    let rec inner (pointer: uint64<index>) (size: uint64<storageSize>) vector =
         match vector with
         | Node(x1, x2) ->
-            let t1, nvals1 = inner (size / 2UL) x1
-            let t2, nvals2 = inner (size / 2UL) x2
+            let halfSize = size / 2UL
+            let t1, nvals1 = inner pointer halfSize x1
+            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2
             (mkNode t1 t2), nvals1 + nvals2
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
-            if size = 1UL<storageSize>
-            then 
-                let res = f v
-
-                let nnz =
-                    match res with
-                    | None -> 0UL<nvals>
-                    | _ -> 1UL<nvals>
-
+            if size = 1UL<storageSize> then 
+                let res = f pointer v
+                let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
                 Leaf(UserValue(res)), nnz
-            else inner size (Node (vector,vector))
+            else 
+                let halfSize = size / 2UL
+                let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
+                let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
+                (mkNode t1 t2), nvals1 + nvals2
 
-    let storage, nvals = inner vector.storage.size vector.storage.data
+    let storage, nvals = inner 0UL<index> vector.storage.size vector.storage.data
 
     SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
 
