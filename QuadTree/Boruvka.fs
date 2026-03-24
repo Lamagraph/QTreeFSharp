@@ -147,14 +147,15 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                     | _ -> None)
                         
                         let graphFilter i j = 
+                            let i = uint64 i * 1UL<Vector.index>
+                            let j = uint64 j * 1UL<Vector.index>
                             let parent_i = Vector.unsafeGet parent i
                             let parent_j = Vector.unsafeGet parent j
                             match (parent_i, parent_j) with
                             | Some v1, Some v2 when v1 <> v2 -> true
                             | _ -> false
 
-                        //let graph = Matrix.mapi
-
+                        let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
                         inner graph tree parent
 
