@@ -137,6 +137,9 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
 
     CoordinateList(nrows, ncols, coo)
 
+let empty nrows ncols =
+    fromCoordinateList (CoordinateList(nrows,ncols,[]))
+
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
         let _do x1 x2 x3 x4 y1 y2 y3 y4 =
