@@ -151,6 +151,92 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
     Assert.Equal(expected, actual)
 
 [<Fact>]
+let ``Simple Matrix.map2i. Square where number of cols and rows are power of two.`` () =
+    let m1 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (1UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    let m2 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10); (0UL<rowindex>, 1UL<colindex>, 20); (1UL<rowindex>, 0UL<colindex>, 30); (1UL<rowindex>, 1UL<colindex>, 40) ]
+            )
+        )
+
+    let f row col x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b + int row + int col)
+        | _ -> None
+
+    let actual = Matrix.map2i m1 m2 f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(4UL<nvals>, actual.nvals)
+
+[<Fact>]
+let ``Simple Matrix.map2i. Square where number of cols and rows are not power of two.`` () =
+    let m1 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                3UL<nrows>, 3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (0UL<rowindex>, 2UL<colindex>, 3); (1UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 1UL<colindex>, 5); (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    let m2 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                3UL<nrows>, 3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10); (0UL<rowindex>, 1UL<colindex>, 10); (0UL<rowindex>, 2UL<colindex>, 10); (1UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 10); (1UL<rowindex>, 2UL<colindex>, 10) ]
+            )
+        )
+
+    let f row col x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a * (int row + 1) + b * (int col + 1))
+        | _ -> None
+
+    let actual = Matrix.map2i m1 m2 f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(6UL<nvals>, actual.nvals)
+
+[<Fact>]
+let ``Simple Matrix.map2i. Mixed values.`` () =
+    let m1 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 3) ]
+            )
+        )
+
+    let m2 =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 10); (3UL<rowindex>, 3UL<colindex>, 30) ]
+            )
+        )
+
+    let f row col x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | Some(a), None -> Some(a * 2)
+        | None, Some(b) -> Some(b * 3)
+        | _ -> None
+
+    let actual = Matrix.map2i m1 m2 f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(4UL<nvals>, actual.nvals)
+
+[<Fact>]
 let ``Conversion identity`` () =
     let id = toCoordinateList << fromCoordinateList
 
