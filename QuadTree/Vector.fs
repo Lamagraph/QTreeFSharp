@@ -262,6 +262,47 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
 
+let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
+    let len1 = vector1.length
+
+    let rec inner (pointer: uint64<index>) (size: uint64<storageSize>) vector1 vector2 =
+        match (vector1, vector2) with
+        | Node(x1, x2), Node(y1, y2) ->
+            let halfSize = size / 2UL
+            let t1, nvals1 = inner pointer halfSize x1 y1
+            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2 y2
+            (mkNode t1 t2), nvals1 + nvals2
+        | Node(x1, x2), Leaf(v2) ->
+            let halfSize = size / 2UL
+            let t1, nvals1 = inner pointer halfSize x1 (Leaf(v2))
+            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2 (Leaf(v2))
+            (mkNode t1 t2), nvals1 + nvals2
+        | Leaf(v1), Node(y1, y2) ->
+            let halfSize = size / 2UL
+            let t1, nvals1 = inner pointer halfSize (Leaf(v1)) y1
+            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(v1)) y2
+            (mkNode t1 t2), nvals1 + nvals2
+        | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
+            let res = f pointer v1 v2
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | Leaf(UserValue(v)), Leaf(Dummy) ->
+            let res = f pointer v None
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | Leaf(Dummy), Leaf(UserValue(v)) ->
+            let res = f pointer None v
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
+
+    if len1 = vector2.length then
+        let storage, nvals = inner 0UL<index> vector1.storage.size vector1.storage.data vector2.storage.data
+        SparseVector(len1, nvals, (Storage(vector1.storage.size, storage)))
+    else
+        failwithf "InconsistentSizeOfArguments: %A vs %A" vector1 vector2
+
 
 /// Returns None if index out of range
 let private unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
