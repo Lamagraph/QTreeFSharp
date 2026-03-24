@@ -8,7 +8,7 @@ open Vector
 open Common
 
 
-//[<Fact>]
+[<Fact>]
 let ``Boruvka MST.`` () =
     let graph =
         let clist =
