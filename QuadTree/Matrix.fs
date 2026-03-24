@@ -180,6 +180,54 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     else
         Error Error.InconsistentSizeOfArguments
 
+let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
+    let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix1 matrix2 =
+        match (matrix1, matrix2) with
+        | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) ->
+            let halfSize = size / 2UL
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+            let t1, nvals1 = inner nwR nwC halfSize x1 y1
+            let t2, nvals2 = inner neR neC halfSize x2 y2
+            let t3, nvals3 = inner swR swC halfSize x3 y3
+            let t4, nvals4 = inner seR seC halfSize x4 y4
+            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Node(x1, x2, x3, x4), Leaf(v2) ->
+            let halfSize = size / 2UL
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+            let t1, nvals1 = inner nwR nwC halfSize x1 (Leaf(v2))
+            let t2, nvals2 = inner neR neC halfSize x2 (Leaf(v2))
+            let t3, nvals3 = inner swR swC halfSize x3 (Leaf(v2))
+            let t4, nvals4 = inner seR seC halfSize x4 (Leaf(v2))
+            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Leaf(v1), Node(y1, y2, y3, y4) ->
+            let halfSize = size / 2UL
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+            let t1, nvals1 = inner nwR nwC halfSize (Leaf(v1)) y1
+            let t2, nvals2 = inner neR neC halfSize (Leaf(v1)) y2
+            let t3, nvals3 = inner swR swC halfSize (Leaf(v1)) y3
+            let t4, nvals4 = inner seR seC halfSize (Leaf(v1)) y4
+            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
+            let res = f prow pcol v1 v2
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | Leaf(UserValue(v)), Leaf(Dummy) ->
+            let res = f prow pcol v None
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | Leaf(Dummy), Leaf(UserValue(v)) ->
+            let res = f prow pcol None v
+            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+            Leaf(UserValue(res)), nnz
+        | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
+
+    if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
+        let storage, nvals = inner 0UL<rowindex> 0UL<colindex> matrix1.storage.size matrix1.storage.data matrix2.storage.data
+        SparseMatrix(matrix1.nrows, matrix1.ncols, nvals, (Storage(matrix1.storage.size, storage)))
+    else
+        failwithf "InconsistentSizeOfArguments: %A vs %A" matrix1 matrix2
+
 let foldAssociative (folder: 'T option -> 'T option -> 'T option) (state: 'T option) (matrix: SparseMatrix<'T>) =
     let rec traverse tree (size: uint64<storageSize>) (state: 'T option) =
         match tree with
