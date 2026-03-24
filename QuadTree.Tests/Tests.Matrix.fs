@@ -237,6 +237,66 @@ let ``Simple Matrix.map2i. Mixed values.`` () =
     Assert.Equal(4UL<nvals>, actual.nvals)
 
 [<Fact>]
+let ``Simple Matrix.mapi. Square where number of cols and rows are power of two.`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (1UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    let f row col x =
+        match x with
+        | Some(a) -> Some(a + int row + int col)
+        | _ -> None
+
+    let actual = Matrix.mapi m f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(4UL<nvals>, actual.nvals)
+
+[<Fact>]
+let ``Simple Matrix.mapi. Square where number of cols and rows are not power of two.`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                3UL<nrows>, 3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (0UL<rowindex>, 2UL<colindex>, 3); (1UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 1UL<colindex>, 5); (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    let f row col x =
+        match x with
+        | Some(a) -> Some(a * (int row + 1) * (int col + 1))
+        | _ -> None
+
+    let actual = Matrix.mapi m f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(6UL<nvals>, actual.nvals)
+
+[<Fact>]
+let ``Simple Matrix.mapi. Multiply row index by value.`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            Matrix.CoordinateList(
+                4UL<nrows>, 4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2); (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 3UL<colindex>, 4) ]
+            )
+        )
+
+    let f row col x =
+        match x with
+        | Some(a) -> Some(a * int row)
+        | _ -> None
+
+    let actual = Matrix.mapi m f
+    let actualCL = Matrix.toCoordinateList actual
+
+    Assert.Equal(4UL<nvals>, actual.nvals)
+
+[<Fact>]
 let ``Conversion identity`` () =
     let id = toCoordinateList << fromCoordinateList
 
