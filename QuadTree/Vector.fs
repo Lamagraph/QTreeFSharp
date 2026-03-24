@@ -304,7 +304,7 @@ let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 
 
 /// Returns None if index out of range
-let private unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
+let unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
     let originalIndex = index
     let rec getFromTree (tree : btree<Option<'a>>) (size : uint64<storageSize>) (index : uint64<index>) =
         match tree with 
