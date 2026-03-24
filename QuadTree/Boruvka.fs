@@ -75,12 +75,12 @@ while S not empty do {
 
 return T
 *)
-
+(*
 type Error<'t1, 't2, 't3, 't4> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
     | EdgesCalculationProblem of Vector.Error<'t1, 't2, 't3>
     | CEdgesCalculationProblem of Vector.Error<'t1, 't4, 't4>
-(*
+
 let mst (graph:Matrix.SparseMatrix<_>) =
     let op_add x y =
         match (x, y) with
@@ -97,7 +97,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     //let all_n = Vector.init  length (fun _ ->  Some (uint64 graph.ncols * 1UL<Vector.index>))
     let iota = Vector.init  length (fun i -> Some (uint64 i))
     
-    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) =
+    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
         if graph.nvals > 0UL<nvals> then
 
             let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
@@ -119,11 +119,28 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 | Result.Success(cedges) ->
 
                     let t = Vector.gather cedges parent
-                    let mask = Vector.map2 edges t (fun x y -> match (x,y) with Some v1, Some v2 when v1 = v2 -> Some v1 | _ -> None)
-                    match mask with 
+                    //let mask = Vector.map2 edges t (fun x y -> match (x,y) with Some v1, Some v2 when v1 = v2 -> Some v1 | _ -> None)
+                    let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
+                    let index = Vector.scatter index index parent op_add
+                    match index with 
                     | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
-                    | Result.Success (mask) ->
-                        let index = Vector.map2 iota mask (fun i m -> match m with | Some _ -> )
+                    | Result.Success (index) ->
+                        let index = Vector.gather index parent
+                        
+                        let filter i j = 
+                            let edge = Vector.unsafeGet edges i
+                            match edge with 
+                            | Some(w,_to) -> 
+                                let parent = Vector.unsafeGet parent j
+                                let idx = Vector.unsafeGet index i
+                                match parent,idx with
+                                | Some p, Some idx -> uint64 p = uint64 _to && idx = i
+                                | _ -> false
+                            | None -> false
+
+                        
+
+
                         inner graph
 
                 
