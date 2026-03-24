@@ -231,6 +231,36 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     else
         failwithf "InconsistentSizeOfArguments: %A vs %A" matrix1 matrix2
 
+let mapi (matrix: SparseMatrix<'a>) f =
+    let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix =
+        match matrix with
+        | Node(x1, x2, x3, x4) ->
+            let halfSize = size / 2UL
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+            let t1, nvals1 = inner nwR nwC halfSize x1
+            let t2, nvals2 = inner neR neC halfSize x2
+            let t3, nvals3 = inner swR swC halfSize x3
+            let t4, nvals4 = inner seR seC halfSize x4
+            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            if size = 1UL<storageSize> then
+                let res = f prow pcol v
+                let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+                Leaf(UserValue(res)), nnz
+            else
+                let halfSize = size / 2UL
+                let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+                let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
+                let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
+                let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
+                let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
+                (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+
+    let storage, nvals = inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
+
+    SparseMatrix(matrix.nrows, matrix.ncols, nvals, (Storage(matrix.storage.size, storage)))
+
 let foldAssociative (folder: 'T option -> 'T option -> 'T option) (state: 'T option) (matrix: SparseMatrix<'T>) =
     let rec traverse tree (size: uint64<storageSize>) (state: 'T option) =
         match tree with
