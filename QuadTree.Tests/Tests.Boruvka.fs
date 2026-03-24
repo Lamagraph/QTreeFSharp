@@ -10,6 +10,7 @@ open Common
 
 [<Fact>]
 let ``Boruvka MST.`` () =
+    System.Console.Error.WriteLine("TEST STARTING")
     let graph =
         let clist =
             Matrix.CoordinateList(7UL<nrows>, 7UL<ncols>,[
