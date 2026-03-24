@@ -75,11 +75,12 @@ while S not empty do {
 
 return T
 *)
-(*
+
 type Error<'t1, 't2, 't3, 't4> =
     | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
     | EdgesCalculationProblem of Vector.Error<'t1, 't2, 't3>
     | CEdgesCalculationProblem of Vector.Error<'t1, 't4, 't4>
+    | IndexCalculationProblem of Vector.Error<'t1, 't4, 't4>
 
 let mst (graph:Matrix.SparseMatrix<_>) =
     let op_add x y =
@@ -94,7 +95,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
     let parent = Vector.init  length (fun i -> Some i)
-    //let all_n = Vector.init  length (fun _ ->  Some (uint64 graph.ncols * 1UL<Vector.index>))
     let iota = Vector.init  length (fun i -> Some (uint64 i))
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
@@ -118,16 +118,17 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
                 | Result.Success(cedges) ->
 
-                    let t = Vector.gather cedges parent
-                    //let mask = Vector.map2 edges t (fun x y -> match (x,y) with Some v1, Some v2 when v1 = v2 -> Some v1 | _ -> None)
+                    let t = Vector.gather cedges parent                    
                     let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
                     let index = Vector.scatter index index parent op_add
                     match index with 
-                    | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
+                    | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
                     | Result.Success (index) ->
                         let index = Vector.gather index parent
                         
                         let filter i j = 
+                            let i = uint64 i * 1UL<Vector.index>
+                            let j = uint64 j * 1UL<Vector.index>
                             let edge = Vector.unsafeGet edges i
                             match edge with 
                             | Some(w,_to) -> 
@@ -137,20 +138,28 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                 | Some p, Some idx -> uint64 p = uint64 _to && idx = i
                                 | _ -> false
                             | None -> false
-
+                        
+                        let tree = 
+                            Matrix.map2i tree graph (
+                                fun i j t g -> 
+                                    match (t,g) with
+                                    | Some t, _ -> Some t
+                                    | None, Some g when filter i j -> Some g
+                                    | _ -> None)
                         
 
 
-                        inner graph
+
+                        inner graph tree parent
 
                 
         else
             Result.Success tree
 
-    inner graph
-*)
+    inner graph (Matrix.empty graph.nrows graph.ncols) parent
 
 
+(*
 let mst (graph:Matrix.SparseMatrix<'w>) =
     let n = uint64 graph.nrows
 
@@ -267,3 +276,4 @@ let mst (graph:Matrix.SparseMatrix<'w>) =
     let parentInit = [| for i in 0UL..n-1UL -> i |]
     let rankInit = [| for i in 0UL..n-1UL -> 0UL |]
     inner graph [] parentInit rankInit 0
+*)
