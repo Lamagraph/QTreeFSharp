@@ -94,7 +94,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
     let parent = Vector.init  length (fun i -> Some i)
-    let iota = Vector.init  length (fun i -> Some (uint64 i))
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
         if graph.nvals > 0UL<nvals> then
@@ -119,7 +118,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
 
                     let t = Vector.gather cedges parent                    
                     let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
-                    let index = Vector.scatter index index parent op_add
+                    let index = Vector.scatter index index parent op_min
                     match index with 
                     | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
                     | Result.Success (index) ->
@@ -145,19 +144,44 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                     | Some t, _ -> Some t
                                     | None, Some g when filter i j -> Some g
                                     | _ -> None)
+
+                        // Step 6: Update parent - for each representative i, set parent[partner[i]] = i
+                        // Create vectors for scatter: indices = partner positions, values = i
+                        let _parent = 
+                            Vector.map2i edges index 
+                                (fun i e idx ->
+                                    match e,idx with 
+                                    | Some (v,j), Some (_i) when _i = i ->
+                                         Some (uint64 j * 1UL<Vector.index>,i)
+                                    | _ -> None
+                                )
+
+                        let parentResult = 
+                            Vector.foldValues  _parent (fun state (i,v) -> 
+                                match state with 
+                                | Result.Success state ->
+                                     Vector.update state i (Some v) (fun old _new -> _new)
+                                | Result.Failure x -> Result.Failure x)
+                                (Result.Success parent)
+
                         
-                        let graphFilter i j = 
-                            let i = uint64 i * 1UL<Vector.index>
-                            let j = uint64 j * 1UL<Vector.index>
-                            let parent_i = Vector.unsafeGet parent i
-                            let parent_j = Vector.unsafeGet parent j
-                            match (parent_i, parent_j) with
-                            | Some v1, Some v2 when v1 <> v2 -> true
-                            | _ -> false
+                        match parentResult with
+                        | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
+                        | Result.Success(parent) ->
+                            let parent = Vector.gather parent parent
+                            // Step 7: Filter graph to remove intra-component edges
+                            let graphFilter i j = 
+                                let i = uint64 i * 1UL<Vector.index>
+                                let j = uint64 j * 1UL<Vector.index>
+                                let parent_i = Vector.unsafeGet parent i
+                                let parent_j = Vector.unsafeGet parent j
+                                match (parent_i, parent_j) with
+                                | Some v1, Some v2 when v1 <> v2 -> true
+                                | _ -> false
 
-                        let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
+                            let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
-                        inner graph tree parent
+                            inner graph tree parent
 
                 
         else
