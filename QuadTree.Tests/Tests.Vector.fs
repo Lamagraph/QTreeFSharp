@@ -251,6 +251,82 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
+let ``Simple Vector.map2i. Length is power of two.`` () =
+    let v1 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 2); (2UL<index>, 3); (3UL<index>, 4) ])
+        )
+
+    let v2 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 20); (2UL<index>, 30); (3UL<index>, 40) ])
+        )
+
+    let f idx x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b + int idx)
+        | _ -> None
+
+    let expected =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 11); (1UL<index>, 23); (2UL<index>, 35); (3UL<index>, 47) ])
+        )
+
+    let actual = Vector.map2i v1 v2 f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.map2i. Length is not power of two.`` () =
+    let v1 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 2); (2UL<index>, 3); (3UL<index>, 4); (4UL<index>, 5); (5UL<index>, 6) ])
+        )
+
+    let v2 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 10); (2UL<index>, 10); (3UL<index>, 10); (4UL<index>, 10); (5UL<index>, 10) ])
+        )
+
+    let f idx x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a * int idx + b)
+        | _ -> None
+
+    let expected =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 12); (2UL<index>, 16); (3UL<index>, 22); (4UL<index>, 30); (5UL<index>, 40) ])
+        )
+
+    let actual = Vector.map2i v1 v2 f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.map2i. Mixed values.`` () =
+    let v1 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 1); (2UL<index>, 3) ])
+        )
+
+    let v2 =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(4UL<dataLength>, [ (1UL<index>, 10); (3UL<index>, 30) ])
+        )
+
+    let f idx x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | Some(a), None -> Some(a * 2)
+        | None, Some(b) -> Some(b * 3)
+        | _ -> None
+
+    let actual = Vector.map2i v1 v2 f
+    let actualCL = Vector.toCoordinateList actual
+
+    Assert.Equal(4UL<nvals>, actual.nvals)
+
+[<Fact>]
 let ``Conversion identity`` () =
     let id = toCoordinateList << fromCoordinateList
 
