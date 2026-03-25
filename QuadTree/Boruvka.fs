@@ -41,17 +41,15 @@ let mst (graph:Matrix.SparseMatrix<_>) =
         Some(w,row)
     
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
+    printfn "Length = %A" length
     let parent = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
         printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
         printfn "=== Graph ==="
         printMatrixCoordinate graph
-        if iteration < 2 then
-            printfn "Parent at start of iter %d:" iteration
-            for i in 0UL..6UL do
-                let p = Vector.unsafeGet parent (i * 1UL<Vector.index>)
-                printfn "  parent[%d]=%A" i p
+        printfn "Parent at start of iter %d:" iteration
+        printVector parent
         if graph.nvals > 0UL<nvals> then
 
             let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph            
@@ -122,9 +120,12 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                     match e,idx with 
                                     | Some (v,j), Some (_i) when _i = i ->
                                         let j = uint64 j * 1UL<Vector.index>
-                                        let parent = Vector.unsafeGet parent (min j i)
-                                        match parent with 
-                                        | Some p -> Some (max j i, p)
+                                        let parent_i = Vector.unsafeGet parent i
+                                        let parent_j = Vector.unsafeGet parent j
+                                        match parent_i,parent_j with 
+                                        | Some p_i, Some p_j -> 
+                                            if p_i < p_j then Some (j, p_i) else Some (i, p_j)
+                                            //Some (max k p, min k p)
                                         | x -> failwithf "Unreachable: %A" x
                                     | _ -> None
                                 )
