@@ -8,7 +8,7 @@ open Vector
 open Common
 
 
-//[<Fact>]
+[<Fact>]
 let ``Boruvka MST simple triangle.`` () =
     System.Console.Error.WriteLine("TEST STARTING")
     let graph =
@@ -55,7 +55,7 @@ let ``Boruvka MST simple triangle.`` () =
     | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
 
 
-//[<Fact>]
+[<Fact>]
 let ``Boruvka MST simple square.`` () =
     System.Console.Error.WriteLine("TEST STARTING")
     let graph =
@@ -110,7 +110,7 @@ let ``Boruvka MST simple square.`` () =
 
 
 
-//[<Fact>]
+[<Fact>]
 let ``Boruvka MST simple square in two steps.`` () =
     System.Console.Error.WriteLine("TEST STARTING")
     let graph =
