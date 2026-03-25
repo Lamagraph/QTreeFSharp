@@ -15,6 +15,16 @@ let printMatrix (matrix: SparseMatrix<_>) =
     printfn "      size: %A" matrix.storage.size
     printfn "      Data: %A" matrix.storage.data
 
+let printMatrixCoordinate (matrix: SparseMatrix<_>) =
+    printfn "Matrix:"
+    printfn "   Rows: %A" matrix.nrows
+    printfn "   Columns: %A" matrix.ncols
+    printfn "   Nvals: %A" matrix.nvals
+    printfn "   Storage:"
+    printfn "      size: %A" matrix.storage.size
+    printfn "      Data: %A" (Matrix.toCoordinateList matrix).list
+
+
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
 let leaf_d () = qtree.Leaf Dummy
