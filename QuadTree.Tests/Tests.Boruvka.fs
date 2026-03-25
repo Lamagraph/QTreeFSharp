@@ -77,7 +77,15 @@ let ``Boruvka MST.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    let actual = Graph.Boruvka.mst graph
+    //let actual = 
+    match Graph.Boruvka.mst graph with 
+    | Result.Success tree -> 
+        let tree_transposed = Matrix.transpose tree
+        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
+        Assert.Equal(expected, actual)
+        //actual
+        //|> Result.Success
+    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
 
-    Assert.Equal(expected, actual)
+    
 
