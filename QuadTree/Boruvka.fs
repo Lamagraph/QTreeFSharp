@@ -28,7 +28,12 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     let parent = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
-        eprintfn "Iter %d: graph=%A, tree=%A" iteration graph.nvals tree.nvals
+        eprintfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
+        if iteration < 2 then
+            eprintfn "Parent at start:"
+            for i in 0UL..6UL do
+                let p = Vector.unsafeGet parent (i * 1UL<Vector.index>)
+                eprintfn "  parent[%d]=%A" i p
         if graph.nvals > 0UL<nvals> then
 
             let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
@@ -86,6 +91,8 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         let getPartnerIdx i =
                             let idxVal = Vector.unsafeGet index i
                             let edgeVal = Vector.unsafeGet edges i
+                            if iteration < 2 then
+                                eprintfn "  getPartnerIdx %d: idxVal=%A, edgeVal=%A" i idxVal edgeVal
                             match (idxVal, edgeVal) with
                             | Some idx', Some(weight, parentSource) when idx' = i -> 
                                 Some(uint64 parentSource * 1UL<Vector.index>)
@@ -94,7 +101,12 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         let scatterIndices: Vector.SparseVector<uint64<Vector.index>> = Vector.init length getPartnerIdx
                         let scatterValues: Vector.SparseVector<uint64<Vector.index>> = Vector.init length (fun i -> Some i)
                         
-                        let parentResult = Vector.scatter parent scatterIndices scatterValues (fun old newVal -> newVal)
+                        let parentResult = Vector.scatter parent scatterIndices scatterValues (fun old newVal -> 
+                            match old, newVal with
+                            | Some o, Some n -> if o < n then Some o else Some n
+                            | Some o, None -> Some o
+                            | None, Some n -> Some n
+                            | _ -> None)
                         
                         match parentResult with
                         | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
