@@ -562,4 +562,21 @@ let ``Sort sorted vector``() =
     let actual = Vector.mergeSort data compare
     Assert.Equal(data, actual)
 
+
+[<Fact>]    
+let ``Init vector``() =
+    let expected = 
+        Vector.CoordinateList(
+                3UL<dataLength>,
+                [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2)
+                  ]
+        )
+        |> Vector.fromCoordinateList
+    let actual = Vector.init 3UL<dataLength> (fun i -> Some (int i))
+    //printfn "++++ Vector inint ++++"
+    //printVector actual
+    Assert.Equal(expected, actual)
+
+
+
     
