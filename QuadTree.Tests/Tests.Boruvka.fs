@@ -246,4 +246,125 @@ let ``Boruvka MST.`` () =
     | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
 
     
+[<Fact>]
+let ``Boruvka MST big.`` () =
+    System.Console.Error.WriteLine("TEST STARTING")
+    let graph =
+        let clist =
+            Matrix.CoordinateList(12UL<nrows>, 12UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 1UL
+                1UL<rowindex>, 0UL<colindex>, 1UL
+
+                1UL<rowindex>, 11UL<colindex>, 1UL
+                11UL<rowindex>, 1UL<colindex>, 1UL
+
+                0UL<rowindex>, 11UL<colindex>, 1UL
+                11UL<rowindex>, 0UL<colindex>, 1UL
+//=================================================
+                2UL<rowindex>, 3UL<colindex>, 1UL
+                3UL<rowindex>, 2UL<colindex>, 1UL
+
+                3UL<rowindex>, 4UL<colindex>, 1UL
+                4UL<rowindex>, 3UL<colindex>, 1UL
+
+                2UL<rowindex>, 4UL<colindex>, 1UL
+                4UL<rowindex>, 2UL<colindex>, 1UL
+//=================================================
+                5UL<rowindex>, 6UL<colindex>, 1UL
+                6UL<rowindex>, 5UL<colindex>, 1UL
+
+                6UL<rowindex>, 7UL<colindex>, 1UL
+                7UL<rowindex>, 6UL<colindex>, 1UL
+
+                5UL<rowindex>, 7UL<colindex>, 1UL
+                7UL<rowindex>, 5UL<colindex>, 1UL
+//=================================================
+                8UL<rowindex>, 9UL<colindex>, 1UL
+                9UL<rowindex>, 8UL<colindex>, 1UL
+
+                9UL<rowindex>, 10UL<colindex>, 1UL
+                10UL<rowindex>, 9UL<colindex>, 1UL
+
+                8UL<rowindex>, 10UL<colindex>, 1UL
+                10UL<rowindex>, 8UL<colindex>, 1UL
+//================================================
+//================================================
+                1UL<rowindex>, 2UL<colindex>, 2UL
+                2UL<rowindex>, 1UL<colindex>, 2UL
+
+                11UL<rowindex>, 4UL<colindex>, 2UL
+                4UL<rowindex>, 11UL<colindex>, 2UL
+
+                10UL<rowindex>, 5UL<colindex>, 2UL
+                5UL<rowindex>, 10UL<colindex>, 2UL
+
+                8UL<rowindex>, 7UL<colindex>, 2UL
+                7UL<rowindex>, 8UL<colindex>, 2UL
+//================================================
+//================================================
+                10UL<rowindex>, 11UL<colindex>, 3UL
+                11UL<rowindex>, 10UL<colindex>, 3UL
+
+                5UL<rowindex>, 4UL<colindex>, 3UL
+                4UL<rowindex>, 5UL<colindex>, 3UL
+
+                ])
+
+        Matrix.fromCoordinateList clist
+
+    
+    let expected =
+        let clist =
+            Matrix.CoordinateList(12UL<nrows>, 12UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 1UL
+                1UL<rowindex>, 0UL<colindex>, 1UL
+
+                0UL<rowindex>, 11UL<colindex>, 1UL
+                11UL<rowindex>, 0UL<colindex>, 1UL
+
+                2UL<rowindex>, 3UL<colindex>, 1UL
+                3UL<rowindex>, 2UL<colindex>, 1UL
+
+                2UL<rowindex>, 4UL<colindex>, 1UL
+                4UL<rowindex>, 2UL<colindex>, 1UL
+
+                5UL<rowindex>, 6UL<colindex>, 1UL
+                6UL<rowindex>, 5UL<colindex>, 1UL
+
+                5UL<rowindex>, 7UL<colindex>, 1UL
+                7UL<rowindex>, 5UL<colindex>, 1UL
+
+                8UL<rowindex>, 9UL<colindex>, 1UL
+                9UL<rowindex>, 8UL<colindex>, 1UL
+
+                8UL<rowindex>, 10UL<colindex>, 1UL
+                10UL<rowindex>, 8UL<colindex>, 1UL
+
+                1UL<rowindex>, 2UL<colindex>, 2UL
+                2UL<rowindex>, 1UL<colindex>, 2UL
+
+                5UL<rowindex>, 10UL<colindex>, 2UL
+                10UL<rowindex>, 5UL<colindex>, 2UL
+
+                4UL<rowindex>, 5UL<colindex>, 3UL
+                5UL<rowindex>, 4UL<colindex>, 3UL
+
+                ])
+
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    //let actual = 
+    match Graph.Boruvka.mst graph with 
+    | Result.Success tree -> 
+        let tree_transposed = Matrix.transpose tree
+        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
+        match actual with 
+        | Result.Success actual -> Tests.printMatrixCoordinate actual
+        | _ -> printfn "Failed"
+        Assert.Equal(expected, actual)
+    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+
+    
+
 
