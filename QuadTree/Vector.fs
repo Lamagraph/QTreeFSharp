@@ -384,7 +384,9 @@ let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVect
     | Result.Success pv -> 
         foldValues pv (fun state (idx, v) -> 
             match state with 
-            | Result.Success state -> update state idx (Some v) op
+            | Result.Success state -> 
+                //printfn "IDX = %A" idx
+                update state idx (Some v) op
             | Result.Failure x -> Result.Failure x)
          (Result.Success w)
     | Result.Failure x -> Result.Failure <| ScatterError x

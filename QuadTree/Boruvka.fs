@@ -2,21 +2,42 @@ module Graph.Boruvka
 
 open Common
 
+
+let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
+    printfn "Matrix:"
+    printfn "   Rows: %A" matrix.nrows
+    printfn "   Columns: %A" matrix.ncols
+    printfn "   Nvals: %A" matrix.nvals
+    printfn "   Storage:"
+    printfn "      size: %A" matrix.storage.size
+    printfn "      Data: %A" (Matrix.toCoordinateList matrix).list
+
+let printVector (vector: Vector.SparseVector<_>) =
+    printfn "Vector:"
+    printfn "   Length: %A" vector.length
+    printfn "   Nvals: %A" vector.nvals
+    printfn "   Storage:"
+    printfn "      Size: %A" vector.storage.size
+    printfn "      Data: %A" (Vector.toCoordinateList vector).data
+
+
+
 type Error<'t1, 't2, 't3, 't4, 't5, 't6, 't7, 't8, 't9, 't10, 't11, 't12> =    
     | EdgesCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't3>
     | CEdgesCalculationProblem of Vector.Error<'t4, 't5, 't6>
     | IndexCalculationProblem of Vector.Error<'t7, 't8, 't9>
 
 let mst (graph:Matrix.SparseMatrix<_>) =
-    eprintfn "MST CALLED nrows=%A ncols=%A nvals=%A" graph.nrows graph.ncols graph.nvals
+    printfn "MST CALLED nrows=%A ncols=%A nvals=%A" graph.nrows graph.ncols graph.nvals
     
     let op_add x y =
         match (x, y) with
         | Some(a, pa), Some(b, pb) -> 
-            if a < b then Some(a, pa)
+            Some (min (a,pa) (b,pb))
+           (* if a < b then Some(a, pa) 
             elif b < a then Some(b, pb)
             elif pa <= pb then Some(a, pa)
-            else Some(b, pb)
+            else Some(b, pb)*)
         | Some(a, pa), _ -> Some(a, pa)
         | _, Some(b, pb) -> Some(b, pb)
         | _ -> None
@@ -28,19 +49,23 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     let parent = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
-        eprintfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
+        printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
+        printfn "=== Graph ==="
+        printMatrixCoordinate graph
         if iteration < 2 then
-            eprintfn "Parent at start:"
+            printfn "Parent at start of iter %d:" iteration
             for i in 0UL..6UL do
                 let p = Vector.unsafeGet parent (i * 1UL<Vector.index>)
-                eprintfn "  parent[%d]=%A" i p
+                printfn "  parent[%d]=%A" i p
         if graph.nvals > 0UL<nvals> then
 
-            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
-            
+            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph            
             match edges with
             | Result.Failure(e) -> Result.Failure(EdgesCalculationProblem(e))
             | Result.Success(edges) ->
+                printfn "=== Edges ==="
+                printVector edges 
+
                 let op_min x y =
                     match (x, y) with
                     | Some v, Some u -> if v < u then Some v else None
@@ -54,6 +79,8 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 match cedges with
                 | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
                 | Result.Success(cedges) ->
+                    printfn "=== Component Edges ==="
+                    printVector cedges
 
                     let t = Vector.gather cedges parent                    
                     let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
@@ -61,30 +88,50 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                     match index with 
                     | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
                     | Result.Success (index) ->
+                        //printfn "=== Index ==="
+                        //printVector index
                         let index = Vector.gather index parent
-                        
+                        printfn "=== Index 2 ==="
+                        printVector index
                         // Use compressed parent for filter
-                        let parentCompressed = Vector.gather parent parent
+                        //let parentCompressed = Vector.gather parent parent
+                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
+                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
+                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
+                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
+                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
                         
+                        printfn "=== parent ==="
+                        printVector parent
+
+
                         // edges[i] = (w, parent[source]) for minimum edge source -> i
                         // index[i] = i if i is a representative  
-                        let filter i j = 
+                        // Filter: add edge (i,j) only if i is rep AND j = src AND j is in DIFFERENT component than i
+                        let filter i j g = 
                             let i = uint64 i * 1UL<Vector.index>
                             let j = uint64 j * 1UL<Vector.index>
+                            printfn "Edge for filter: %A %A %A" i j g
                             let edge = Vector.unsafeGet edges i
                             let idx = Vector.unsafeGet index i
-                            let parentJ = Vector.unsafeGet parentCompressed j
-                            match edge, idx, parentJ with 
-                            | Some(w, parentSource), Some idxVal, Some pj -> 
-                                uint64 idxVal = uint64 i && uint64 parentSource <> uint64 i && uint64 pj = uint64 parentSource
-                            | _ -> false
+                            let parent_j = Vector.unsafeGet parent j
+                            let result = 
+                                match edge, idx, parent_j with 
+                                | Some(w, dst), Some idxVal, Some pi -> 
+                                    // i is rep (parent[i]=i), source != i, j = src
+                                    //(uint64 pi) = (uint64 i) && (uint64 src) <> (uint64 i) && (uint64 j) = (uint64 src)
+                                    g = w && idxVal = i && uint64 dst = uint64 j
+                                | _ -> false
+                            if result then
+                                printfn "TREE FILTER iter %d: edge (%d,%d) -> tree" iteration (i/1UL<Vector.index>) (j/1UL<Vector.index>)
+                            result
                         
                         let tree = 
                             Matrix.map2i tree graph (
                                 fun i j t g -> 
                                     match (t,g) with
                                     | Some t, _ -> Some t
-                                    | None, Some g when filter i j -> Some g
+                                    | None, Some g when filter i j g -> Some g
                                     | _ -> None)
 
                         // Step 6: Update parent
@@ -92,7 +139,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                             let idxVal = Vector.unsafeGet index i
                             let edgeVal = Vector.unsafeGet edges i
                             if iteration < 2 then
-                                eprintfn "  getPartnerIdx %d: idxVal=%A, edgeVal=%A" i idxVal edgeVal
+                                printfn "  getPartnerIdx %d: idxVal=%A, edgeVal=%A" i idxVal edgeVal
                             match (idxVal, edgeVal) with
                             | Some idx', Some(weight, parentSource) when idx' = i -> 
                                 Some(uint64 parentSource * 1UL<Vector.index>)
@@ -111,41 +158,45 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         match parentResult with
                         | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
                         | Result.Success(parent) ->
-                            // Path compression: gather multiple times
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            let parent = Vector.gather parent parent
-                            
-                            // Step 7: Filter graph to remove intra-component edges
-                            // First do MORE compressions to get actual roots
-                            let rec compress p iter =
-                                if iter > 20 then p else
+                            // Path compression: fix-point iteration using vector length
+                            let vecLength = uint64 parent.length
+                            let rec fixPoint p iter =
                                 let p2 = Vector.gather p p
-                                compress p2 (iter + 1)
-                            let parentForFilter = compress parent 0
+                                // Check if p changed by comparing all values
+                                let rec changed i =
+                                    if i >= vecLength then false
+                                    else
+                                        let v1 = Vector.unsafeGet p (i * 1UL<Vector.index>)
+                                        let v2 = Vector.unsafeGet p2 (i * 1UL<Vector.index>)
+                                        if v1 <> v2 then true
+                                        else changed (i + 1UL)
+                                let isChanged = changed 0UL
+                                if isChanged then 
+                                    if iter > 20 then p2  // Safety limit
+                                    else fixPoint p2 (iter + 1)
+                                else p2
+                            let parent = fixPoint parent 0
+                            let parentForFilter = fixPoint parent 0
                             
                             // Debug: print parent for filtering
                             if iteration < 2 then
-                                eprintfn "Step7 parent for filtering:"
+                                printfn "Step7 parent for filtering:"
                                 for i in [0UL;1UL;2UL;3UL;4UL;5UL;6UL] do
                                     let p = Vector.unsafeGet parentForFilter (i * 1UL<Vector.index>)
-                                    eprintfn "  parent[%d]=%A" i p
+                                    printfn "  parent[%d]=%A" i p
                             
                             let graphFilter i j = 
                                 let i = uint64 i * 1UL<Vector.index>
                                 let j = uint64 j * 1UL<Vector.index>
                                 let parent_i = Vector.unsafeGet parentForFilter i
                                 let parent_j = Vector.unsafeGet parentForFilter j
-                                match (parent_i, parent_j) with
-                                | Some v1, Some v2 when v1 <> v2 -> true
-                                | _ -> false
+                                let result = 
+                                    match (parent_i, parent_j) with
+                                    | Some v1, Some v2 when v1 <> v2 -> true
+                                    | _ -> false
+                                if iteration < 2 && result then
+                                    printfn "GRAPH FILTER iter %d: keep edge (%d,%d)" iteration (i/1UL<Vector.index>) (j/1UL<Vector.index>)
+                                result
 
                             let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
