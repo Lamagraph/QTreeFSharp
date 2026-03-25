@@ -7,15 +7,13 @@ open Matrix
 open Vector
 open Common
 
-let printResult name mstResult =
-    match mstResult with 
+let checkResult name actual expected =
+    match actual with 
     | Result.Success tree -> 
         let tree_transposed = Matrix.transpose tree
-        let combined = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match combined with 
-        | Result.Success c -> Tests.printMatrixCoordinate c
-        | _ -> printfn "Failed to combine"
-    | Result.Failure e -> printfn "MST failed: %A" e
+        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
+        Assert.Equal(expected, actual)
+    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
 
 [<Fact>]
 let ``Boruvka MST 2 nodes.`` () =
@@ -28,8 +26,16 @@ let ``Boruvka MST 2 nodes.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "2 nodes" (Graph.Boruvka.mst graph)
-    Assert.True(true)
+    let expected =
+        let clist =
+            Matrix.CoordinateList(2UL<nrows>, 2UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 5UL
+                1UL<rowindex>, 0UL<colindex>, 5UL
+                ])
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 [<Fact>]
@@ -45,8 +51,19 @@ let ``Boruvka MST 3 nodes line.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "3 nodes line" (Graph.Boruvka.mst graph)
-    Assert.True(true)
+    let expected =
+        let clist =
+            Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 1UL
+                1UL<rowindex>, 0UL<colindex>, 1UL
+                1UL<rowindex>, 2UL<colindex>, 2UL
+                2UL<rowindex>, 1UL<colindex>, 2UL
+                ])
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    checkResult (Graph.Boruvka.mst graph) expected
+
 
 
 [<Fact>]
@@ -64,8 +81,20 @@ let ``Boruvka MST 4 nodes line.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "4 nodes line" (Graph.Boruvka.mst graph)
-    Assert.True(true)
+    let expected =
+        let clist =
+            Matrix.CoordinateList(4UL<nrows>, 4UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 1UL
+                1UL<rowindex>, 0UL<colindex>, 1UL
+                1UL<rowindex>, 2UL<colindex>, 2UL
+                2UL<rowindex>, 1UL<colindex>, 2UL
+                2UL<rowindex>, 3UL<colindex>, 3UL
+                3UL<rowindex>, 2UL<colindex>, 3UL
+                ])
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 [<Fact>]
@@ -85,8 +114,22 @@ let ``Boruvka MST 5 nodes line.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "5 nodes line" (Graph.Boruvka.mst graph)
-    Assert.True(true)
+    let expected =
+        let clist =
+            Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 1UL
+                1UL<rowindex>, 0UL<colindex>, 1UL
+                1UL<rowindex>, 2UL<colindex>, 2UL
+                2UL<rowindex>, 1UL<colindex>, 2UL
+                2UL<rowindex>, 3UL<colindex>, 3UL
+                3UL<rowindex>, 2UL<colindex>, 3UL
+                3UL<rowindex>, 4UL<colindex>, 4UL
+                4UL<rowindex>, 3UL<colindex>, 4UL
+                ])
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 [<Fact>]
@@ -106,8 +149,22 @@ let ``Boruvka MST 5 nodes star.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "5 nodes star" (Graph.Boruvka.mst graph)
-    Assert.True(true)
+    let expected =
+        let clist =
+            Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>,[
+                0UL<rowindex>, 1UL<colindex>, 5UL
+                1UL<rowindex>, 0UL<colindex>, 5UL
+                0UL<rowindex>, 2UL<colindex>, 4UL
+                2UL<rowindex>, 0UL<colindex>, 4UL
+                0UL<rowindex>, 3UL<colindex>, 3UL
+                3UL<rowindex>, 0UL<colindex>, 3UL
+                0UL<rowindex>, 4UL<colindex>, 2UL
+                4UL<rowindex>, 0UL<colindex>, 2UL
+                ])
+        Matrix.fromCoordinateList clist
+        |> Result.Success
+
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 [<Fact>]
@@ -139,7 +196,7 @@ let ``Boruvka MST 5 nodes complete.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "5 nodes complete" (Graph.Boruvka.mst graph)
+    //printResult "5 nodes complete" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 
@@ -166,7 +223,7 @@ let ``Boruvka MST two components.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "two components" (Graph.Boruvka.mst graph)
+    //printResult "two components" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 
@@ -191,7 +248,7 @@ let ``Boruvka MST cycle graph 6 nodes.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "cycle 6" (Graph.Boruvka.mst graph)
+    //printResult "cycle 6" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 ///!!!!!!!!
@@ -231,7 +288,7 @@ let ``Boruvka MST complete bipartite K3,3.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "K3,3" (Graph.Boruvka.mst graph)
+    //printResult "K3,3" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 [<Fact>]
@@ -270,7 +327,7 @@ let ``Boruvka MST random weights.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "random weights" (Graph.Boruvka.mst graph)
+   // printResult "random weights" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 [<Fact>]
@@ -305,7 +362,7 @@ let ``Boruvka MST 8 nodes grid.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "8 nodes grid" (Graph.Boruvka.mst graph)
+    //printResult "8 nodes grid" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 [<Fact>]
@@ -343,7 +400,7 @@ let ``Boruvka MST 10 nodes random.`` () =
                 ])
         Matrix.fromCoordinateList clist
 
-    printResult "10 nodes" (Graph.Boruvka.mst graph)
+    //printResult "10 nodes" (Graph.Boruvka.mst graph)
     Assert.True(true)
 
 
@@ -380,18 +437,7 @@ let ``Boruvka MST simple triangle.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    //let actual = 
-    match Graph.Boruvka.mst graph with 
-    | Result.Success tree -> 
-        let tree_transposed = Matrix.transpose tree
-        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match actual with 
-        | Result.Success actual -> Tests.printMatrixCoordinate actual
-        | _ -> printfn "Failed"
-        Assert.Equal(expected, actual)
-        //actual
-        //|> Result.Success
-    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 [<Fact>]
@@ -433,18 +479,7 @@ let ``Boruvka MST simple square.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    //let actual = 
-    match Graph.Boruvka.mst graph with 
-    | Result.Success tree -> 
-        let tree_transposed = Matrix.transpose tree
-        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match actual with 
-        | Result.Success actual -> Tests.printMatrixCoordinate actual
-        | _ -> printfn "Failed"
-        Assert.Equal(expected, actual)
-        //actual
-        //|> Result.Success
-    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 
@@ -488,18 +523,7 @@ let ``Boruvka MST simple square in two steps.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    //let actual = 
-    match Graph.Boruvka.mst graph with 
-    | Result.Success tree -> 
-        let tree_transposed = Matrix.transpose tree
-        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match actual with 
-        | Result.Success actual -> Tests.printMatrixCoordinate actual
-        | _ -> printfn "Failed"
-        Assert.Equal(expected, actual)
-        //actual
-        //|> Result.Success
-    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+    checkResult (Graph.Boruvka.mst graph) expected
 
 
 
@@ -573,16 +597,7 @@ let ``Boruvka MST.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    //let actual = 
-    match Graph.Boruvka.mst graph with 
-    | Result.Success tree -> 
-        let tree_transposed = Matrix.transpose tree
-        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match actual with 
-        | Result.Success actual -> Tests.printMatrixCoordinate actual
-        | _ -> printfn "Failed"
-        Assert.Equal(expected, actual)
-    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+    checkResult (Graph.Boruvka.mst graph) expected
 
     
 [<Fact>]
@@ -693,16 +708,7 @@ let ``Boruvka MST big.`` () =
         Matrix.fromCoordinateList clist
         |> Result.Success
 
-    //let actual = 
-    match Graph.Boruvka.mst graph with 
-    | Result.Success tree -> 
-        let tree_transposed = Matrix.transpose tree
-        let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
-        match actual with 
-        | Result.Success actual -> Tests.printMatrixCoordinate actual
-        | _ -> printfn "Failed"
-        Assert.Equal(expected, actual)
-    | x -> Assert.Fail (sprintf "Boruvka failed: %A" x)
+    checkResult (Graph.Boruvka.mst graph) expected
 
     
 
