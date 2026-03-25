@@ -20,8 +20,6 @@ let printVector (vector: Vector.SparseVector<_>) =
     printfn "      Size: %A" vector.storage.size
     printfn "      Data: %A" (Vector.toCoordinateList vector).data
 
-
-
 type Error<'t1, 't2, 't3, 't4, 't5, 't6, 't7, 't8, 't9, 't10, 't11, 't12> =    
     | EdgesCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't3>
     | CEdgesCalculationProblem of Vector.Error<'t4, 't5, 't6>
@@ -35,16 +33,12 @@ let mst (graph:Matrix.SparseMatrix<_>) =
         match (x, y) with
         | Some(a, pa), Some(b, pb) -> 
             Some (min (a,pa) (b,pb))
-           (* if a < b then Some(a, pa) 
-            elif b < a then Some(b, pb)
-            elif pa <= pb then Some(a, pa)
-            else Some(b, pb)*)
         | Some(a, pa), _ -> Some(a, pa)
         | _, Some(b, pb) -> Some(b, pb)
         | _ -> None
 
     let op_mult (i,x) (row,col,w) =
-        Some(w,row)  // Store source vertex
+        Some(w,row)
     
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
     let parent = Vector.init length (fun i -> Some i)
@@ -94,21 +88,10 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         let index = Vector.gather index parent
                         printfn "=== Index 2 ==="
                         printVector index
-                        // Use compressed parent for filter
-                        //let parentCompressed = Vector.gather parent parent
-                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
-                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
-                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
-                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
-                        //let parentCompressed = Vector.gather parentCompressed parentCompressed
                         
                         printfn "=== parent ==="
                         printVector parent
 
-
-                        // edges[i] = (w, parent[source]) for minimum edge source -> i
-                        // index[i] = i if i is a representative  
-                        // Filter: add edge (i,j) only if i is rep AND j = src AND j is in DIFFERENT component than i
                         let filter i j g = 
                             let i = uint64 i * 1UL<Vector.index>
                             let j = uint64 j * 1UL<Vector.index>
@@ -119,8 +102,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                             let result = 
                                 match edge, idx, parent_j with 
                                 | Some(w, dst), Some idxVal, Some pi -> 
-                                    // i is rep (parent[i]=i), source != i, j = src
-                                    //(uint64 pi) = (uint64 i) && (uint64 src) <> (uint64 i) && (uint64 j) = (uint64 src)
                                     g = w && idxVal = i && uint64 dst = uint64 j
                                 | _ -> false
                             if result then
@@ -135,28 +116,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                     | None, Some g when filter i j g -> Some g
                                     | _ -> None)
 
-                        // Step 6: Update parent
-                        (*
-                        let getPartnerIdx i =
-                            let idxVal = Vector.unsafeGet index i
-                            let edgeVal = Vector.unsafeGet edges i
-                            if iteration < 2 then
-                                printfn "  getPartnerIdx %d: idxVal=%A, edgeVal=%A" i idxVal edgeVal
-                            match (idxVal, edgeVal) with
-                            | Some idx', Some(weight, parentSource) when idx' = i -> 
-                                Some(uint64 parentSource * 1UL<Vector.index>)
-                            | _ -> None
-                        
-                        let scatterIndices: Vector.SparseVector<uint64<Vector.index>> = Vector.init length getPartnerIdx
-                        let scatterValues: Vector.SparseVector<uint64<Vector.index>> = Vector.init length (fun i -> Some i)
-                        
-                        let parentResult = Vector.scatter parent scatterIndices scatterValues (fun old newVal -> 
-                            match old, newVal with
-                            | Some o, Some n -> if o < n then Some o else Some n
-                            | Some o, None -> Some o
-                            | None, Some n -> Some n
-                            | _ -> None)
-                        *)
                         let _parent = 
                             Vector.map2i edges index 
                                 (fun i e idx ->
@@ -186,8 +145,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         | Result.Success(__parent) ->
                             printfn "=== parentResult ==="
                             printVector __parent
-                            // Path compression: fix-point iteration using vector length
-                            let vecLength = uint64 parent.length
+                            // Path compression: fix-point iteration using vector length                            
                             let rec fixPoint p iter =
                                 let p2 = Vector.gather p p
                                 if p2 = p then p else fixPoint p2 1
