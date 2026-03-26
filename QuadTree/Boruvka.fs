@@ -75,7 +75,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                     printfn "=== Component Edges ==="
                     printVector cedges
 
-                    let t = Vector.gather cedges parent                    
+                    let t = Vector.gather cedges parent
                     let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
                     let index = Vector.scatter (Vector.empty length) index parent op_min
                     match index with 
@@ -93,7 +93,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         let filter i j g = 
                             let i = uint64 i * 1UL<Vector.index>
                             let j = uint64 j * 1UL<Vector.index>
-                            printfn "Edge for filter: %A %A %A" i j g
                             let edge = Vector.unsafeGet edges i
                             let idx = Vector.unsafeGet index i
                             let parent_j = Vector.unsafeGet parent j
@@ -125,7 +124,6 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                         match parent_i,parent_j with 
                                         | Some p_i, Some p_j -> 
                                             if p_i < p_j then Some (j, p_i) else Some (i, p_j)
-                                            //Some (max k p, min k p)
                                         | x -> failwithf "Unreachable: %A" x
                                     | _ -> None
                                 )
@@ -147,22 +145,22 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                             printfn "=== parentResult ==="
                             printVector __parent
                             // Path compression: fix-point iteration using vector length                            
-                            let rec fixPoint p iter =
+                            let rec fixPoint p =
                                 let p2 = Vector.gather p p
-                                if p2 = p then p else fixPoint p2 1
+                                if p2 = p then p else fixPoint p2
                             let op_min x y =
                                 match (x, y) with
                                 | Some v, Some u -> if v < u then Some v else Some u
                                 | Some v, _ -> Some v
                                 | None, Some v -> Some v
                                 | _ -> None
-                            let parent = Vector.scatter parent __parent parent op_min                            
+                            let parent = Vector.scatter parent __parent parent op_min
                             match parent with 
                             | Result.Failure x -> ScatterProblem x |> Result.Failure
                             | Result.Success parent -> 
                                 printfn "=== parent' ==="
                                 printVector parent
-                                let parent = fixPoint parent 0
+                                let parent = fixPoint parent
                                 
                                 printfn "=== Parent for filter ==="
                                 printVector parent
