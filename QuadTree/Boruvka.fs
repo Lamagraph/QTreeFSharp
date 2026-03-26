@@ -5,48 +5,26 @@ open Common
 
 let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
     printfn "Matrix:"
-    //printfn "   Rows: %A" matrix.nrows
-    //printfn "   Columns: %A" matrix.ncols
     printfn "   Nvals: %A" matrix.nvals
-    //printfn "   Storage:"
-    //printfn "      size: %A" matrix.storage.size
     printfn "   Data: %A" (Matrix.toCoordinateList matrix).list
 
 let printVector (vector: Vector.SparseVector<_>) =
     printfn "Vector:"
-    //printfn "   Length: %A" vector.length
     printfn "   Nvals: %A" vector.nvals
-    //printfn "   Storage:"
-    //printfn "      Size: %A" vector.storage.size
     printfn "   Data: %A" (Vector.toCoordinateList vector).data
 
 let mst (graph:Matrix.SparseMatrix<_>) =
 
-    let op_add x y =
-        match (x, y) with
-        | Some(a, pa), Some(b, pb) -> 
-            Some (min (a,pa) (b,pb))
-        | Some(a, pa), _ -> Some(a, pa)
-        | _, Some(b, pb) -> Some(b, pb)
-        | _ -> None
-
     let op_mult (i,x) (row,col,w) =
         Some(w,row)
 
-    let op_min x y =
+    let op_min x y = 
         match (x, y) with
-        | Some v, Some u -> if v < u then Some v else Some u //None
+        | Some v, Some u -> Some (min v u) 
         | Some v, _ -> Some v
         | None, Some v -> Some v
         | _ -> None
-
-    (*let op_min' x y =
-        match (x, y) with
-        | Some v, Some u -> if v < u then Some v else Some u
-        | Some v, _ -> Some v
-        | None, Some v -> Some v
-        | _ -> None
-*)
+      
     let fixPoint p =
         let rec inner p iter = 
             let p2 = Vector.gather p p
@@ -103,14 +81,14 @@ let mst (graph:Matrix.SparseMatrix<_>) =
             // such that i and j are in different components.
             // Because graph contains only cross‑component edges,
             // we simply take the min over all neighbors.
-            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
+            let edges = LinearAlgebra.vxmi_values op_min op_mult parent graph
            
             printfn "=== Edges ==="
             printVector edges 
 
             // Per‑component cheapest edge
             // For each component, keep the smallest edges among its vertices.
-            let cedges = Vector.scatter (Vector.empty length) edges parent op_add
+            let cedges = Vector.scatter (Vector.empty length) edges parent op_min
             
             printfn "=== Component Edges ==="
             printVector cedges
