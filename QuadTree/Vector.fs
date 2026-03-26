@@ -29,7 +29,7 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error<'value1, 'value2, 'a> =
+type _Error<'value1, 'value2, 'a> =
     | InconsistentStructureOfStorages of btree<Option<'value1>> * btree<Option<'value2>>
     | InconsistentSizeOfArguments of SparseVector<'value1> * SparseVector<'value2>
     | IndexOutOfRange of SparseVector<'value1> * uint64<index>
@@ -80,12 +80,13 @@ let update (vector: SparseVector<_>) i v op =
                 (mkNode x1 newVector), deltaNNZ
         | _ -> failwith "Unreachable. But seams that index out of range."
     
-    if uint64 i <= uint64 vector.length
-    then
-        let storage, deltaNNZ =  inner vector.storage.data i vector.storage.size
-        let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
-        Result.Success (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
-    else Result.Failure <| Error.IndexOutOfRange (vector,i)
+    //if uint64 i <= uint64 vector.length
+    //then
+    let storage, deltaNNZ =  inner vector.storage.data i vector.storage.size
+    let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
+    SparseVector (vector.length, nvals, Storage(vector.storage.size, storage))
+    //Result.Success (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
+    //else Result.Failure <| Error.IndexOutOfRange (vector,i)
 
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
     let length = lst.length
@@ -229,16 +230,16 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2) with
-            | Result.Success((t1, nvals1)), Result.Success((t2, nvals2)) ->
-                ((mkNode t1 t2), nvals1 + nvals2) |> Result.Success
-            | Result.Failure(e), _
-            | _, Result.Failure(e) -> Result.Failure(e)
+            | (*Result.Success*)((t1, nvals1)), (*Result.Success*)((t2, nvals2)) ->
+                ((mkNode t1 t2), nvals1 + nvals2) //|> Result.Success
+            //| Result.Failure(e), _
+            //| _, Result.Failure(e) -> Result.Failure(e)
 
         match (vector1, vector2) with
         | Node(x1, x2), Leaf(_) -> _do x1 x2 vector2 vector2
         | Leaf(_), Node(y1, y2) -> _do vector1 vector1 y1 y2
         | Node(x1, x2), Node(y1, y2) -> _do x1 x2 y1 y2
-        | Leaf(Dummy), Leaf(Dummy) -> Result.Success(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(Dummy), Leaf(Dummy) -> (*Result.Success*)(Leaf(Dummy), 0UL<nvals>)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f v1 v2
 
@@ -247,17 +248,23 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                 | None -> 0UL<nvals>
                 | _ -> (uint64 size) * 1UL<nvals>
 
-            Result.Success(Leaf(UserValue(res)), nnz)
+            //Result.Success(Leaf(UserValue(res)), nnz)
+            Leaf(UserValue(res)), nnz
 
-        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+        | (x, y) -> 
+            failwithf "Inconsistent structure of storage:%A \n %A" x y
+            //Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
     if len1 = vector2.length then
-        match inner vector1.storage.size vector1.storage.data vector2.storage.data with
-        | Result.Failure(e) -> Result.Failure(e)
-        | Result.Success((storage, nvals)) ->
-            Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
+        let storage, nvals = inner vector1.storage.size vector1.storage.data vector2.storage.data
+        SparseVector(len1, nvals, (Storage(vector1.storage.size, storage)))
+        // match inner vector1.storage.size vector1.storage.data vector2.storage.data with
+        // | Result.Failure(e) -> Result.Failure(e)
+        // | Result.Success((storage, nvals)) ->
+        //     Result.Success(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
     else
-        Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
+        //Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
+        failwithf "Inconsistent size of arguments: %A \n %A" vector1 vector2
 
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
@@ -381,12 +388,13 @@ let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVect
             (op: Option<'value> -> Option<'value> -> Option<'value>) =
     let pairsVec = map2 idx v (fun i v -> match i, v with Some i, Some v -> Some(i, v) | _ -> None)
     match pairsVec with
-    | Result.Success pv -> 
+    | (*Result.Success*) pv -> 
         foldValues pv (fun state (idx, v) -> 
             match state with 
-            | Result.Success state -> 
+            | (*Result.Success*) state -> 
                 //printfn "IDX = %A" idx
                 update state idx (Some v) op
-            | Result.Failure x -> Result.Failure x)
-         (Result.Success w)
-    | Result.Failure x -> Result.Failure <| ScatterError x
+            //| Result.Failure x -> Result.Failure x
+            )
+         w //(Result.Success w)
+    //| Result.Failure x -> Result.Failure <| ScatterError x

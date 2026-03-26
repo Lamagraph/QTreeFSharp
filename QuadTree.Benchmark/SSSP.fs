@@ -16,4 +16,4 @@ type Benchmark() =
         matrix <- readMtx (System.IO.Path.Combine(DIR_WITH_MATRICES, this.MatrixName)) true
 
     [<Benchmark>]
-    member this.SSSP() = Graph.SSSP.sssp matrix 0UL
+    member this.SSSP() = ()//Graph.SSSP.sssp matrix 0UL

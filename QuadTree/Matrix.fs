@@ -146,19 +146,19 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2), (inner new_size x3 y3), (inner new_size x4 y4) with
-            | Result.Success((new_t1, nvals1)),
-              Result.Success((new_t2, nvals2)),
-              Result.Success((new_t3, nvals3)),
-              Result.Success((new_t4, nvals4)) ->
+            | (*Result.Success*)((new_t1, nvals1)),
+              (*Result.Success*)((new_t2, nvals2)),
+              (*Result.Success*)((new_t3, nvals3)),
+              (*Result.Success*)((new_t4, nvals4)) ->
                 ((mkNode new_t1 new_t2 new_t3 new_t4), nvals1 + nvals2 + nvals3 + nvals4)
-                |> Result.Success
-            | Result.Failure(e), _, _, _
-            | _, Result.Failure(e), _, _
-            | _, _, Result.Failure(e), _
-            | _, _, _, Result.Failure(e) -> Result.Failure(e)
+                //|> Result.Success
+            //| Result.Failure(e), _, _, _
+            //| _, Result.Failure(e), _, _
+            //| _, _, Result.Failure(e), _
+            //| _, _, _, Result.Failure(e) -> Result.Failure(e)
 
         match (matrix1, matrix2) with
-        | Leaf(Dummy), Leaf(Dummy) -> Result.Success(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(Dummy), Leaf(Dummy) -> (*Result.Success*)(Leaf(Dummy), 0UL<nvals>)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f v1 v2
 
@@ -167,21 +167,22 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
                 | None -> 0UL<nvals>
                 | _ -> (uint64 size) * (uint64 size) * 1UL<nvals>
 
-            (Leaf(UserValue(res)), nnz) |> Result.Success
+            (Leaf(UserValue(res)), nnz) //|> Result.Success
 
         | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) -> _do x1 x2 x3 x4 y1 y2 y3 y4
         | Node(x1, x2, x3, x4), Leaf(v) -> _do x1 x2 x3 x4 matrix2 matrix2 matrix2 matrix2
         | Leaf(v), Node(x1, x2, x3, x4) -> _do matrix1 matrix1 matrix1 matrix1 x1 x2 x3 x4
-        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+        | (x, y) -> failwith "Inconsistent structure of storage." //Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
         match inner matrix1.storage.size matrix1.storage.data matrix2.storage.data with
-        | Result.Failure x -> Result.Failure x
-        | Result.Success(storage, nvals) ->
+        //| Result.Failure x -> Result.Failure x
+        | (*Result.Success*)(storage, nvals) ->
             (SparseMatrix(matrix1.nrows, matrix1.ncols, nvals, (Storage(matrix1.storage.size, storage))))
-            |> Result.Success
+            //|> Result.Success
     else
-        (Error.InconsistentSizeOfArguments(matrix1, matrix2)) |> Result.Failure
+        //(Error.InconsistentSizeOfArguments(matrix1, matrix2)) |> Result.Failure
+        failwith "Inconsistent argument size."
 
 let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix1 matrix2 =

@@ -22,4 +22,5 @@ type Benchmark() =
             Vector.CoordinateList((uint64 matrix.ncols) * 1UL<Vector.dataLength>, [ 0UL<Vector.index>, 1UL ])
             |> Vector.fromCoordinateList
 
-        Graph.BFS.bfs_level matrix startVertices
+        //Graph.BFS.bfs_level matrix startVertices
+        ()

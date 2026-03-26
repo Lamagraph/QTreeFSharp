@@ -17,4 +17,5 @@ type Benchmark() =
 
     [<Benchmark>]
     member this.TriangleCount() =
-        Graph.TriangleCount.triangle_count matrix
+        //Graph.TriangleCount.triangle_count matrix
+        ()

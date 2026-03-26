@@ -5,30 +5,23 @@ open Common
 
 let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
     printfn "Matrix:"
-    printfn "   Rows: %A" matrix.nrows
-    printfn "   Columns: %A" matrix.ncols
+    //printfn "   Rows: %A" matrix.nrows
+    //printfn "   Columns: %A" matrix.ncols
     printfn "   Nvals: %A" matrix.nvals
-    printfn "   Storage:"
-    printfn "      size: %A" matrix.storage.size
-    printfn "      Data: %A" (Matrix.toCoordinateList matrix).list
+    //printfn "   Storage:"
+    //printfn "      size: %A" matrix.storage.size
+    printfn "   Data: %A" (Matrix.toCoordinateList matrix).list
 
 let printVector (vector: Vector.SparseVector<_>) =
     printfn "Vector:"
-    printfn "   Length: %A" vector.length
+    //printfn "   Length: %A" vector.length
     printfn "   Nvals: %A" vector.nvals
-    printfn "   Storage:"
-    printfn "      Size: %A" vector.storage.size
-    printfn "      Data: %A" (Vector.toCoordinateList vector).data
-
-type Error<'t1, 't2, 't3, 't4, 't5, 't6, 't7, 't8, 't9, 't10, 't11, 't12> =    
-    | EdgesCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't3>
-    | CEdgesCalculationProblem of Vector.Error<'t4, 't5, 't6>
-    | IndexCalculationProblem of Vector.Error<'t7, 't8, 't9>
-    | ScatterProblem of Vector.Error<'t10, 't11, 't12>
+    //printfn "   Storage:"
+    //printfn "      Size: %A" vector.storage.size
+    printfn "   Data: %A" (Vector.toCoordinateList vector).data
 
 let mst (graph:Matrix.SparseMatrix<_>) =
-    printfn "MST CALLED nrows=%A ncols=%A nvals=%A" graph.nrows graph.ncols graph.nvals
-    
+
     let op_add x y =
         match (x, y) with
         | Some(a, pa), Some(b, pb) -> 
@@ -39,9 +32,61 @@ let mst (graph:Matrix.SparseMatrix<_>) =
 
     let op_mult (i,x) (row,col,w) =
         Some(w,row)
+
+    let op_min x y =
+        match (x, y) with
+        | Some v, Some u -> if v < u then Some v else Some u //None
+        | Some v, _ -> Some v
+        | None, Some v -> Some v
+        | _ -> None
+
+    (*let op_min' x y =
+        match (x, y) with
+        | Some v, Some u -> if v < u then Some v else Some u
+        | Some v, _ -> Some v
+        | None, Some v -> Some v
+        | _ -> None
+*)
+    let fixPoint p =
+        let rec inner p iter = 
+            let p2 = Vector.gather p p
+            if p2 = p then p, iter else inner p2 (iter+1)
+        let res, iters = inner p 0
+        printfn "Iterations to update parents: %A" iters
+        res
+
+    let treeFilter edges index = 
+        fun i j g ->
+            let i = uint64 i * 1UL<Vector.index>
+            let j = uint64 j * 1UL<Vector.index>
+            let edge = Vector.unsafeGet edges i
+            let idx = Vector.unsafeGet index i
+            let result = 
+                match edge, idx with 
+                | Some(w, dst), Some idxVal-> 
+                    g = w && idxVal = i && uint64 dst = uint64 j
+                | _ -> false
+            if result then printfn "TREE FILTER: edge (%A,%A) -> tree" i j
+            result
     
+    let graphFilter parent = 
+        fun i j -> 
+            let i = uint64 i * 1UL<Vector.index>
+            let j = uint64 j * 1UL<Vector.index>
+            let parent_i = Vector.unsafeGet parent i
+            let parent_j = Vector.unsafeGet parent j
+            let result = 
+                match (parent_i, parent_j) with
+                | Some v1, Some v2 when v1 <> v2 -> true
+                | _ -> false
+            
+            //if result then printfn "GRAPH FILTER: keep edge (%A,%A)" i j
+            result
+
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
-    printfn "Length = %A" length
+    
+    // Initially each vertex is its own component
+    // Each component can be identified by its root super-vertex, parent)
     let parent = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
@@ -52,137 +97,101 @@ let mst (graph:Matrix.SparseMatrix<_>) =
         printVector parent
         if graph.nvals > 0UL<nvals> then
 
-            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph            
-            match edges with
-            | Result.Failure(e) -> Result.Failure(EdgesCalculationProblem(e))
-            | Result.Success(edges) ->
-                printfn "=== Edges ==="
-                printVector edges 
+            
+            // Cheapest outgoing edge for each vertex 
+            // For each vertex j, find the smallest weight edge (i, j, w)
+            // such that i and j are in different components.
+            // Because graph contains only cross‑component edges,
+            // we simply take the min over all neighbors.
+            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph
+           
+            printfn "=== Edges ==="
+            printVector edges 
 
-                let op_min x y =
-                    match (x, y) with
-                    | Some v, Some u -> if v < u then Some v else None
-                    | Some v, _ -> Some v
-                    | None, Some v -> Some v
-                    | _ -> None
+            // Per‑component cheapest edge
+            // For each component, keep the smallest edges among its vertices.
+            let cedges = Vector.scatter (Vector.empty length) edges parent op_add
+            
+            printfn "=== Component Edges ==="
+            printVector cedges
 
-                let cedges = 
-                    Vector.scatter (Vector.empty length) edges parent op_add
+            // Propagate component's cheapest edge to all its vertices
+            // Each vertex gets its component's edge
+            let t = Vector.gather cedges parent
+            
+            // Identify a representative vertex for each component
+            // For each vertex, if its own edge is the component's cheapest, mark it.
+            let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
+            // Among the marked vertices in a component, keep the smallest index.
+            let index = Vector.scatter (Vector.empty length) index parent op_min
+            // now each vertex knows its component's representative
+            let index = Vector.gather index parent
+            
+            printfn "=== Index ==="
+            printVector index
 
-                match cedges with
-                | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
-                | Result.Success(cedges) ->
-                    printfn "=== Component Edges ==="
-                    printVector cedges
+            // Add selected edges to the MST tree
+            // An edge (i, j, w) is added if vertex i is the representative for its component
+            // and (i, j, w) is the cheapest edge of that component.
+            let treeFilter = treeFilter edges index
+            let tree = 
+                Matrix.map2i tree graph (
+                    fun i j t g -> 
+                        match (t,g) with
+                        | Some t, _ -> Some t
+                        | None, Some g when treeFilter i j g -> Some g
+                        | _ -> None)
 
-                    let t = Vector.gather cedges parent
-                    let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
-                    let index = Vector.scatter (Vector.empty length) index parent op_min
-                    match index with 
-                    | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
-                    | Result.Success (index) ->
-                        //printfn "=== Index ==="
-                        //printVector index
-                        let index = Vector.gather index parent
-                        printfn "=== Index 2 ==="
-                        printVector index
-                        
-                        printfn "=== parent ==="
-                        printVector parent
-
-                        let filter i j g = 
-                            let i = uint64 i * 1UL<Vector.index>
+            // Compute new parent assignments (merge components)
+            // For each component representative i with cheapest edge (w, j), we want to merge
+            // the component of i with the component of j. Choose the smaller root.
+            let data_for_update_parent = 
+                Vector.map2i edges index 
+                    (fun i e idx ->
+                        match e,idx with 
+                        | Some (v,j), Some (_i) when _i = i ->
                             let j = uint64 j * 1UL<Vector.index>
-                            let edge = Vector.unsafeGet edges i
-                            let idx = Vector.unsafeGet index i
+                            let parent_i = Vector.unsafeGet parent i
                             let parent_j = Vector.unsafeGet parent j
-                            let result = 
-                                match edge, idx, parent_j with 
-                                | Some(w, dst), Some idxVal, Some pi -> 
-                                    g = w && idxVal = i && uint64 dst = uint64 j
-                                | _ -> false
-                            if result then
-                                printfn "TREE FILTER iter %d: edge (%d,%d) -> tree" iteration (i/1UL<Vector.index>) (j/1UL<Vector.index>)
-                            result
-                        
-                        let tree = 
-                            Matrix.map2i tree graph (
-                                fun i j t g -> 
-                                    match (t,g) with
-                                    | Some t, _ -> Some t
-                                    | None, Some g when filter i j g -> Some g
-                                    | _ -> None)
+                            match parent_i,parent_j with 
+                            | Some p_i, Some p_j -> 
+                                if p_i < p_j then Some (j, p_i) else Some (i, p_j)
+                            | x -> failwithf "Unreachable: %A" x
+                        | _ -> None
+                    )
 
-                        let _parent = 
-                            Vector.map2i edges index 
-                                (fun i e idx ->
-                                    match e,idx with 
-                                    | Some (v,j), Some (_i) when _i = i ->
-                                        let j = uint64 j * 1UL<Vector.index>
-                                        let parent_i = Vector.unsafeGet parent i
-                                        let parent_j = Vector.unsafeGet parent j
-                                        match parent_i,parent_j with 
-                                        | Some p_i, Some p_j -> 
-                                            if p_i < p_j then Some (j, p_i) else Some (i, p_j)
-                                        | x -> failwithf "Unreachable: %A" x
-                                    | _ -> None
-                                )
+            printfn "=== Data for update parent ==="
+            printVector data_for_update_parent
+            // Apply the updates
+            let initial_parent_update = 
+                Vector.foldValues  data_for_update_parent (fun state (i,v) -> 
+                    
+                            Vector.update state i (Some v) (fun old _new -> _new)
+                    )
+                    parent
 
-                        printfn "=== _parent ==="
-                        printVector _parent
+            printfn "=== Initial parent update ==="
+            printVector initial_parent_update
+            
+            let parent = Vector.scatter parent initial_parent_update parent op_min
+                
+            printfn "=== Initially updated parent ==="
+            printVector parent
+            
+            // Then ensure that all vertices in a merged component point to the same root.
+            // This is done by a fixpoint (path compression) that repeatedly gathers parents.
+            let parent = fixPoint parent
+            
+            printfn "=== Parent before data propagation ==="
+            printVector parent
+            
+            // Filter the graph to keep only edges between different components
+            let graphFilter = graphFilter parent
+            let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
-                        let parentResult = 
-                            Vector.foldValues  _parent (fun state (i,v) -> 
-                                match state with 
-                                | Result.Success state ->
-                                     Vector.update state i (Some v) (fun old _new -> _new)
-                                | Result.Failure x -> Result.Failure x)
-                                (Result.Success parent)
-
-                        match parentResult with
-                        | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
-                        | Result.Success(__parent) ->
-                            printfn "=== parentResult ==="
-                            printVector __parent
-                            // Path compression: fix-point iteration using vector length                            
-                            let rec fixPoint p =
-                                let p2 = Vector.gather p p
-                                if p2 = p then p else fixPoint p2
-                            let op_min x y =
-                                match (x, y) with
-                                | Some v, Some u -> if v < u then Some v else Some u
-                                | Some v, _ -> Some v
-                                | None, Some v -> Some v
-                                | _ -> None
-                            let parent = Vector.scatter parent __parent parent op_min
-                            match parent with 
-                            | Result.Failure x -> ScatterProblem x |> Result.Failure
-                            | Result.Success parent -> 
-                                printfn "=== parent' ==="
-                                printVector parent
-                                let parent = fixPoint parent
-                                
-                                printfn "=== Parent for filter ==="
-                                printVector parent
-                                let graphFilter i j = 
-                                    let i = uint64 i * 1UL<Vector.index>
-                                    let j = uint64 j * 1UL<Vector.index>
-                                    let parent_i = Vector.unsafeGet parent i
-                                    let parent_j = Vector.unsafeGet parent j
-                                    let result = 
-                                        match (parent_i, parent_j) with
-                                        | Some v1, Some v2 when v1 <> v2 -> true
-                                        | _ -> false
-                                    if iteration < 2 && result then
-                                        printfn "GRAPH FILTER iter %d: keep edge (%d,%d)" iteration (i/1UL<Vector.index>) (j/1UL<Vector.index>)
-                                    result
-
-                                let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
-
-                                inner graph tree parent (iteration + 1)
-
+            inner graph tree parent (iteration + 1)
                 
         else
-            Result.Success tree
+            tree
 
     inner graph (Matrix.empty graph.nrows graph.ncols) parent 0

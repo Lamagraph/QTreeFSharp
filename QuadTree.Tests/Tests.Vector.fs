@@ -203,7 +203,8 @@ let ``Simple Vector.map2. Length is power of two.`` () =
             )
 
         let store = Storage(8UL<storageSize>, tree)
-        Result.Success(SparseVector(8UL<dataLength>, 4UL<nvals>, store))
+        (*Result.Success*)
+        (SparseVector(8UL<dataLength>, 4UL<nvals>, store))
 
     let actual = Vector.map2 v1 v2 f
 
@@ -244,7 +245,8 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
             )
 
         let store = Storage(8UL<storageSize>, tree)
-        Result.Success(SparseVector(6UL<dataLength>, 2UL<nvals>, store))
+        (*Result.Success*)
+        (SparseVector(6UL<dataLength>, 2UL<nvals>, store))
 
     let actual = Vector.map2 v1 v2 f
 
@@ -368,8 +370,8 @@ let ``Simple addition`` () =
 
         let result =
             match map2 v1 v2 addition with
-            | Result.Success x -> x
-            | _ -> failwith "Unreachable"
+            | (*Result.Success*) x -> x
+            //| _ -> failwith "Unreachable"
 
         toCoordinateList result
 
