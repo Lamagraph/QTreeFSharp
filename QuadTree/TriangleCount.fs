@@ -2,13 +2,13 @@ module Graph.TriangleCount
 
 open Common
 
-type TriangleCountError =
+type Error =
     | MXMError of LinearAlgebra.Error
     | MaskingError of Matrix.Error
 
-// Assume non-oriented graph adjacency matrix
-// Some _ -> edge, None -> no edge
-// Computes triangle count
+let mapError (err: LinearAlgebra.Error) = MXMError err
+let mapError' (err: Matrix.Error) = MaskingError err
+
 let triangle_count (graph: Matrix.SparseMatrix<_>) =
     let graph = Matrix.getLowerTriangle graph
 
@@ -24,19 +24,14 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
         | Some _, Some _ -> Some 1UL
         | _ -> None
 
-    let C = LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
+    result {
+        let! C =
+            LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
+            |> Common.Result.mapError mapError
 
-    let CMasked =
-        match C with
-        | Ok matrix ->
-            match Matrix.mask matrix graph Option.isSome with
-            | Ok m -> Ok m
-            | Error e -> Error (TriangleCountError.MaskingError e)
-        | Error e -> Error (TriangleCountError.MXMError e)
+        let! CMasked =
+            Matrix.mask C graph Option.isSome
+            |> Common.Result.mapError mapError'
 
-    let result =
-        match CMasked with
-        | Ok matrix -> Ok(Matrix.foldAssociative op_add None matrix)
-        | Error e -> Error e
-
-    result
+        return Matrix.foldAssociative op_add None CMasked
+    }
