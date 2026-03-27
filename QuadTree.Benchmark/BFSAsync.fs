@@ -12,7 +12,7 @@ type BenchmarkAsync() =
     [<Params("494_bus.mtx", "arc130.mtx")>]
     member val MatrixName = "" with get, set
 
-    [<Params(1, 2, 4, 8)>]
+    [<Params(0, 1, 2, 3, 4)>]
     member val MaxSubtasks = 0 with get, set
 
     [<GlobalSetup>]

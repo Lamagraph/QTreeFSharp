@@ -2,7 +2,6 @@ module LinearAlgebra
 
 open System
 open Common
-open System.Threading.Tasks
 
 type Error<'value1, 'value2, 'value3> =
     | InconsistentStructureOfStorages of Vector.btree<Option<'value1>> * Matrix.qtree<Option<'value2>>
@@ -267,14 +266,15 @@ let vxmAsync
             let subtasks = remainingSubtasks - 1
 
             if subtasks > 0 then
-                Task.Run(fun () ->
-                    inner subtasks new_size x1 y1,
-                    inner subtasks new_size x1 y2,
-                    inner subtasks new_size x2 y3,
-                    inner subtasks new_size x2 y4)
-                |> fun t -> 
-                    let t1, t2, t3, t4 = t.Result
-                    match t1, t2, t3, t4 with
+                let a1 = async { return inner subtasks new_size x1 y1 }
+                let a2 = async { return inner subtasks new_size x1 y2 }
+                let a3 = async { return inner subtasks new_size x2 y3 }
+                let a4 = async { return inner subtasks new_size x2 y4 }
+                [| a1; a2; a3; a4 |]
+                |> Async.Parallel
+                |> Async.RunSynchronously
+                |> fun results ->
+                    match results.[0], results.[1], results.[2], results.[3] with
                     | Result.Success((t1, nvals1)),
                       Result.Success((t2, nvals2)),
                       Result.Success((t3, nvals3)),

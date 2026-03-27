@@ -1,7 +1,6 @@
 module Vector
 
 open System
-open System.Threading.Tasks
 open Common
 
 type 'value btree =
@@ -169,12 +168,13 @@ let map2Async (maxSubtasks: int) (vector1: SparseVector<'a>) (vector2: SparseVec
             let subtasks = remainingSubtasks - 1
 
             if subtasks > 0 then
-                Task.Run(fun () ->
-                    inner subtasks new_size x1 y1,
-                    inner subtasks new_size x2 y2)
-                |> fun t ->
-                    let t1, t2 = t.Result
-                    match t1, t2 with
+                let a1 = async { return inner subtasks new_size x1 y1 }
+                let a2 = async { return inner subtasks new_size x2 y2 }
+                [| a1; a2 |]
+                |> Async.Parallel
+                |> Async.RunSynchronously
+                |> fun results ->
+                    match results.[0], results.[1] with
                     | Result.Success((t1, nvals1)), Result.Success((t2, nvals2)) ->
                         ((mkNode t1 t2), nvals1 + nvals2) |> Result.Success
                     | Result.Failure(e), _
