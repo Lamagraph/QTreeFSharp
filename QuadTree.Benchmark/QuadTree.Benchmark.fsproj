@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Utils.fs"/>
     <Compile Include="BFS.fs"/>
+    <Compile Include="BFSAsync.fs"/>
     <Compile Include="SSSP.fs"/>
     <Compile Include="Triangles.fs"/>
     <Compile Include="Main.fs"/>
