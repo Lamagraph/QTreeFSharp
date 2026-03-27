@@ -69,3 +69,91 @@ let ``Simple level bfs.`` () =
     let actual = Graph.BFS.bfs_level graph startVertices
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async level bfs.`` () =
+    let graph =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(1))),
+                    Matrix.qtree.Leaf(UserValue(Some(3))),
+                    Matrix.qtree.Leaf(UserValue(None))
+                ),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(Some(1))),
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(2))),
+                    Matrix.qtree.Leaf(UserValue(Some(3)))
+                ),
+                Matrix.qtree.Leaf(UserValue(None)),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(2))),
+                    Matrix.qtree.Leaf(UserValue(Some(3))),
+                    Matrix.qtree.Leaf(UserValue(None))
+                )
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
+
+    let startVertices =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1UL))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(None))
+            )
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 1UL<nvals>, store)
+
+    let expected_sync = Graph.BFS.bfs_level graph startVertices
+    let actual = Graph.BFS.bfs_levelAsync 4 graph startVertices
+
+    Assert.Equal(expected_sync, actual)
+
+[<Fact>]
+let ``Async level bfs with 1 subtask.`` () =
+    let graph =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(1))),
+                    Matrix.qtree.Leaf(UserValue(Some(3))),
+                    Matrix.qtree.Leaf(UserValue(None))
+                ),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(Some(1))),
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(2))),
+                    Matrix.qtree.Leaf(UserValue(Some(3)))
+                ),
+                Matrix.qtree.Leaf(UserValue(None)),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Leaf(UserValue(None)),
+                    Matrix.qtree.Leaf(UserValue(Some(2))),
+                    Matrix.qtree.Leaf(UserValue(Some(3))),
+                    Matrix.qtree.Leaf(UserValue(None))
+                )
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
+
+    let startVertices =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1UL))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(None))
+            )
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 1UL<nvals>, store)
+
+    let expected_sync = Graph.BFS.bfs_level graph startVertices
+    let actual = Graph.BFS.bfs_levelAsync 1 graph startVertices
+
+    Assert.Equal(expected_sync, actual)
