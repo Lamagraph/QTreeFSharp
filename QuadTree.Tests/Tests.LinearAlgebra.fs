@@ -64,7 +64,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -104,7 +104,7 @@ let ``Simple vxm. 3 * (3x4)`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -146,7 +146,7 @@ let ``Simple vxm. 4 * (4x3).`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
+        Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -205,7 +205,7 @@ let ``Simple vxm. 3 * (3x5)`` () =
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
-        Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
+        Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -243,7 +243,7 @@ let ``Simple mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
+        | Ok m -> m
         | _ -> failwith "Unreachable"
 
     Assert.Equal(expected.storage.data, actual.storage.data)
@@ -279,8 +279,8 @@ let ``Sparse mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)
 
@@ -325,8 +325,8 @@ let ``Shrinking mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)
 
@@ -374,7 +374,7 @@ let ``Expanding mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)

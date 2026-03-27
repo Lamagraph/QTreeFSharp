@@ -81,7 +81,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are power of two.
             )
 
         let store = Storage(4UL<storageSize>, tree)
-        Result.Success(SparseMatrix(4UL<nrows>, 4UL<ncols>, 6UL<nvals>, store))
+        Ok(SparseMatrix(4UL<nrows>, 4UL<ncols>, 6UL<nvals>, store))
 
     let actual = Matrix.map2 m1 m2 f
 
@@ -144,7 +144,7 @@ let ``Simple Matrix.map2. Square where number of cols and rows are not power of 
             )
 
         let store = Storage(4UL<storageSize>, tree)
-        Result.Success(SparseMatrix(3UL<nrows>, 3UL<ncols>, 5UL<nvals>, store))
+        Ok(SparseMatrix(3UL<nrows>, 3UL<ncols>, 5UL<nvals>, store))
 
     let actual = Matrix.map2 m1 m2 f
 
@@ -211,7 +211,7 @@ let ``Simple addition`` () =
 
         let result =
             match map2 m1 m2 addition with
-            | Result.Success x -> x
+            | Ok x -> x
             | _ -> failwith "Unreachable"
 
         toCoordinateList result

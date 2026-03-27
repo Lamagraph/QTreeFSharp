@@ -64,7 +64,7 @@ let ``Simple level bfs.`` () =
             )
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = Graph.BFS.bfs_level graph startVertices
 

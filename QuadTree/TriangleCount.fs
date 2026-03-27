@@ -2,9 +2,9 @@ module Graph.TriangleCount
 
 open Common
 
-type TriangleCountError<'value1, 'value2, 'value3> =
-    | MXMError of LinearAlgebra.MXMError<'value1, 'value2, 'value3>
-    | MaskingError of Matrix.Error<'value3, 'value2>
+type TriangleCountError =
+    | MXMError of LinearAlgebra.Error
+    | MaskingError of Matrix.Error
 
 // Assume non-oriented graph adjacency matrix
 // Some _ -> edge, None -> no edge
@@ -28,15 +28,15 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
 
     let CMasked =
         match C with
-        | Result.Success matrix ->
+        | Ok matrix ->
             match Matrix.mask matrix graph Option.isSome with
-            | Result.Success m -> Result.Success m
-            | Result.Failure e -> Result.Failure <| TriangleCountError.MaskingError e
-        | Result.Failure e -> Result.Failure <| TriangleCountError.MXMError e
+            | Ok m -> Ok m
+            | Error e -> Error (TriangleCountError.MaskingError e)
+        | Error e -> Error (TriangleCountError.MXMError e)
 
     let result =
         match CMasked with
-        | Result.Success matrix -> Result.Success(Matrix.foldAssociative op_add None matrix)
-        | Result.Failure e -> Result.Failure e
+        | Ok matrix -> Ok(Matrix.foldAssociative op_add None matrix)
+        | Error e -> Error e
 
     result
