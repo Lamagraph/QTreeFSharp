@@ -70,15 +70,105 @@ let ``Simple vxm. All sizes are power of two.`` () =
 
     Assert.Equal(expected, actual)
 
+[<Fact>]
+let ``Async vxm. All sizes are power of two.`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
+
+    let v =
+        let tree = vleaf_v 2
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 4UL<nvals>, store)
+
+    let expected =
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 4 op_add op_mult v m
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async vxm with 1 subtask.`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
+
+    let v =
+        let tree = vleaf_v 2
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 4UL<nvals>, store)
+
+    let expected =
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 1 op_add op_mult v m
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async vxm with 2 subtasks.`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_v 3, leaf_n ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 4UL<ncols>, 9UL<nvals>, store)
+
+    let v =
+        let tree = vleaf_v 2
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 4UL<nvals>, store)
+
+    let expected =
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 2 op_add op_mult v m
+
+    Assert.Equal(expected, actual)
+
 (*
 2,2,2,D
 *
-N,1,1,N
-3,2,2,3
-N,N,1,2
+N,1,1,D
+3,2,2,D
+N,N,1,D
 D,D,D,D
 =
-6,6,8,10
+6,6,8,D
 *)
 [<Fact>]
 let ``Simple vxm. 3 * (3x4)`` () =
@@ -110,16 +200,45 @@ let ``Simple vxm. 3 * (3x4)`` () =
 
     Assert.Equal(expected, actual)
 
+[<Fact>]
+let ``Async vxm. 3 * (3x4)`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_d (), leaf_d ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(3UL<nrows>, 4UL<ncols>, 8UL<nvals>, store)
+
+    let v =
+        let tree = Vector.btree.Node(vleaf_v 2, Vector.btree.Node(vleaf_v 2, vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(3UL<dataLength>, 3UL<nvals>, store)
+
+    let expected =
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 4 op_add op_mult v m
+
+    Assert.Equal(expected, actual)
 
 (*
-2,2,2,2
+2,2,2,D
 *
-N,1,1,D
-3,2,2,D
-N,N,1,D
-N,N,3,D
+N,1,1,N
+3,2,2,3
+N,N,1,2
+D,D,D,D
 =
-6,6,14,D
+6,6,8,10
 *)
 [<Fact>]
 let ``Simple vxm. 4 * (4x3).`` () =
@@ -149,6 +268,37 @@ let ``Simple vxm. 4 * (4x3).`` () =
         Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async vxm. 4 * (4x3).`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 2, leaf_d ()),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 3, leaf_d ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 3UL<ncols>, 7UL<nvals>, store)
+
+    let v =
+        let tree = vleaf_v 2
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 4UL<nvals>, store)
+
+
+    let expected =
+        let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 4 op_add op_mult v m
 
     Assert.Equal(expected, actual)
 
@@ -208,6 +358,50 @@ let ``Simple vxm. 3 * (3x5)`` () =
         Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async vxm. 3 * (3x5)`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(
+                    Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                    Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                    Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                    Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_d (), leaf_d ())
+                ),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_v 1, leaf_d ()),
+                    leaf_d (),
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ()),
+                    leaf_d ()
+                ),
+                leaf_d (),
+                leaf_d ()
+            )
+
+        let store = Matrix.Storage(8UL<storageSize>, tree)
+        SparseMatrix(3UL<nrows>, 5UL<ncols>, 9UL<nvals>, store)
+
+    let v =
+        let tree = Vector.btree.Node(vleaf_v 2, Vector.btree.Node(vleaf_v 2, vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(3UL<dataLength>, 3UL<nvals>, store)
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10)),
+                Vector.btree.Node(Vector.btree.Node(vleaf_v 2, vleaf_d ()), vleaf_d ())
+            )
+
+        let store = Vector.Storage(8UL<storageSize>, tree)
+        Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmAsync 4 op_add op_mult v m
 
     Assert.Equal(expected, actual)
 

@@ -1,6 +1,8 @@
 module LinearAlgebra
 
+open System
 open Common
+open System.Threading.Tasks
 
 type Error<'value1, 'value2, 'value3> =
     | InconsistentStructureOfStorages of Vector.btree<Option<'value1>> * Matrix.qtree<Option<'value2>>
@@ -250,3 +252,130 @@ let mxm
         | Result.Failure(e) -> Result.Failure(e)
     else
         MXMError.InconsistentSizeOfArguments(m1, m2) |> Result.Failure
+
+
+let vxmAsync 
+    (maxSubtasks: int) 
+    op_add 
+    op_mult 
+    (vector: Vector.SparseVector<'a>) 
+    (matrix: Matrix.SparseMatrix<'b>) =
+
+    let rec inner (remainingSubtasks: int) (size: uint64<storageSize>) vector matrix =
+        let _do x1 x2 y1 y2 y3 y4 =
+            let new_size = size / 2UL
+            let subtasks = remainingSubtasks - 1
+
+            if subtasks > 0 then
+                Task.Run(fun () ->
+                    inner subtasks new_size x1 y1,
+                    inner subtasks new_size x1 y2,
+                    inner subtasks new_size x2 y3,
+                    inner subtasks new_size x2 y4)
+                |> fun t -> 
+                    let t1, t2, t3, t4 = t.Result
+                    match t1, t2, t3, t4 with
+                    | Result.Success((t1, nvals1)),
+                      Result.Success((t2, nvals2)),
+                      Result.Success((t3, nvals3)),
+                      Result.Success((t4, nvals4)) ->
+                        let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
+                        let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
+                        let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
+                        let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
+                        let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
+
+                        let vAdd v1 (v2: Vector.SparseVector<_>) =
+                            match v2.storage.data with
+                            | Vector.Leaf(Dummy) -> Result.Success(v1)
+                            | _ -> Vector.map2 v1 v2 op_add
+
+                        let z1 = vAdd v1 v3
+                        let z2 = vAdd v2 v4
+
+                        match (z1, z2) with
+                        | Result.Success(v1), Result.Success(v2) ->
+                            Result.Success((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                        | Result.Failure(e), _
+                        | _, Result.Failure(e) -> Result.Failure(VectorAdditionProblem(e))
+                    | Result.Failure(e), _, _, _
+                    | _, Result.Failure(e), _, _
+                    | _, _, Result.Failure(e), _
+                    | _, _, _, Result.Failure(e) -> Result.Failure(e)
+            else
+                match inner 0 new_size x1 y1, inner 0 new_size x1 y2, inner 0 new_size x2 y3, inner 0 new_size x2 y4 with
+                | Result.Success((t1, nvals1)),
+                  Result.Success((t2, nvals2)),
+                  Result.Success((t3, nvals3)),
+                  Result.Success((t4, nvals4)) ->
+                    let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
+                    let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
+                    let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
+                    let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
+                    let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
+
+                    let vAdd v1 (v2: Vector.SparseVector<_>) =
+                        match v2.storage.data with
+                        | Vector.Leaf(Dummy) -> Result.Success(v1)
+                        | _ -> Vector.map2 v1 v2 op_add
+
+                    let z1 = vAdd v1 v3
+                    let z2 = vAdd v2 v4
+
+                    match (z1, z2) with
+                    | Result.Success(v1), Result.Success(v2) ->
+                        Result.Success((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                    | Result.Failure(e), _
+                    | _, Result.Failure(e) -> Result.Failure(VectorAdditionProblem(e))
+                | Result.Failure(e), _, _, _
+                | _, Result.Failure(e), _, _
+                | _, _, Result.Failure(e), _
+                | _, _, _, Result.Failure(e) -> Result.Failure(e)
+
+        match (vector, matrix) with
+        | Vector.btree.Leaf(UserValue(v1)), Matrix.qtree.Leaf(UserValue(v2)) ->
+            let res = multScalar op_add (uint64 size) (op_mult v1 v2)
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * 1UL<nvals>
+
+            Result.Success(Vector.btree.Leaf(UserValue(res)), nnz)
+
+        | Vector.btree.Leaf(UserValue(_)), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(_)) -> _do x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
+
+        | Vector.btree.Leaf(Dummy), _
+        | _, Matrix.qtree.Leaf(Dummy) -> Result.Success(Vector.btree.Leaf(Dummy), 0UL<nvals>)
+        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+
+    if uint64 vector.length = uint64 matrix.nrows then
+        let vector_storage =
+            if uint64 vector.storage.size < uint64 matrix.storage.size then
+                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
+                    if current_size = bound then
+                        storage_data
+                    else
+                        increaseStorage
+                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
+                            (current_size * 2UL)
+                            bound
+
+                let target_size = matrix.storage.size
+                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
+            else
+                vector.storage
+
+        match inner maxSubtasks vector_storage.size vector_storage.data matrix.storage.data with
+        | Result.Failure x -> Result.Failure x
+        | Result.Success(storage, nvals) ->
+            (Vector.SparseVector(
+                (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
+                nvals,
+                (Vector.Storage(matrix.storage.size, storage))
+            ))
+            |> Result.Success
+    else
+        (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
