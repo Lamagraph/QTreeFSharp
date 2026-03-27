@@ -54,7 +54,7 @@ let ``7V Triangle count`` () =
 
     let actual =
         match triangle_count g with
-        | Result.Success(Some x) -> x
+        | Ok(Some x) -> x
         | _ -> failwith "Unreachable"
 
     Assert.Equal(expected, actual)

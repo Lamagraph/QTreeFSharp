@@ -2,47 +2,42 @@ module Graph.BFS
 
 open Common
 
-type Error<'t1, 't2> =
-    | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | FrontierCalculationProblem of Vector.Error<'t1, 't1>
-    | VisitedCalculationProblem of Vector.Error<'t1, 't1>
+type Error =
+    | NewFrontierCalculationProblem of LinearAlgebra.Error
+    | FrontierCalculationProblem of Vector.Error
+    | VisitedCalculationProblem of Vector.Error
+
+let mapError (err: LinearAlgebra.Error) = NewFrontierCalculationProblem err
+let mapError' (err: Vector.Error) = FrontierCalculationProblem err
+let mapError'' (err: Vector.Error) = VisitedCalculationProblem err
 
 let bfs_level graph startVertices =
     let rec inner level (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
         if frontier.nvals > 0UL<nvals> then
-            let op_add x y =
-                match (x, y) with
-                | Some(v), _
-                | _, Some(v) -> Some(v)
-                | _ -> None
+            result {
+                let! new_frontier = 
+                    LinearAlgebra.vxm 
+                        (fun x y -> match (x, y) with | Some(v), _ | _, Some(v) -> Some(v) | _ -> None)
+                        (fun x y -> match (x, y) with | Some(v), Some(_) -> Some(v) | _ -> None)
+                        frontier graph
+                    |> Common.Result.mapError mapError
 
-            let op_mult x y =
-                match (x, y) with
-                | Some(v), Some(_) -> Some(v)
-                | _ -> None
+                let! frontier = 
+                    Vector.mask new_frontier visited (fun x -> x.IsNone)
+                    |> Common.Result.mapError mapError'
 
-            let new_frontier = LinearAlgebra.vxm op_add op_mult frontier graph
-
-            match new_frontier with
-            | Result.Failure(e) -> Result.Failure(NewFrontierCalculationProblem(e))
-            | Result.Success(new_frontier) ->
-                let frontier = Vector.mask new_frontier visited (fun x -> x.IsNone)
-
-                match frontier with
-                | Result.Failure(e) -> Result.Failure(FrontierCalculationProblem(e))
-                | Result.Success(frontier) ->
-                    let op_add x y =
+                let! visited = 
+                    Vector.map2 visited new_frontier (fun x y ->
                         match (x, y) with
                         | (Some(_), _) -> x
                         | (None, Some(_)) -> Some(level)
-                        | _ -> None
+                        | _ -> None)
+                    |> Common.Result.mapError mapError''
 
-                    let visited = Vector.map2 visited new_frontier op_add
-
-                    match visited with
-                    | Result.Failure(e) -> Result.Failure(VisitedCalculationProblem(e))
-                    | Result.Success(visited) -> inner (level + 1UL) frontier visited
+                return! inner (level + 1UL) frontier visited
+            }
         else
-            Result.Success visited
+            Ok visited
 
-    inner 1UL startVertices (Vector.map startVertices (Option.map (fun x -> 0UL)))
+    let initialVisited = Vector.map startVertices (Option.map (fun x -> 0UL))
+    inner 1UL startVertices initialVisited

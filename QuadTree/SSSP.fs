@@ -2,10 +2,10 @@ module Graph.SSSP
 
 open Common
 
-type Error<'t1, 't2> =
-    | NewFrontierCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't1>
-    | FrontierCalculationProblem of Vector.Error<'t1, 't1>
-    | VisitedCalculationProblem of Vector.Error<'t1, 't1>
+type Error =
+    | NewFrontierCalculationProblem of LinearAlgebra.Error
+    | FrontierCalculationProblem of Vector.Error
+    | VisitedCalculationProblem of Vector.Error
 
 let sssp graph (startVertex: uint64) =
     let op_add x y =
@@ -26,8 +26,8 @@ let sssp graph (startVertex: uint64) =
             let new_frontier = LinearAlgebra.vxm op_add op_mult frontier graph
 
             match new_frontier with
-            | Result.Failure(e) -> Result.Failure(NewFrontierCalculationProblem(e))
-            | Result.Success(new_frontier) ->
+            | Error(e) -> Error(NewFrontierCalculationProblem(e))
+            | Ok(new_frontier) ->
                 let op_min x y =
                     match (x, y) with
                     | Some v, Some u -> if v < u then Some v else None
@@ -37,16 +37,16 @@ let sssp graph (startVertex: uint64) =
                 let frontier = Vector.map2 new_frontier visited op_min
 
                 match frontier with
-                | Result.Failure(e) -> Result.Failure(FrontierCalculationProblem(e))
-                | Result.Success(frontier) ->
+                | Error(e) -> Error(FrontierCalculationProblem(e))
+                | Ok(frontier) ->
 
                     let visited = Vector.map2 visited frontier op_add
 
                     match visited with
-                    | Result.Failure(e) -> Result.Failure(VisitedCalculationProblem(e))
-                    | Result.Success(visited) -> inner frontier visited (iter_num + 1)
+                    | Error(e) -> Error(VisitedCalculationProblem(e))
+                    | Ok(visited) -> inner frontier visited (iter_num + 1)
         else
-            Result.Success visited
+            Ok visited
 
     let frontier =
         Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])

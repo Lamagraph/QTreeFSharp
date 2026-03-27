@@ -54,7 +54,7 @@ let ``Simple SSSP.`` () =
             )
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = Graph.SSSP.sssp graph 0UL
 
@@ -97,7 +97,7 @@ let ``SSSP with recalculation`` () =
                   (4UL<index>, 5.0) ]
             )
 
-        Result.Success(Vector.fromCoordinateList clist)
+        Ok(Vector.fromCoordinateList clist)
 
     let actual = Graph.SSSP.sssp graph 0UL
 
