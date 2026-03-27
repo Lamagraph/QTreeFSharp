@@ -350,3 +350,83 @@ let ``Condensation of empty`` () =
         SparseVector(clist.length, 0UL<nvals>, Storage(16UL<storageSize>, tree))
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async Vector.mask. Length is power of two.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(Some(2)))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 6UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(true))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(true))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 4UL<nvals>, store)
+
+    let expected_sync = Vector.mask v1 v2 (fun x -> x = Some(true))
+    let actual = Vector.maskAsync 2 v1 v2 (fun x -> x = Some(true))
+
+    Assert.Equal(expected_sync, actual)
+
+let ``Async Vector.mask with 1 subtask.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(Some(2)))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 6UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(true))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(true))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 4UL<nvals>, store)
+
+    let expected_sync = Vector.mask v1 v2 (fun x -> x = Some(true))
+    let actual = Vector.maskAsync 1 v1 v2 (fun x -> x = Some(true))
+
+    Assert.Equal(expected_sync, actual)
+
+[<Fact>]
+let ``Async Vector.mask. Length is not power of two.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(Dummy))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(6UL<dataLength>, 2UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(true))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(Dummy))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(6UL<dataLength>, 2UL<nvals>, store)
+
+    let expected_sync = Vector.mask v1 v2 (fun x -> x = Some(true))
+    let actual = Vector.maskAsync 2 v1 v2 (fun x -> x = Some(true))
+
+    Assert.Equal(expected_sync, actual)

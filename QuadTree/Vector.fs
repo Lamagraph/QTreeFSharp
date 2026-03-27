@@ -213,3 +213,6 @@ let map2Async (maxSubtasks: int) (vector1: SparseVector<'a>) (vector2: SparseVec
 
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
+
+let maskAsync (maxSubtasks: int) (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
+    map2Async maxSubtasks vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
