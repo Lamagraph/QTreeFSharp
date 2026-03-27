@@ -161,6 +161,129 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
+let ``Async Vector.map2. Length is power of two.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(Some(2)))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 6UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(1))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 4UL<nvals>, store)
+
+    let f x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | _ -> None
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(3))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(3))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        Result.Success(SparseVector(8UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = Vector.map2Async 2 v1 v2 f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async Vector.map2 with 1 subtask.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Leaf(UserValue(Some(2)))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 6UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(1))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(8UL<dataLength>, 4UL<nvals>, store)
+
+    let f x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | _ -> None
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(3))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(UserValue(Some(3))))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        Result.Success(SparseVector(8UL<dataLength>, 4UL<nvals>, store))
+
+    let actual = Vector.map2Async 1 v1 v2 f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Async Vector.map2. Length is not power of two.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(Dummy))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(6UL<dataLength>, 2UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(2))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(Dummy))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        SparseVector(6UL<dataLength>, 2UL<nvals>, store)
+
+    let f x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | _ -> None
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(3))), Vector.btree.Leaf(UserValue(None))),
+                Vector.btree.Node(Vector.btree.Leaf(UserValue(None)), Vector.btree.Leaf(Dummy))
+            )
+
+        let store = Storage(8UL<storageSize>, tree)
+        Result.Success(SparseVector(6UL<dataLength>, 2UL<nvals>, store))
+
+    let actual = Vector.map2Async 2 v1 v2 f
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
 let ``Conversion identity`` () =
     let id = toCoordinateList << fromCoordinateList
 
