@@ -9,7 +9,7 @@ open Common
 
 let checkResult name actual expected =
     match actual with 
-    | Result.Success tree -> 
+    | Ok tree -> 
         let tree_transposed = Matrix.transpose tree
         let actual = Matrix.map2 tree tree_transposed (fun x y -> match (x,y) with | (Some(x),_) | (_, Some x) -> Some x | _ -> None)
         Assert.Equal(expected, actual)
@@ -33,7 +33,7 @@ let ``Boruvka MST 2 nodes.`` () =
                 1UL<rowindex>, 0UL<colindex>, 5UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -60,7 +60,7 @@ let ``Boruvka MST 3 nodes line.`` () =
                 2UL<rowindex>, 1UL<colindex>, 2UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -92,7 +92,7 @@ let ``Boruvka MST 4 nodes line.`` () =
                 3UL<rowindex>, 2UL<colindex>, 3UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -127,7 +127,7 @@ let ``Boruvka MST 5 nodes line.`` () =
                 4UL<rowindex>, 3UL<colindex>, 4UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -162,7 +162,7 @@ let ``Boruvka MST 5 nodes star.`` () =
                 4UL<rowindex>, 0UL<colindex>, 2UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -209,7 +209,7 @@ let ``Boruvka MST 5 nodes complete.`` () =
                 4UL<rowindex>, 0UL<colindex>, 4UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -250,7 +250,7 @@ let ``Boruvka MST two components.`` () =
                 5UL<rowindex>, 4UL<colindex>, 2UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -291,7 +291,7 @@ let ``Boruvka MST cycle graph 6 nodes.`` () =
                 5UL<rowindex>, 4UL<colindex>, 5UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -347,7 +347,7 @@ let ``Boruvka MST complete bipartite K3,3.`` () =
                 5UL<rowindex>, 0UL<colindex>, 3UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -408,7 +408,7 @@ let ``Boruvka MST random weights.`` () =
                 4UL<rowindex>, 3UL<colindex>, 10UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -463,7 +463,7 @@ let ``Boruvka MST 8 nodes grid.`` () =
                 7UL<rowindex>, 6UL<colindex>, 3UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -533,7 +533,7 @@ let ``Boruvka MST 10 nodes random.`` () =
                 9UL<rowindex>, 8UL<colindex>, 4UL
                 ])
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -569,7 +569,7 @@ let ``Boruvka MST simple triangle.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -611,7 +611,7 @@ let ``Boruvka MST simple square.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -655,7 +655,7 @@ let ``Boruvka MST simple square in two steps.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -729,7 +729,7 @@ let ``Boruvka MST.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
@@ -840,7 +840,7 @@ let ``Boruvka MST big.`` () =
                 ])
 
         Matrix.fromCoordinateList clist
-        |> Result.Success
+        |> Ok
 
     checkResult (Graph.Boruvka.mst graph) expected
 
