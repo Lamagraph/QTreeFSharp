@@ -1,6 +1,7 @@
 module Graph.BFS
 
 open Common
+open Result
 
 type Error =
     | NewFrontierCalculationProblem of LinearAlgebra.Error
@@ -14,17 +15,17 @@ let mapError'' (err: Vector.Error) = VisitedCalculationProblem err
 let bfs_level graph startVertices =
     let rec inner level (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
         if frontier.nvals > 0UL<nvals> then
-            result {
+            resultM {
                 let! new_frontier = 
                     LinearAlgebra.vxm 
                         (fun x y -> match (x, y) with | Some(v), _ | _, Some(v) -> Some(v) | _ -> None)
                         (fun x y -> match (x, y) with | Some(v), Some(_) -> Some(v) | _ -> None)
                         frontier graph
-                    |> Common.Result.mapError mapError
+                    |> Result.mapError mapError
 
                 let! frontier = 
                     Vector.mask new_frontier visited (fun x -> x.IsNone)
-                    |> Common.Result.mapError mapError'
+                    |> Result.mapError mapError'
 
                 let! visited = 
                     Vector.map2 visited new_frontier (fun x y ->
@@ -32,7 +33,7 @@ let bfs_level graph startVertices =
                         | (Some(_), _) -> x
                         | (None, Some(_)) -> Some(level)
                         | _ -> None)
-                    |> Common.Result.mapError mapError''
+                    |> Result.mapError mapError''
 
                 return! inner (level + 1UL) frontier visited
             }
