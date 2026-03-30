@@ -119,10 +119,10 @@ let vxmi_values
                   (inner new_size x1 vectorIdx y2 rowIdx (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)), 
                   (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y3 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) colIdx), 
                   (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y4 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)) with
-            | Result.Success((t1, nvals1)),
-              Result.Success((t2, nvals2)),
-              Result.Success((t3, nvals3)),
-              Result.Success((t4, nvals4)) ->
+            | Ok((t1, nvals1)),
+              Ok((t2, nvals2)),
+              Ok((t3, nvals3)),
+              Ok((t4, nvals4)) ->
                 let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
                 let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
                 let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
@@ -131,22 +131,22 @@ let vxmi_values
 
                 let vAdd v1 (v2: Vector.SparseVector<_>) =
                     match v2.storage.data with
-                    | Vector.Leaf(Dummy) -> Result.Success(v1)
+                    | Vector.Leaf(Dummy) -> Ok(v1)
                     | _ -> Vector.map2 v1 v2 op_add
 
                 let z1 = vAdd v1 v3
                 let z2 = vAdd v2 v4
 
                 match (z1, z2) with
-                | Result.Success(v1), Result.Success(v2) ->
-                    Result.Success((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
-                | Result.Failure(e), _
-                | _, Result.Failure(e) -> Result.Failure(VectorAdditionProblem(e))
+                | Ok(v1), Ok(v2) ->
+                    Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                | Error(e), _
+                | _, Error(e) -> Error(VectorAdditionProblem(e))
 
-            | Result.Failure(e), _, _, _
-            | _, Result.Failure(e), _, _
-            | _, _, Result.Failure(e), _
-            | _, _, _, Result.Failure(e) -> Result.Failure(e)
+            | Error(e), _, _, _
+            | _, Error(e), _, _
+            | _, _, Error(e), _
+            | _, _, _, Error(e) -> Error(e)
 
         match (vector, matrix) with
         | Vector.btree.Leaf(UserValue(Some(v1))), Matrix.qtree.Leaf(UserValue(Some(v2))) ->
@@ -159,7 +159,7 @@ let vxmi_values
                     | None -> 0UL<nvals>
                     | _ -> 1UL<nvals>
 
-                Result.Success(Vector.btree.Leaf(UserValue(res)), nnz)
+                Ok(Vector.btree.Leaf(UserValue(res)), nnz)
             else 
                 inner size (Vector.btree.Node(vector,vector)) vectorIdx (Matrix.qtree.Node(matrix, matrix,matrix,matrix)) rowIdx colIdx
 
@@ -167,11 +167,11 @@ let vxmi_values
         | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> _do x1 x2 matrix matrix matrix matrix
         | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
         | Vector.btree.Leaf(UserValue(None)),_
-        | _, Matrix.qtree.Leaf(UserValue(None)) ->  Result.Success(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
+        | _, Matrix.qtree.Leaf(UserValue(None)) ->  Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
 
         | Vector.btree.Leaf(Dummy), _
-        | _, Matrix.qtree.Leaf(Dummy) -> Result.Success(Vector.btree.Leaf(Dummy), 0UL<nvals>)
-        | (x, y) -> Result.Failure <| Error.InconsistentStructureOfStorages(x, y)
+        | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
+        | (x, y) -> Error Error.InconsistentStructureOfStorages
 
     if uint64 vector.length = uint64 matrix.nrows then
         let vector_storage =
@@ -191,21 +191,16 @@ let vxmi_values
                 vector.storage
 
         match inner vector_storage.size vector_storage.data 0UL<Vector.index> matrix.storage.data 0UL<Matrix.rowindex> 0UL<Matrix.colindex> with
-        | Result.Failure x -> Result.Failure x
-        | Result.Success(storage, nvals) ->
+        | Error x -> Error x
+        | Ok(storage, nvals) ->
             (Vector.SparseVector(
                 (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
                 nvals,
                 (Vector.Storage(matrix.storage.size, storage))
             ))
-            |> Result.Success
+            |> Ok
     else
-        (Error.InconsistentSizeOfArguments(vector, matrix)) |> Result.Failure
-
-type MXMError<'value1, 'value2, 'value3> =
-    | InconsistentSizeOfArguments of Matrix.SparseMatrix<'value1> * Matrix.SparseMatrix<'value2>
-    | MatrixAdditionProblem of Matrix.Error<'value3, 'value3>
->>>>>>> 6d543b7 (Draft of vxmi_values. Not finished.)
+        Error Error.InconsistentSizeOfArguments
 
 
 let mxm

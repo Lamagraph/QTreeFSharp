@@ -1,7 +1,21 @@
 module Graph.Boruvka
 
 open Common
+open Result
 
+
+type Error =
+    | EdgesCalculationProblem of LinearAlgebra.Error
+    | CEdgesCalculationProblem of Vector.Error
+    | IndexCalculationProblem of Vector.Error
+    | ScatterProblem of Vector.Error
+    | FoldValuesError of Vector.Error
+
+let mapError (err: LinearAlgebra.Error) = EdgesCalculationProblem err
+let mapError' (err: Vector.Error) = CEdgesCalculationProblem err
+let mapError'' (err: Vector.Error) = IndexCalculationProblem err
+let mapError''' (err: Vector.Error) = ScatterProblem err
+let mapError'''' (err: Vector.Error) = FoldValuesError err
 
 let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
     printfn "Matrix:"
@@ -20,12 +34,6 @@ let printVector (vector: Vector.SparseVector<_>) =
     printfn "      Size: %A" vector.storage.size
     printfn "      Data: %A" (Vector.toCoordinateList vector).data
 
-type Error<'t1, 't2, 't3, 't4, 't5, 't6, 't7, 't8, 't9, 't10, 't11, 't12> =    
-    | EdgesCalculationProblem of LinearAlgebra.Error<'t1, 't2, 't3>
-    | CEdgesCalculationProblem of Vector.Error<'t4, 't5, 't6>
-    | IndexCalculationProblem of Vector.Error<'t7, 't8, 't9>
-    | ScatterProblem of Vector.Error<'t10, 't11, 't12>
-
 let mst (graph:Matrix.SparseMatrix<_>) =
     printfn "MST CALLED nrows=%A ncols=%A nvals=%A" graph.nrows graph.ncols graph.nvals
     
@@ -42,7 +50,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
     printfn "Length = %A" length
-    let parent = Vector.init length (fun i -> Some i)
+    let parentInit = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
         printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
@@ -52,10 +60,10 @@ let mst (graph:Matrix.SparseMatrix<_>) =
         printVector parent
         if graph.nvals > 0UL<nvals> then
 
-            let edges = LinearAlgebra.vxmi_values op_add op_mult parent graph            
-            match edges with
-            | Result.Failure(e) -> Result.Failure(EdgesCalculationProblem(e))
-            | Result.Success(edges) ->
+            let edgesResult = LinearAlgebra.vxmi_values op_add op_mult parent graph
+            match edgesResult with
+            | Error e -> Error(EdgesCalculationProblem e)
+            | Ok edges ->
                 printfn "=== Edges ==="
                 printVector edges 
 
@@ -66,27 +74,23 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                     | None, Some v -> Some v
                     | _ -> None
 
-                let cedges = 
-                    Vector.scatter (Vector.empty length) edges parent op_add
-
-                match cedges with
-                | Result.Failure(e) -> Result.Failure(CEdgesCalculationProblem(e))
-                | Result.Success(cedges) ->
+                let cedgesResult = Vector.scatter (Vector.empty length) edges parent op_add
+                match cedgesResult with
+                | Error e -> Error(CEdgesCalculationProblem e)
+                | Ok cedges ->
                     printfn "=== Component Edges ==="
                     printVector cedges
 
                     let t = Vector.gather cedges parent
-                    let index = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
-                    let index = Vector.scatter (Vector.empty length) index parent op_min
-                    match index with 
-                    | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
-                    | Result.Success (index) ->
-                        //printfn "=== Index ==="
-                        //printVector index
+                    let indexInner = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
+                    let indexResult = Vector.scatter (Vector.empty length) indexInner parent op_min
+                    match indexResult with
+                    | Error e -> Error(IndexCalculationProblem e)
+                    | Ok index ->
                         let index = Vector.gather index parent
                         printfn "=== Index 2 ==="
                         printVector index
-                        
+                                
                         printfn "=== parent ==="
                         printVector parent
 
@@ -104,7 +108,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                             if result then
                                 printfn "TREE FILTER iter %d: edge (%d,%d) -> tree" iteration (i/1UL<Vector.index>) (j/1UL<Vector.index>)
                             result
-                        
+                                
                         let tree = 
                             Matrix.map2i tree graph (
                                 fun i j t g -> 
@@ -113,7 +117,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                     | None, Some g when filter i j g -> Some g
                                     | _ -> None)
 
-                        let _parent = 
+                        let _parentInner = 
                             Vector.map2i edges index 
                                 (fun i e idx ->
                                     match e,idx with 
@@ -129,46 +133,49 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                 )
 
                         printfn "=== _parent ==="
-                        printVector _parent
+                        printVector _parentInner
 
-                        let parentResult = 
-                            Vector.foldValues  _parent (fun state (i,v) -> 
+                        let parentUpdateResult = 
+                            Vector.foldValues _parentInner (fun state (i,v) -> 
                                 match state with 
-                                | Result.Success state ->
-                                     Vector.update state i (Some v) (fun old _new -> _new)
-                                | Result.Failure x -> Result.Failure x)
-                                (Result.Success parent)
+                                | Ok state ->
+                                    let updateResult = Vector.update state i (Some v) (fun old _new -> _new)
+                                    match updateResult with
+                                    | Ok u -> Ok u
+                                    | Error e -> Error e
+                                | Error e -> Error e)
+                                (Ok parent)
 
-                        match parentResult with
-                        | Result.Failure(e) -> Result.Failure(IndexCalculationProblem(e))
-                        | Result.Success(__parent) ->
+                        match parentUpdateResult with
+                        | Error e -> Error(FoldValuesError e)
+                        | Ok __parent ->
                             printfn "=== parentResult ==="
                             printVector __parent
-                            // Path compression: fix-point iteration using vector length                            
+                            
                             let rec fixPoint p =
                                 let p2 = Vector.gather p p
                                 if p2 = p then p else fixPoint p2
-                            let op_min x y =
+                            let op_min2 x y =
                                 match (x, y) with
                                 | Some v, Some u -> if v < u then Some v else Some u
                                 | Some v, _ -> Some v
                                 | None, Some v -> Some v
                                 | _ -> None
-                            let parent = Vector.scatter parent __parent parent op_min
-                            match parent with 
-                            | Result.Failure x -> ScatterProblem x |> Result.Failure
-                            | Result.Success parent -> 
+                            let parentScatterResult = Vector.scatter parent __parent parent op_min2
+                            match parentScatterResult with
+                            | Error e -> Error(ScatterProblem e)
+                            | Ok parentNew -> 
                                 printfn "=== parent' ==="
-                                printVector parent
-                                let parent = fixPoint parent
+                                printVector parentNew
+                                let parentFixed = fixPoint parentNew
                                 
                                 printfn "=== Parent for filter ==="
-                                printVector parent
+                                printVector parentFixed
                                 let graphFilter i j = 
                                     let i = uint64 i * 1UL<Vector.index>
                                     let j = uint64 j * 1UL<Vector.index>
-                                    let parent_i = Vector.unsafeGet parent i
-                                    let parent_j = Vector.unsafeGet parent j
+                                    let parent_i = Vector.unsafeGet parentFixed i
+                                    let parent_j = Vector.unsafeGet parentFixed j
                                     let result = 
                                         match (parent_i, parent_j) with
                                         | Some v1, Some v2 when v1 <> v2 -> true
@@ -179,10 +186,9 @@ let mst (graph:Matrix.SparseMatrix<_>) =
 
                                 let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
-                                inner graph tree parent (iteration + 1)
+                                inner graph tree parentFixed (iteration + 1)
 
-                
         else
-            Result.Success tree
+            Ok tree
 
-    inner graph (Matrix.empty graph.nrows graph.ncols) parent 0
+    inner graph (Matrix.empty graph.nrows graph.ncols) parentInit 0
