@@ -1,6 +1,7 @@
 module Graph.TriangleCount
 
 open Common
+open Result
 
 type Error =
     | MXMError of LinearAlgebra.Error
@@ -24,14 +25,14 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
         | Some _, Some _ -> Some 1UL
         | _ -> None
 
-    result {
+    resultM {
         let! C =
             LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
-            |> Common.Result.mapError mapError
+            |> Result.mapError mapError
 
         let! CMasked =
             Matrix.mask C graph Option.isSome
-            |> Common.Result.mapError mapError'
+            |> Result.mapError mapError'
 
         return Matrix.foldAssociative op_add None CMasked
     }
