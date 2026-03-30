@@ -279,7 +279,7 @@ let ``Simple vxmi_values. 3 * (3x5)`` () =
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
-        Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
+        Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
     let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
 
@@ -323,7 +323,7 @@ let ``Simple vxmi_values. 4 * (4x3).`` () =
                                                                         , Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,2UL<Matrix.colindex>), vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
+        Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
     let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
 
