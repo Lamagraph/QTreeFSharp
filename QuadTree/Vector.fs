@@ -40,6 +40,67 @@ let mkNode t1 t2 =
     | _ -> Node(t1, t2)
 
 
+type UnaryOp<'a,'b> =
+    | ValuesOnly of ('a -> Option<'b>)
+    | ValuesOnlyIndexed of (uint64<index> -> 'a -> Option<'b>)
+    | AllCells of (Option<'a> -> Option<'b>)
+    | AllCellsIndexed of (uint64<index> -> Option<'a> -> Option<'b>)
+
+
+let private mapInner (vector: SparseVector<'a>) (op: UnaryOp<'a,'b>) : SparseVector<'b> =
+    let rec inner (pointer: uint64<index>) (size: uint64<storageSize>) (tree: btree<Option<'a>>) : btree<Option<'b>> * uint64<nvals> =
+        match tree with
+        | Node(x1, x2) ->
+            let halfSize = size / 2UL
+            let t1, nvals1 = inner pointer halfSize x1
+            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2
+            mkNode t1 t2, nvals1 + nvals2
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            match op with
+            | ValuesOnly f ->
+                match v with
+                | None -> Leaf(UserValue(None)), 0UL<nvals>
+                | Some v' ->
+                    let res = f v'
+                    let nvals = if res.IsSome then (uint64 size) * 1UL<nvals> else 0UL<nvals>
+                    Leaf(UserValue(res)), nvals
+            | ValuesOnlyIndexed f ->
+                match v with
+                | None -> Leaf(UserValue(None)), 0UL<nvals>
+                | Some v' ->
+                    if size = 1UL<storageSize> then
+                        let res = f pointer v'
+                        let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
+                        Leaf(UserValue(res)), nvals
+                    else
+                        let res = f pointer v'
+                        if res.IsNone then
+                            Leaf(UserValue(res)), 0UL<nvals>
+                        else
+                            let halfSize = size / 2UL
+                            let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
+                            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
+                            mkNode t1 t2, nvals1 + nvals2
+            | AllCells f ->
+                let res = f v
+                let nvals = if res.IsSome then (uint64 size) * 1UL<nvals> else 0UL<nvals>
+                Leaf(UserValue(res)), nvals
+            | AllCellsIndexed f ->
+                if size = 1UL<storageSize> then
+                    let res = f pointer v
+                    let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
+                    Leaf(UserValue(res)), nvals
+                else
+                    let halfSize = size / 2UL
+                    let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
+                    let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
+                    mkNode t1 t2, nvals1 + nvals2
+
+    let storage, nvals = inner 0UL<index> vector.storage.size vector.storage.data
+    SparseVector(vector.length, nvals, Storage(vector.storage.size, storage))
+
+
 [<Struct>]
 type CoordinateList<'value> =
     val length: uint64<dataLength>
@@ -150,51 +211,16 @@ let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state:'b) =
     inner state vector.storage.size vector.storage.data
 
 let map (vector: SparseVector<'a>) f =
-    let rec inner (size: uint64<storageSize>) vector =
-        match vector with
-        | Node(x1, x2) ->
-            let t1, nvals1 = inner (size / 2UL) x1
-            let t2, nvals2 = inner (size / 2UL) x2
-            (mkNode t1 t2), nvals1 + nvals2
-        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v)) ->
-            let res = f v
+    mapInner vector (AllCells f)
 
-            let nnz =
-                match res with
-                | None -> 0UL<nvals>
-                | _ -> (uint64 size) * 1UL<nvals>
-
-            Leaf(UserValue(res)), nnz
-
-    let storage, nvals = inner vector.storage.size vector.storage.data
-
-    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
-
+let mapValues (vector: SparseVector<'a>) f =
+    mapInner vector (ValuesOnly f)
 
 let mapi (vector: SparseVector<'a>) f =
-    let rec inner (pointer: uint64<index>) (size: uint64<storageSize>) vector =
-        match vector with
-        | Node(x1, x2) ->
-            let halfSize = size / 2UL
-            let t1, nvals1 = inner pointer halfSize x1
-            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2
-            (mkNode t1 t2), nvals1 + nvals2
-        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v)) ->
-            if size = 1UL<storageSize> then 
-                let res = f pointer v
-                let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
-                Leaf(UserValue(res)), nnz
-            else 
-                let halfSize = size / 2UL
-                let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
-                let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
-                (mkNode t1 t2), nvals1 + nvals2
+    mapInner vector (AllCellsIndexed f)
 
-    let storage, nvals = inner 0UL<index> vector.storage.size vector.storage.data
-
-    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+let mapiValues (vector: SparseVector<'a>) f =
+    mapInner vector (ValuesOnlyIndexed f)
 
 
 let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseVector<'a> =
@@ -320,10 +346,7 @@ let unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
 
 /// Gather: w[i] = v[idx[i]]
 let gather (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>) : SparseVector<'value> =
-    map idx (fun i -> 
-        match i with 
-        | Some  i-> unsafeGet v i 
-        | None -> None)
+    mapValues idx (fun i ->  unsafeGet v i) 
 
 let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) : SparseVector<'a> =
     let storageSize = v.storage.size
