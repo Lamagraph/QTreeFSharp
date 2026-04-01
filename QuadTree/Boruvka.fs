@@ -59,7 +59,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 | Some(w, dst), Some idxVal-> 
                     g = w && idxVal = i && uint64 dst = uint64 j
                 | _ -> false
-            if result then printfn "TREE FILTER: edge (%A,%A) -> tree" i j
+            //if result then printfn "TREE FILTER: edge (%A,%A) -> tree" i j
             result
     
     let graphFilter parent = 
@@ -77,11 +77,11 @@ let mst (graph:Matrix.SparseMatrix<_>) =
     let parent = Vector.init length (fun i -> Some i)
     
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
-        printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
-        printfn "=== Graph ==="
-        printMatrixCoordinate graph
-        printfn "Parent at start of iter %d:" iteration
-        printVector parent
+        //printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
+        //printfn "=== Graph ==="
+        //printMatrixCoordinate graph
+        //printfn "Parent at start of iter %d:" iteration
+        //printVector parent
         if graph.nvals > 0UL<nvals> then
 
             // Cheapest outgoing edge for each vertex 
@@ -94,8 +94,8 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                     LinearAlgebra.vxmi_values op_min op_mult parent graph
                     |> Result.mapError mapError
            
-                printfn "=== Edges ==="
-                printVector edges 
+                //printfn "=== Edges ==="
+                //printVector edges 
 
                 // Per‑component cheapest edge
                 // For each component, keep the smallest edges among its vertices.
@@ -103,8 +103,8 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                     Vector.scatter (Vector.empty length) edges parent op_min
                     |> Result.mapError mapError'
             
-                printfn "=== Component Edges ==="
-                printVector cedges
+                //printfn "=== Component Edges ==="
+                //printVector cedges
 
                 // Propagate component's cheapest edge to all its vertices
                 // Each vertex gets its component's edge
@@ -112,7 +112,9 @@ let mst (graph:Matrix.SparseMatrix<_>) =
             
                 // Identify a representative vertex for each component
                 // For each vertex, if its own edge is the component's cheapest, mark it.
-                let indexInner = Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
+                let! indexInner = 
+                    Vector.map2i t edges (fun i t e -> match (t,e) with |  Some v1, Some v2 when v1 = v2 -> Some i | _ -> None)
+                    |> Result.mapError mapError'
                 // Among the marked vertices in a component, keep the smallest index.
                 let! index = 
                     Vector.scatter (Vector.empty length) indexInner parent op_min
@@ -120,8 +122,8 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 // now each vertex knows its component's representative
                 let index = Vector.gather index parent
             
-                printfn "=== Index ==="
-                printVector index
+                //printfn "=== Index ==="
+                //printVector index
 
                 // Add selected edges to the MST tree
                 // An edge (i, j, w) is added if vertex i is the representative for its component
@@ -138,7 +140,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                 // Compute new parent assignments (merge components)
                 // For each component representative i with cheapest edge (w, j), we want to merge
                 // the component of i with the component of j. Choose the smaller root.
-                let data_for_update_parent = 
+                let! data_for_update_parent = 
                     Vector.map2i edges index 
                         (fun i e idx ->
                             match e,idx with 
@@ -152,9 +154,7 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                                 | x -> failwithf "Unreachable: %A" x
                             | _ -> None
                         )
-
-                printfn "=== Data for update parent ==="
-                printVector data_for_update_parent
+                    |> Result.mapError mapError'
 
                 // Apply the updates
                 let! initial_parent_update =
@@ -169,22 +169,22 @@ let mst (graph:Matrix.SparseMatrix<_>) =
                         (Ok parent)
                     |> Result.mapError mapError''''
 
-                printfn "=== Initial parent update ==="
-                printVector initial_parent_update
+                //printfn "=== Initial parent update ==="
+                //printVector initial_parent_update
             
                 let! parent = 
                     Vector.scatter parent initial_parent_update parent op_min
                     |> Result.mapError mapError'''
                 
-                printfn "=== Initially updated parent ==="
-                printVector parent
+                //printfn "=== Initially updated parent ==="
+                //printVector parent
             
                 // Then ensure that all vertices in a merged component point to the same root.
                 // This is done by a fixpoint (path compression) that repeatedly gathers parents.
                 let parent = fixPoint parent
             
-                printfn "=== Parent before data propagation ==="
-                printVector parent
+                //printfn "=== Parent before data propagation ==="
+                //printVector parent
             
                 // Filter the graph to keep only edges between different components
                 let graphFilter = graphFilter parent

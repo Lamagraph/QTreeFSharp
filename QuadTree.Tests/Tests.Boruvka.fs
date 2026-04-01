@@ -17,7 +17,7 @@ let checkResult name actual expected =
 
 [<Fact>]
 let ``Boruvka MST 2 nodes.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(2UL<nrows>, 2UL<ncols>,[
@@ -40,7 +40,7 @@ let ``Boruvka MST 2 nodes.`` () =
 
 [<Fact>]
 let ``Boruvka MST 3 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>,[
@@ -68,7 +68,7 @@ let ``Boruvka MST 3 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 4 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(4UL<nrows>, 4UL<ncols>,[
@@ -99,7 +99,7 @@ let ``Boruvka MST 4 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>,[
@@ -134,7 +134,7 @@ let ``Boruvka MST 5 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes star.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>,[
@@ -169,7 +169,7 @@ let ``Boruvka MST 5 nodes star.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes complete.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(5UL<nrows>, 5UL<ncols>,[
@@ -216,7 +216,7 @@ let ``Boruvka MST 5 nodes complete.`` () =
 
 [<Fact>]
 let ``Boruvka MST two components.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(6UL<nrows>, 6UL<ncols>,[
@@ -257,7 +257,7 @@ let ``Boruvka MST two components.`` () =
 
 [<Fact>]
 let ``Boruvka MST cycle graph 6 nodes.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(6UL<nrows>, 6UL<ncols>,[
@@ -298,7 +298,7 @@ let ``Boruvka MST cycle graph 6 nodes.`` () =
 ///!!!!!!!!
 [<Fact>]
 let ``Boruvka MST complete bipartite K3,3.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(6UL<nrows>, 6UL<ncols>,[
@@ -353,7 +353,7 @@ let ``Boruvka MST complete bipartite K3,3.`` () =
 
 [<Fact>]
 let ``Boruvka MST random weights.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(8UL<nrows>, 8UL<ncols>,[
@@ -414,7 +414,7 @@ let ``Boruvka MST random weights.`` () =
 
 [<Fact>]
 let ``Boruvka MST 8 nodes grid.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(8UL<nrows>, 8UL<ncols>,[
@@ -469,7 +469,7 @@ let ``Boruvka MST 8 nodes grid.`` () =
 
 [<Fact>]
 let ``Boruvka MST 10 nodes random.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(10UL<nrows>, 10UL<ncols>,[
@@ -539,8 +539,7 @@ let ``Boruvka MST 10 nodes random.`` () =
 
 
 [<Fact>]
-let ``Boruvka MST simple triangle.`` () =
-    printfn "!!! TEST STARTING !!!"
+let ``Boruvka MST simple triangle.`` () =    
     let graph =
         let clist =
             Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>,[
@@ -576,7 +575,7 @@ let ``Boruvka MST simple triangle.`` () =
 
 [<Fact>]
 let ``Boruvka MST simple square.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(4UL<nrows>, 4UL<ncols>,[
@@ -620,7 +619,7 @@ let ``Boruvka MST simple square.`` () =
 
 [<Fact>]
 let ``Boruvka MST simple square in two steps.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(4UL<nrows>, 4UL<ncols>,[
@@ -664,7 +663,7 @@ let ``Boruvka MST simple square in two steps.`` () =
 
 [<Fact>]
 let ``Boruvka MST.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(7UL<nrows>, 7UL<ncols>,[
@@ -736,7 +735,7 @@ let ``Boruvka MST.`` () =
     
 [<Fact>]
 let ``Boruvka MST big.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
+    
     let graph =
         let clist =
             Matrix.CoordinateList(12UL<nrows>, 12UL<ncols>,[

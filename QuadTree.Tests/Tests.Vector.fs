@@ -274,7 +274,9 @@ let ``Simple Vector.map2i. Length is power of two.`` () =
 
     let actual = Vector.map2i v1 v2 f
 
-    Assert.Equal(expected, actual)
+    match actual with
+    | Error e -> failwithf "Unexpected error: %A" e
+    | Ok result -> Assert.Equal(expected, result)
 
 [<Fact>]
 let ``Simple Vector.map2i. Length is not power of two.`` () =
@@ -300,7 +302,9 @@ let ``Simple Vector.map2i. Length is not power of two.`` () =
 
     let actual = Vector.map2i v1 v2 f
 
-    Assert.Equal(expected, actual)
+    match actual with
+    | Error e -> failwithf "Unexpected error: %A" e
+    | Ok result -> Assert.Equal(expected, result)
 
 [<Fact>]
 let ``Simple Vector.map2i. Mixed values.`` () =
@@ -321,10 +325,11 @@ let ``Simple Vector.map2i. Mixed values.`` () =
         | None, Some(b) -> Some(b * 3)
         | _ -> None
 
-    let actual = Vector.map2i v1 v2 f
-    let actualCL = Vector.toCoordinateList actual
-
-    Assert.Equal(4UL<nvals>, actual.nvals)
+    match Vector.map2i v1 v2 f with
+    | Error e -> failwithf "Unexpected error: %A" e
+    | Ok result ->
+        let actualCL = Vector.toCoordinateList result
+        Assert.Equal(4UL<nvals>, result.nvals)
 
 [<Fact>]
 let ``Simple Vector.map2Values.`` () =
@@ -512,6 +517,37 @@ let ``Vector.map2Values compressed both`` () =
 
     let actual = Vector.map2Values v1 v2 f
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Vector.map2Values compressed both indexed`` () =
+    let dataLength = 5UL<dataLength>    
+
+    let v1 =
+        let data =
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let v2 =
+        let data =
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let f i a b = Some(int i + a + b)
+
+    let expected =
+        let data =
+            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList |> Ok
+    
+    let actual = Vector.map2iValues v1 v2 f
+    match actual with Ok actual -> printVector actual  
+    Assert.Equal(expected, actual)    
 
 
 [<Fact>]
