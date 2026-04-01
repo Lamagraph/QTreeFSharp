@@ -148,43 +148,60 @@ let private map2Inner (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) (o
                 | Ok(t2, nvals2) -> Ok(mkNode t1 t2, nvals1 + nvals2)
         | Leaf(Dummy), Leaf(Dummy) -> Ok(Leaf(Dummy), 0UL<nvals>)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
-            let res =
+            let isIndexedOp =
                 match op with
-                | BinaryOp.ValuesOnly f ->
-                    match v1, v2 with
-                    | Some a, Some b -> f a b
-                    | _ -> None
-                | BinaryOp.ValuesOnlyIndexed f ->
-                    match v1, v2 with
-                    | Some a, Some b -> f pointer a b
-                    | _ -> None
-                | BinaryOp.AllCells f ->
-                    f v1 v2
-                | BinaryOp.AllCellsIndexed f ->
-                    f pointer v1 v2
-                | BinaryOp.AtLeastOneValue f ->
-                    match v1, v2 with
-                    | Some a, Some b -> f (AtLeastOne.Both(a, b))
-                    | Some a, None -> f (AtLeastOne.Left a)
-                    | None, Some b -> f (AtLeastOne.Right b)
-                    | None, None -> None
-                | BinaryOp.AtLeastOneValueIndexed f ->
-                    match v1, v2 with
-                    | Some a, Some b -> f pointer (AtLeastOne.Both(a, b))
-                    | Some a, None -> f pointer (AtLeastOne.Left a)
-                    | None, Some b -> f pointer (AtLeastOne.Right b)
-                    | None, None -> None
-                | BinaryOp.LeftValuesOnly f ->
-                    match v1 with
-                    | Some a -> f a v2
-                    | None -> None
-                | BinaryOp.LeftValuesOnlyIndexed f ->
-                    match v1 with
-                    | Some a -> f pointer a v2
-                    | None -> None
+                | BinaryOp.ValuesOnlyIndexed _ -> true
+                | BinaryOp.AllCellsIndexed _ -> true
+                | BinaryOp.AtLeastOneValueIndexed _ -> true
+                | BinaryOp.LeftValuesOnlyIndexed _ -> true
+                | _ -> false
 
-            let nnz = match res with Some _ -> (uint64 size) * 1UL<nvals> | None -> 0UL<nvals>
-            Ok(Leaf(UserValue(res)), nnz)
+            if size > 1UL<storageSize> && isIndexedOp then
+                let halfSize = size / 2UL
+                match inner pointer halfSize (Leaf(UserValue(v1))) (Leaf(UserValue(v2))) with
+                | Error e -> Error e
+                | Ok(t1, nvals1) ->
+                    match inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v1))) (Leaf(UserValue(v2))) with
+                    | Error e -> Error e
+                    | Ok(t2, nvals2) -> Ok(mkNode t1 t2, nvals1 + nvals2)
+            else
+                let res =
+                    match op with
+                    | BinaryOp.ValuesOnly f ->
+                        match v1, v2 with
+                        | Some a, Some b -> f a b
+                        | _ -> None
+                    | BinaryOp.ValuesOnlyIndexed f ->
+                        match v1, v2 with
+                        | Some a, Some b -> f pointer a b
+                        | _ -> None
+                    | BinaryOp.AllCells f ->
+                        f v1 v2
+                    | BinaryOp.AllCellsIndexed f ->
+                        f pointer v1 v2
+                    | BinaryOp.AtLeastOneValue f ->
+                        match v1, v2 with
+                        | Some a, Some b -> f (AtLeastOne.Both(a, b))
+                        | Some a, None -> f (AtLeastOne.Left a)
+                        | None, Some b -> f (AtLeastOne.Right b)
+                        | None, None -> None
+                    | BinaryOp.AtLeastOneValueIndexed f ->
+                        match v1, v2 with
+                        | Some a, Some b -> f pointer (AtLeastOne.Both(a, b))
+                        | Some a, None -> f pointer (AtLeastOne.Left a)
+                        | None, Some b -> f pointer (AtLeastOne.Right b)
+                        | None, None -> None
+                    | BinaryOp.LeftValuesOnly f ->
+                        match v1 with
+                        | Some a -> f a v2
+                        | None -> None
+                    | BinaryOp.LeftValuesOnlyIndexed f ->
+                        match v1 with
+                        | Some a -> f pointer a v2
+                        | None -> None
+
+                let nnz = match res with Some _ -> (uint64 size) * 1UL<nvals> | None -> 0UL<nvals>
+                Ok(Leaf(UserValue(res)), nnz)
         | _ -> Error Error.InconsistentStructureOfStorages
 
     if len1 = vector2.length then
