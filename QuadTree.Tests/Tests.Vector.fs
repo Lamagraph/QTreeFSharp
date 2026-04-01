@@ -327,6 +327,295 @@ let ``Simple Vector.map2i. Mixed values.`` () =
     Assert.Equal(4UL<nvals>, actual.nvals)
 
 [<Fact>]
+let ``Simple Vector.map2Values.`` () =
+    let v1 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Leaf(UserValue(Some(1))),
+                Vector.btree.Leaf(UserValue(Some(2)))
+            )
+        let store = Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 2UL<nvals>, store)
+
+    let v2 =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Leaf(UserValue(Some(10))),
+                Vector.btree.Leaf(UserValue(Some(20)))
+            )
+        let store = Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 2UL<nvals>, store)
+
+    let f a b = Some(a + b)
+
+    match Vector.map2Values v1 v2 f with
+    | Error e -> failwithf "Unexpected error: %A" e
+    | Ok result ->
+        Assert.Equal(4UL<nvals>, result.nvals)
+        Assert.Equal(4UL<dataLength>, result.length)
+
+[<Fact>]
+let ``Simple Vector.map2AllCells.`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(Some(3)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let f (x: Option<int>) (y: Option<int>) = Option.map2 (+) x y
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(8)))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = Vector.map2AllCells v1 v2 f
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.map2AtLeastOne.`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(None))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 0UL<nvals>, store)
+
+    let f (x: AtLeastOne<int,int>) =
+        match x with
+        | AtLeastOne.Both(a, b) -> Some(a + b)
+        | AtLeastOne.Left a -> Some(a * 2)
+        | AtLeastOne.Right b -> Some(b * 3)
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(10)))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = Vector.map2AtLeastOne v1 v2 f
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Simple Vector.map2LeftValues.`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(None))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 0UL<nvals>, store)
+
+    let f a (y: Option<int>) = Some(a + (defaultArg y 0))
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = Vector.map2LeftValues v1 v2 f
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Vector.map2Values compressed`` () =
+    let dataLength = 5UL<dataLength>    
+
+    let v1 =
+        let data =
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let v2 =
+        let data =
+            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let f a b = Some(a + b)
+
+    let expected =
+        let data =
+            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList |> Ok
+
+    let actual = Vector.map2Values v1 v2 f
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Vector.map2Values compressed to None`` () =
+    let dataLength = 5UL<dataLength>    
+
+    let v1 =
+        let data =
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let v2 =
+        let data =
+            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let f a b = None
+
+    let expected =
+        Vector.empty dataLength |> Ok
+
+    let actual = Vector.map2Values v1 v2 f
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Vector.map2Values compressed both`` () =
+    let dataLength = 5UL<dataLength>    
+
+    let v1 =
+        let data =
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let v2 =
+        let data =
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let f a b = Some(a + b)
+
+    let expected =
+        let data =
+            [ 0UL<index>, 3; 1UL<index>, 3; 2UL<index>, 3; 3UL<index>, 3; 4UL<index>, 3]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList |> Ok
+
+    let actual = Vector.map2Values v1 v2 f
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Vector.map2Values compressed both to None`` () =
+    let dataLength = 5UL<dataLength>    
+
+    let v1 =
+        let data =
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let v2 =
+        let data =
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+
+        CoordinateList(dataLength, data)
+        |> Vector.fromCoordinateList
+
+    let f a b = None
+
+    let expected =
+        Vector.empty dataLength |> Ok
+
+    let actual = Vector.map2Values v1 v2 f
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``Vector.map2Values with None returns None`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(None))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 0UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(Some(3)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let f a b = Some(a + b)
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(None))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 0UL<nvals>, store))
+
+    let actual = Vector.map2Values v1 v2 f
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Vector.map2AtLeastOne Both case`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(Some(5)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(Some(3)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let f (x: AtLeastOne<int,int>) =
+        match x with
+        | AtLeastOne.Both(a, b) -> Some(a + b)
+        | AtLeastOne.Left a -> Some(a)
+        | AtLeastOne.Right b -> Some(b)
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(8)))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = Vector.map2AtLeastOne v1 v2 f
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Vector.map2AtLeastOne Right case`` () =
+    let v1 =
+        let tree = Vector.btree.Leaf(UserValue(None))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 0UL<nvals>, store)
+
+    let v2 =
+        let tree = Vector.btree.Leaf(UserValue(Some(7)))
+        let store = Storage(1UL<storageSize>, tree)
+        SparseVector(1UL<dataLength>, 1UL<nvals>, store)
+
+    let f (x: AtLeastOne<int,int>) =
+        match x with
+        | AtLeastOne.Both(a, b) -> Some(a + b)
+        | AtLeastOne.Left a -> Some(a)
+        | AtLeastOne.Right b -> Some(b * 2)
+
+    let expected =
+        let tree = Vector.btree.Leaf(UserValue(Some(14)))
+        let store = Storage(1UL<storageSize>, tree)
+        Ok(SparseVector(1UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = Vector.map2AtLeastOne v1 v2 f
+    Assert.Equal(expected, actual)
+
+[<Fact>]
 let ``Conversion identity`` () =
     let id = toCoordinateList << fromCoordinateList
 
