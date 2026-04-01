@@ -185,32 +185,6 @@ let private map2Inner (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) (o
 
             let nnz = match res with Some _ -> (uint64 size) * 1UL<nvals> | None -> 0UL<nvals>
             Ok(Leaf(UserValue(res)), nnz)
-        | Leaf(UserValue(v)), Leaf(Dummy) ->
-            let res =
-                match op with
-                | BinaryOp.ValuesOnly f -> None
-                | BinaryOp.ValuesOnlyIndexed f -> None
-                | BinaryOp.AllCells f -> f v None
-                | BinaryOp.AllCellsIndexed f -> f pointer v None
-                | BinaryOp.AtLeastOneValue f -> f (AtLeastOne.Left (Option.get v))
-                | BinaryOp.AtLeastOneValueIndexed f -> f pointer (AtLeastOne.Left (Option.get v))
-                | BinaryOp.LeftValuesOnly f -> f (Option.get v) None
-                | BinaryOp.LeftValuesOnlyIndexed f -> f pointer (Option.get v) None
-            let nnz = match res with Some _ -> (uint64 size) * 1UL<nvals> | None -> 0UL<nvals>
-            Ok(Leaf(UserValue(res)), nnz)
-        | Leaf(Dummy), Leaf(UserValue(v)) ->
-            let res =
-                match op with
-                | BinaryOp.ValuesOnly f -> None
-                | BinaryOp.ValuesOnlyIndexed f -> None
-                | BinaryOp.AllCells f -> f None v
-                | BinaryOp.AllCellsIndexed f -> f pointer None v
-                | BinaryOp.AtLeastOneValue f -> f (AtLeastOne.Right (Option.get v))
-                | BinaryOp.AtLeastOneValueIndexed f -> f pointer (AtLeastOne.Right (Option.get v))
-                | BinaryOp.LeftValuesOnly f -> None
-                | BinaryOp.LeftValuesOnlyIndexed f -> None
-            let nnz = match res with Some _ -> (uint64 size) * 1UL<nvals> | None -> 0UL<nvals>
-            Ok(Leaf(UserValue(res)), nnz)
         | _ -> Error Error.InconsistentStructureOfStorages
 
     if len1 = vector2.length then
