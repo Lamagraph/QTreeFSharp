@@ -13,7 +13,7 @@ type Benchmark() =
 
     [<GlobalSetup>]
     member this.LoadMatrix() =
-        matrix <- readMtx (System.IO.Path.Combine(DIR_WITH_MATRICES, this.MatrixName)) true
+        matrix <- readMtx (System.IO.Path.Combine(DIR_WITH_MATRICES, this.MatrixName)) false
 
     [<Benchmark>]
     member this.SSSP() = Graph.SSSP.sssp matrix 0UL
