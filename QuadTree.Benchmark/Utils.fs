@@ -11,7 +11,8 @@ let DIR_WITH_MATRICES = "../../../../../../../data/"
 let readMtx path directed =
     let getCooList (linewords: seq<string array>) =
         linewords
-        |> Seq.map (fun x -> ((uint64 x.[0]) - 1UL), ((uint64 x.[1]) - 1UL), (if x.Length = 2 then 1.0 else double x.[2]))
+        |> Seq.map (fun x ->
+            ((uint64 x.[0]) - 1UL), ((uint64 x.[1]) - 1UL), (if x.Length = 2 then 1.0 else double x.[2]))
         |> Seq.collect (fun (i, j, v) ->
             if not directed then
                 [ (i * 1UL<Matrix.rowindex>, j * 1UL<Matrix.colindex>, v)

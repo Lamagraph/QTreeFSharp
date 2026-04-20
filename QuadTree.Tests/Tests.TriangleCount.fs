@@ -92,4 +92,3 @@ let ``5V Triangle count`` () =
         | _ -> failwith "Unreachable"
 
     Assert.Equal(expected, actual)
-
