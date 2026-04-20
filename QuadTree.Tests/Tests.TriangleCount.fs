@@ -58,3 +58,38 @@ let ``7V Triangle count`` () =
         | _ -> failwith "Unreachable"
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``5V Triangle count`` () =
+
+    let g =
+        let d =
+            [ 1UL<rowindex>, 0UL<colindex>, ()
+              0UL<rowindex>, 1UL<colindex>, ()
+
+              1UL<rowindex>, 2UL<colindex>, ()
+              2UL<rowindex>, 1UL<colindex>, ()
+
+              2UL<rowindex>, 0UL<colindex>, ()
+              0UL<rowindex>, 2UL<colindex>, ()
+
+              1UL<rowindex>, 4UL<colindex>, ()
+              4UL<rowindex>, 1UL<colindex>, ()
+
+              4UL<rowindex>, 3UL<colindex>, ()
+              3UL<rowindex>, 4UL<colindex>, ()
+
+              3UL<rowindex>, 1UL<colindex>, ()
+              1UL<rowindex>, 3UL<colindex>, () ]
+
+        fromCoordinateList (CoordinateList(5UL<nrows>, 5UL<ncols>, d))
+
+    let expected = 2UL
+
+    let actual =
+        match triangle_count g with
+        | Result.Success(Some x) -> x
+        | _ -> failwith "Unreachable"
+
+    Assert.Equal(expected, actual)
+
