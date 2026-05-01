@@ -163,7 +163,7 @@ let delete tree v =
     newTree |> justTree |> blacken |> justTree
 
 //join
-let join t1 g t2 =
+let private join t1 g t2 =
 
     let rec joinLT t1 g t2 targetHeight currentHeight =
         if targetHeight = currentHeight then
@@ -210,7 +210,7 @@ let join t1 g t2 =
         Node(Black, t1, g, t2)
 
 //merge
-let merge t1 t2 =
+let private merge t1 t2 =
 
     let rec minimum tree =
         match tree with
@@ -278,7 +278,7 @@ let merge t1 t2 =
         t |> blacken |> justTree
 
 //split
-let rec split kx tree =
+let rec private split kx tree =
     match tree with
     | Empty -> (Empty, Empty)
     | Node(_, l, x, r) ->
