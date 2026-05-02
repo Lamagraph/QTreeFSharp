@@ -1,6 +1,7 @@
 module Vector
 
 open Common
+open Result
 
 type 'value btree =
     | Leaf of 'value treeValue
@@ -108,7 +109,6 @@ let map (vector: SparseVector<'a>) f =
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
             let res = f v
-
             let nnz =
                 match res with
                 | None -> 0UL<nvals>
@@ -119,6 +119,29 @@ let map (vector: SparseVector<'a>) f =
     let storage, nvals = inner vector.storage.size vector.storage.data
 
     SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+
+let mapi (vector: SparseVector<'a>) f =
+    let rec inner (size: uint64<storageSize>) (pos: uint64<index>) vector =
+        match vector with
+        | Node (x1, x2) ->
+            let half = size / 2UL
+            let halfIdx = (uint64 half) * 1UL<index>
+            let t1, n1 = inner half pos x1
+            let t2, n2 = inner half (pos + halfIdx) x2
+            (mkNode t1 t2), n1 + n2
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            let res = f pos v
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * 1UL<nvals>
+
+            Leaf(UserValue(res)), nnz
+
+    let storage, nvals = inner vector.storage.size 0UL<index> vector.storage.data
+
+    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage))) 
 
 let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     let len1 = vector1.length
@@ -158,5 +181,41 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     else
         Result.Failure <| Error.InconsistentSizeOfArguments(vector1, vector2)
 
+
+
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
+
+let slice (_start: int) (_end: int) (vector: SparseVector<'a>) =
+    match () with
+    | _ when _start < 0 -> Failure "Start should be >= 0"
+    | _ when _end < 0 -> Failure "End should be >= 0"
+    | _ when _start > int vector.length - 1 -> Failure "Start is out of Vector length"
+    | _ when _end > int vector.length - 1 -> Failure "End is out of Vector length"
+    | _ when _start > _end -> Failure "End should be >= Start"
+    | _ ->
+        let startIdx = uint64 _start * 1UL<index>
+        let endIdx = uint64 _end * 1UL<index>
+
+        let rec inner (size: uint64<storageSize>) (pos: uint64<index>) vector =
+            let sizeIdx = (uint64 size) * 1UL<index>
+            match vector with
+            | Node (x1,x2) ->
+                let half = size / 2UL
+                let halfIdx = (uint64 half) * 1UL<index>
+                let t1, n1 = inner half pos x1
+                let t2, n2 = inner half (pos + halfIdx) x2
+                (mkNode t1 t2), n1 + n2
+            | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when pos >= startIdx && pos + sizeIdx - 1UL<index> <= endIdx -> Leaf(UserValue(v)), (uint64 size) * 1UL<nvals>
+            | Leaf(UserValue(v)) when pos + sizeIdx - 1UL<index> < startIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when pos > endIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) -> Leaf(Dummy), 0UL<nvals>
+
+        let storage, nvals = inner vector.storage.size 0UL<index> vector.storage.data
+        let newLength = uint64 (_end - _start + 1) * 1UL<dataLength>
+        let coo = toCoordinateList (SparseVector(newLength, nvals, Storage(vector.storage.size, storage)))
+        let shiftedData = coo.data |> List.map (fun (idx, value) -> (idx - uint64 _start * 1UL<index>, value))
+        let shiftedCoo = CoordinateList(newLength, shiftedData)
+        let newVec = fromCoordinateList shiftedCoo
+        Success newVec

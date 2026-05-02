@@ -1,6 +1,7 @@
 ﻿module Matrix
 
 open Common
+open Result
 
 (*
 | x1 | x2 |
@@ -107,7 +108,6 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
                 (traverse neCoo nep halfSize)
                 (traverse swCoo swp halfSize)
                 (traverse seCoo sep halfSize)
-
     let tree = traverse coo.list (0UL<rowindex>, 0UL<colindex>) storageSize
 
     SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageSize>, tree))
@@ -136,6 +136,33 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
         traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size)
 
     CoordinateList(nrows, ncols, coo)
+
+let mapi (matrix: SparseMatrix<'a>) f =
+    let rec inner (size: uint64<storageSize>) (row: uint64<rowindex>) (col: uint64<colindex>) (tree: qtree<Option<'a>>) =
+        match tree with
+        | Node(nw, ne, sw, se) ->
+            let halfSize = size / 2UL
+            let halfSizeRow = (uint64 halfSize) * 1UL<rowindex>
+            let halfSizeCol = (uint64 halfSize) * 1UL<colindex>
+            let nwTree, nwNvals = inner halfSize row col nw
+            let neTree, neNvals = inner halfSize row (col + halfSizeCol) ne
+            let swTree, swNvals = inner halfSize (row + halfSizeRow) col sw
+            let seTree, seNvals = inner halfSize (row + halfSizeRow) (col + halfSizeCol) se
+            (mkNode nwTree neTree swTree seTree), nwNvals + neNvals + swNvals + seNvals
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            let res = f (int row) (int col) v
+
+            let nnz = 
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * (uint64 size) * 1UL<nvals>
+            
+            Leaf(UserValue(res)), nnz
+    
+    let newTree, newNvals = inner matrix.storage.size 0UL<rowindex> 0UL<colindex> matrix.storage.data
+    SparseMatrix(matrix.nrows, matrix.ncols, newNvals, Storage(matrix.storage.size, newTree))
+
 
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
@@ -279,3 +306,52 @@ let transpose (matrix: SparseMatrix<_>) =
 
 let mask (m1: SparseMatrix<'a>) (m2: SparseMatrix<'b>) f =
     map2 m1 m2 (fun m1 m2 -> if f m2 then m1 else None)
+
+let slice (matrix: SparseMatrix<'a>) (rowStart: int) (rowEnd: int) (colStart: int) (colEnd: int): Result<SparseMatrix<'a>, string> =
+    match () with
+    | _ when rowStart < 0 -> Failure "Start row should be >= 0"
+    | _ when rowEnd < 0 -> Failure "End row should be >= 0"
+    | _ when colStart < 0 -> Failure "Start column should be >= 0"
+    | _ when colEnd < 0 -> Failure "End column should be >= 0"
+    | _ when rowStart > int matrix.nrows - 1 -> Failure "Start row is out of matrix length"
+    | _ when rowEnd > int matrix.nrows - 1 -> Failure "End row is out of matrix length"
+    | _ when colStart > int matrix.ncols - 1 -> Failure "Start column is out of matrix length"
+    | _ when colEnd > int matrix.ncols - 1 -> Failure "End column is out of matrix length"
+    | _ when rowStart > rowEnd -> Failure "Start row should be <= end row"
+    | _ when colStart > colEnd -> Failure "Start column should be <= end column"
+    | _ ->
+        let rowStartIdx = uint64 rowStart * 1UL<rowindex>
+        let rowEndIdx = uint64 rowEnd * 1UL<rowindex>
+        let colStartIdx = uint64 colStart * 1UL<colindex>
+        let colEndIdx = uint64 colEnd * 1UL<colindex>
+
+        let rec inner (size: uint64<storageSize>) (row: uint64<rowindex>) (col: uint64<colindex>) matrix =
+            let sizeRow = (uint64 size) * 1UL<rowindex>
+            let sizeCol = (uint64 size) * 1UL<colindex>
+            match matrix with
+            | Node (nw, ne, sw, se) ->
+                let halfSize = size / 2UL
+                let halfRow = (uint64 halfSize) * 1UL<rowindex>
+                let halfCol = (uint64 halfSize) * 1UL<colindex>
+                let nwTree, nwNvals = inner halfSize row col nw
+                let neTree, neNvals = inner halfSize row (col + halfCol) ne
+                let swTree, swNvals = inner halfSize (row + halfRow) col sw
+                let seTree, seNvals = inner halfSize (row + halfRow) (col + halfCol) se
+                (mkNode nwTree neTree swTree seTree), nwNvals + neNvals + swNvals + seNvals
+            | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when row >= rowStartIdx && row + sizeRow - 1UL<rowindex> <= rowEndIdx && col >= colStartIdx && 
+                col + sizeCol - 1UL<colindex> <= colEndIdx -> Leaf(UserValue(v)), (uint64 size) * (uint64 size) * 1UL<nvals>
+            | Leaf(UserValue(v)) when row + sizeRow - 1UL<rowindex> < rowStartIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when col + sizeCol - 1UL<colindex> < colStartIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when row > rowEndIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when col > colEndIdx -> Leaf(Dummy), 0UL<nvals>
+            | _ -> Leaf(Dummy), 0UL<nvals>
+        
+        let storage, nvals = inner matrix.storage.size 0UL<rowindex> 0UL<colindex> matrix.storage.data
+        let newRows = uint64(rowEnd - rowStart + 1) * 1UL<nrows>
+        let newCols = uint64(colEnd - colStart + 1) * 1UL<ncols>
+        let coo = toCoordinateList (SparseMatrix(newRows, newCols, nvals, Storage(matrix.storage.size, storage)))
+        let shiftedData = coo.list |> List.map (fun (i, j, v) -> (i - uint64 rowStart * 1UL<rowindex>, j - uint64 colStart * 1UL<colindex>, v))
+        let shiftedCoo = CoordinateList(newRows, newCols, shiftedData)
+        let newMatrix = fromCoordinateList shiftedCoo
+        Success newMatrix
