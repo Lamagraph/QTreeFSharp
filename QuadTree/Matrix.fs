@@ -138,7 +138,7 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     CoordinateList(nrows, ncols, coo)
 
 let empty nrows ncols =
-    fromCoordinateList (CoordinateList(nrows,ncols,[]))
+    fromCoordinateList (CoordinateList(nrows, ncols, []))
 
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
@@ -146,12 +146,8 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2), (inner new_size x3 y3), (inner new_size x4 y4) with
-            | Ok((new_t1, nvals1)),
-              Ok((new_t2, nvals2)),
-              Ok((new_t3, nvals3)),
-              Ok((new_t4, nvals4)) ->
-                ((mkNode new_t1 new_t2 new_t3 new_t4), nvals1 + nvals2 + nvals3 + nvals4)
-                |> Ok
+            | Ok((new_t1, nvals1)), Ok((new_t2, nvals2)), Ok((new_t3, nvals3)), Ok((new_t4, nvals4)) ->
+                ((mkNode new_t1 new_t2 new_t3 new_t4), nvals1 + nvals2 + nvals3 + nvals4) |> Ok
             | Error(e), _, _, _
             | _, Error(e), _, _
             | _, _, Error(e), _
@@ -188,7 +184,10 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
         match (matrix1, matrix2) with
         | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) ->
             let halfSize = size / 2UL
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
             let t1, nvals1 = inner nwR nwC halfSize x1 y1
             let t2, nvals2 = inner neR neC halfSize x2 y2
             let t3, nvals3 = inner swR swC halfSize x3 y3
@@ -196,7 +195,10 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
         | Node(x1, x2, x3, x4), Leaf(v2) ->
             let halfSize = size / 2UL
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
             let t1, nvals1 = inner nwR nwC halfSize x1 (Leaf(v2))
             let t2, nvals2 = inner neR neC halfSize x2 (Leaf(v2))
             let t3, nvals3 = inner swR swC halfSize x3 (Leaf(v2))
@@ -204,7 +206,10 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
         | Leaf(v1), Node(y1, y2, y3, y4) ->
             let halfSize = size / 2UL
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
             let t1, nvals1 = inner nwR nwC halfSize (Leaf(v1)) y1
             let t2, nvals2 = inner neR neC halfSize (Leaf(v1)) y2
             let t3, nvals3 = inner swR swC halfSize (Leaf(v1)) y3
@@ -213,20 +218,37 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
         | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f prow pcol v1 v2
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | Leaf(UserValue(v)), Leaf(Dummy) ->
             let res = f prow pcol v None
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | Leaf(Dummy), Leaf(UserValue(v)) ->
             let res = f prow pcol None v
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
-        let storage, nvals = inner 0UL<rowindex> 0UL<colindex> matrix1.storage.size matrix1.storage.data matrix2.storage.data
+        let storage, nvals =
+            inner 0UL<rowindex> 0UL<colindex> matrix1.storage.size matrix1.storage.data matrix2.storage.data
+
         SparseMatrix(matrix1.nrows, matrix1.ncols, nvals, (Storage(matrix1.storage.size, storage)))
     else
         failwithf "InconsistentSizeOfArguments: %A vs %A" matrix1 matrix2
@@ -236,7 +258,10 @@ let mapi (matrix: SparseMatrix<'a>) f =
         match matrix with
         | Node(x1, x2, x3, x4) ->
             let halfSize = size / 2UL
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
             let t1, nvals1 = inner nwR nwC halfSize x1
             let t2, nvals2 = inner neR neC halfSize x2
             let t3, nvals3 = inner swR swC halfSize x3
@@ -246,18 +271,27 @@ let mapi (matrix: SparseMatrix<'a>) f =
         | Leaf(UserValue(v)) ->
             if size = 1UL<storageSize> then
                 let res = f prow pcol v
-                let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+                let nnz =
+                    match res with
+                    | Some _ -> 1UL<nvals>
+                    | None -> 0UL<nvals>
+
                 Leaf(UserValue(res)), nnz
             else
                 let halfSize = size / 2UL
-                let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) = getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+                let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                    getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
                 let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
                 let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
                 let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
                 let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
                 (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
 
-    let storage, nvals = inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
+    let storage, nvals =
+        inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
 
     SparseMatrix(matrix.nrows, matrix.ncols, nvals, (Storage(matrix.storage.size, storage)))
 
