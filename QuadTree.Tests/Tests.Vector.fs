@@ -81,7 +81,17 @@ let ``Simple Vector.map. Length is not power of two.`` () =
 let ``Simple Vector.mapi. Length is power of two, multiply by index.`` () =
     let v =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(8UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 1); (2UL<index>, 1); (3UL<index>, 1); (4UL<index>, 2); (5UL<index>, 2); (6UL<index>, 2); (7UL<index>, 2) ])
+            Vector.CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 1)
+                  (2UL<index>, 1)
+                  (3UL<index>, 1)
+                  (4UL<index>, 2)
+                  (5UL<index>, 2)
+                  (6UL<index>, 2)
+                  (7UL<index>, 2) ]
+            )
         )
 
     let f (idx: uint64<index>) x =
@@ -91,7 +101,17 @@ let ``Simple Vector.mapi. Length is power of two, multiply by index.`` () =
 
     let expected =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(8UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2); (3UL<index>, 3); (4UL<index>, 8); (5UL<index>, 10); (6UL<index>, 12); (7UL<index>, 14) ])
+            Vector.CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 0)
+                  (1UL<index>, 1)
+                  (2UL<index>, 2)
+                  (3UL<index>, 3)
+                  (4UL<index>, 8)
+                  (5UL<index>, 10)
+                  (6UL<index>, 12)
+                  (7UL<index>, 14) ]
+            )
         )
 
     let actual = Vector.mapi v f
@@ -103,7 +123,15 @@ let ``Simple Vector.mapi. Length is not power of two.`` () =
     // Build vector [1, 1, 1, 1, 1, 1] with dummy at end
     let v =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 1); (2UL<index>, 1); (3UL<index>, 1); (4UL<index>, 1); (5UL<index>, 1) ])
+            Vector.CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 1)
+                  (2UL<index>, 1)
+                  (3UL<index>, 1)
+                  (4UL<index>, 1)
+                  (5UL<index>, 1) ]
+            )
         )
 
     // f idx x = x * idx
@@ -115,7 +143,15 @@ let ``Simple Vector.mapi. Length is not power of two.`` () =
     // Expected: [0, 1, 2, 3, 4, 5] (1*idx for each position)
     let expected =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2); (3UL<index>, 3); (4UL<index>, 4); (5UL<index>, 5) ])
+            Vector.CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 0)
+                  (1UL<index>, 1)
+                  (2UL<index>, 2)
+                  (3UL<index>, 3)
+                  (4UL<index>, 4)
+                  (5UL<index>, 5) ]
+            )
         )
 
     let actual = Vector.mapi v f
@@ -149,12 +185,7 @@ let ``Simple Vector.mapi. Uniform leaf expansion.`` () =
 let ``Simple Vector.mapi. All indices identity.`` () =
     // Vector with values matching their indices
     let v =
-        Vector.fromCoordinateList (
-            Vector.CoordinateList(
-                4UL<dataLength>,
-                [ (0UL<index>, 0); (2UL<index>, 2) ]
-            )
-        )
+        Vector.fromCoordinateList (Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 0); (2UL<index>, 2) ]))
 
     let f (idx: uint64<index>) x =
         match x with
@@ -254,12 +285,18 @@ let ``Simple Vector.map2. Length is not power of two.`` () =
 let ``Simple Vector.map2i. Length is power of two.`` () =
     let v1 =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 2); (2UL<index>, 3); (3UL<index>, 4) ])
+            Vector.CoordinateList(
+                4UL<dataLength>,
+                [ (0UL<index>, 1); (1UL<index>, 2); (2UL<index>, 3); (3UL<index>, 4) ]
+            )
         )
 
     let v2 =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 20); (2UL<index>, 30); (3UL<index>, 40) ])
+            Vector.CoordinateList(
+                4UL<dataLength>,
+                [ (0UL<index>, 10); (1UL<index>, 20); (2UL<index>, 30); (3UL<index>, 40) ]
+            )
         )
 
     let f idx x y =
@@ -269,7 +306,10 @@ let ``Simple Vector.map2i. Length is power of two.`` () =
 
     let expected =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 11); (1UL<index>, 23); (2UL<index>, 35); (3UL<index>, 47) ])
+            Vector.CoordinateList(
+                4UL<dataLength>,
+                [ (0UL<index>, 11); (1UL<index>, 23); (2UL<index>, 35); (3UL<index>, 47) ]
+            )
         )
 
     let actual = Vector.map2i v1 v2 f
@@ -280,12 +320,28 @@ let ``Simple Vector.map2i. Length is power of two.`` () =
 let ``Simple Vector.map2i. Length is not power of two.`` () =
     let v1 =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 1); (1UL<index>, 2); (2UL<index>, 3); (3UL<index>, 4); (4UL<index>, 5); (5UL<index>, 6) ])
+            Vector.CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
         )
 
     let v2 =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 10); (2UL<index>, 10); (3UL<index>, 10); (4UL<index>, 10); (5UL<index>, 10) ])
+            Vector.CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 10)
+                  (1UL<index>, 10)
+                  (2UL<index>, 10)
+                  (3UL<index>, 10)
+                  (4UL<index>, 10)
+                  (5UL<index>, 10) ]
+            )
         )
 
     let f idx x y =
@@ -295,7 +351,15 @@ let ``Simple Vector.map2i. Length is not power of two.`` () =
 
     let expected =
         Vector.fromCoordinateList (
-            Vector.CoordinateList(6UL<dataLength>, [ (0UL<index>, 10); (1UL<index>, 12); (2UL<index>, 16); (3UL<index>, 22); (4UL<index>, 30); (5UL<index>, 40) ])
+            Vector.CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 10)
+                  (1UL<index>, 12)
+                  (2UL<index>, 16)
+                  (3UL<index>, 22)
+                  (4UL<index>, 30)
+                  (5UL<index>, 40) ]
+            )
         )
 
     let actual = Vector.map2i v1 v2 f
@@ -305,14 +369,10 @@ let ``Simple Vector.map2i. Length is not power of two.`` () =
 [<Fact>]
 let ``Simple Vector.map2i. Mixed values.`` () =
     let v1 =
-        Vector.fromCoordinateList (
-            Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 1); (2UL<index>, 3) ])
-        )
+        Vector.fromCoordinateList (Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 1); (2UL<index>, 3) ]))
 
     let v2 =
-        Vector.fromCoordinateList (
-            Vector.CoordinateList(4UL<dataLength>, [ (1UL<index>, 10); (3UL<index>, 30) ])
-        )
+        Vector.fromCoordinateList (Vector.CoordinateList(4UL<dataLength>, [ (1UL<index>, 10); (3UL<index>, 30) ]))
 
     let f idx x y =
         match (x, y) with
@@ -395,35 +455,23 @@ let ``Condensation of empty`` () =
     Assert.Equal(expected, actual)
 
 
-[<Fact>]    
-let ``Gather``() =
-    let data = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 0.0)
-                  (1UL<index>, 1.0)
-                  (4UL<index>, 5.0) ]
-        )
+[<Fact>]
+let ``Gather`` () =
+    let data =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 0.0); (1UL<index>, 1.0); (4UL<index>, 5.0) ])
         |> Vector.fromCoordinateList
 
-    let indices = 
+    let indices =
         Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 1UL<index>)
-                  (1UL<index>, 4UL<index>)
-                  (3UL<index>, 1UL<index>) ]
+            5UL<dataLength>,
+            [ (0UL<index>, 1UL<index>); (1UL<index>, 4UL<index>); (3UL<index>, 1UL<index>) ]
         )
         |> Vector.fromCoordinateList
 
     let actual = Vector.gather data indices
 
-    let expected = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 1.0)
-                  (1UL<index>, 5.0)
-                  (3UL<index>, 1.0) ]
-        )
+    let expected =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 1.0); (1UL<index>, 5.0); (3UL<index>, 1.0) ])
         |> Vector.fromCoordinateList
 
     Assert.Equal(expected, actual)
@@ -469,114 +517,88 @@ let ``Scatter``() =
 
     Assert.Equal(expected, actual)*)
 
-let compare x y = 
-    match (x,y)  with
+let compare x y =
+    match (x, y) with
     | Some x, None -> -1
-    | Some x, Some y -> if x < y then -1 elif x > y then 1 else 0
+    | Some x, Some y ->
+        if x < y then -1
+        elif x > y then 1
+        else 0
     | None, Some x -> 1
     | _ -> 0
 
-[<Fact>]    
-let ``Sort one element vector``() =
-    let data = 
-        Vector.CoordinateList(
-                1UL<dataLength>,
-                [ (0UL<index>, 0.0)
-                  ]
-        )
+[<Fact>]
+let ``Sort one element vector`` () =
+    let data =
+        Vector.CoordinateList(1UL<dataLength>, [ (0UL<index>, 0.0) ])
         |> Vector.fromCoordinateList
+
     let actual = Vector.mergeSort data compare
     Assert.Equal(data, actual)
 
-[<Fact>]    
-let ``Sort vector of two equal elements``() =
-    let data = 
-        Vector.CoordinateList(
-                2UL<dataLength>,
-                [ (0UL<index>, 0.0);(1UL<index>, 0.0)
-                  ]
-        )
+[<Fact>]
+let ``Sort vector of two equal elements`` () =
+    let data =
+        Vector.CoordinateList(2UL<dataLength>, [ (0UL<index>, 0.0); (1UL<index>, 0.0) ])
         |> Vector.fromCoordinateList
+
     let actual = Vector.mergeSort data compare
     Assert.Equal(data, actual)
 
-[<Fact>]    
-let ``Sort vector of three equal elements``() =
-    let data = 
-        Vector.CoordinateList(
-                3UL<dataLength>,
-                [ (0UL<index>, 2.0);(1UL<index>, 2.0);(2UL<index>, 2.0)
-                  ]
-        )
+[<Fact>]
+let ``Sort vector of three equal elements`` () =
+    let data =
+        Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 2.0); (1UL<index>, 2.0); (2UL<index>, 2.0) ])
         |> Vector.fromCoordinateList
-    
+
     let actual = Vector.mergeSort data compare
     Assert.Equal(data, actual)
 
 
-[<Fact>]    
-let ``Sort vector of three different unordered elements``() =
-    let data = 
-        Vector.CoordinateList(
-                3UL<dataLength>,
-                [ (0UL<index>, 2.0);(1UL<index>, 1.0);(2UL<index>, 4.0)
-                  ]
-        )
+[<Fact>]
+let ``Sort vector of three different unordered elements`` () =
+    let data =
+        Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 2.0); (1UL<index>, 1.0); (2UL<index>, 4.0) ])
         |> Vector.fromCoordinateList
-    let expected = 
-        Vector.CoordinateList(
-                3UL<dataLength>,
-                [ (0UL<index>, 1.0);(1UL<index>, 2.0);(2UL<index>, 4.0)
-                  ]
-        )
+
+    let expected =
+        Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 1.0); (1UL<index>, 2.0); (2UL<index>, 4.0) ])
         |> Vector.fromCoordinateList
+
     let actual = Vector.mergeSort data compare
     Assert.Equal(expected, actual)
-    
 
 
-[<Fact>]    
-let ``Sort long vector with one element``() =
-    let data = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 0.0)
-                  ]
-        )
+
+[<Fact>]
+let ``Sort long vector with one element`` () =
+    let data =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 0.0) ])
         |> Vector.fromCoordinateList
+
     let actual = Vector.mergeSort data compare
     printVector actual
     Assert.Equal(data, actual)
 
 
 
-[<Fact>]    
-let ``Sort sorted vector``() =
-    let data = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 0.0); (1UL<index>, 0.0)
-                  ]
-        )
+[<Fact>]
+let ``Sort sorted vector`` () =
+    let data =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 0.0); (1UL<index>, 0.0) ])
         |> Vector.fromCoordinateList
+
     let actual = Vector.mergeSort data compare
     Assert.Equal(data, actual)
 
 
-[<Fact>]    
-let ``Init vector``() =
-    let expected = 
-        Vector.CoordinateList(
-                3UL<dataLength>,
-                [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2)
-                  ]
-        )
+[<Fact>]
+let ``Init vector`` () =
+    let expected =
+        Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2) ])
         |> Vector.fromCoordinateList
-    let actual = Vector.init 3UL<dataLength> (fun i -> Some (int i))
+
+    let actual = Vector.init 3UL<dataLength> (fun i -> Some(int i))
     //printfn "++++ Vector inint ++++"
     //printVector actual
     Assert.Equal(expected, actual)
-
-
-
-    

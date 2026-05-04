@@ -47,44 +47,49 @@ type CoordinateList<'value> =
     new(_length, _data) = { length = _length; data = _data }
 
 let update (vector: SparseVector<_>) i v op =
-    let rec inner vector (i:uint64<index>)  size =
-        match vector  with
-        | Leaf (UserValue x) -> 
-            if size = 1UL<storageSize> 
-            then
+    let rec inner vector (i: uint64<index>) size =
+        match vector with
+        | Leaf(UserValue x) ->
+            if size = 1UL<storageSize> then
                 let res = op x v
-                let deltaNNZ = 
+
+                let deltaNNZ =
                     match (res, x) with
                     | Some _, None -> 1L
-                    | None , Some _ -> -1L
-                    | _ -> 0 
-                Leaf (UserValue  (op x v)), deltaNNZ 
-            else 
-                let halfSize = size / 2UL 
-                if uint64 i < uint64 halfSize
-                then
-                    let newVector, deltaNNZ = inner vector i halfSize 
+                    | None, Some _ -> -1L
+                    | _ -> 0
+
+                Leaf(UserValue(op x v)), deltaNNZ
+            else
+                let halfSize = size / 2UL
+
+                if uint64 i < uint64 halfSize then
+                    let newVector, deltaNNZ = inner vector i halfSize
                     (mkNode newVector vector), deltaNNZ
-                else 
-                    let newVector, deltaNNZ = inner vector ((uint64 i - uint64 halfSize)*1UL<index>) halfSize
+                else
+                    let newVector, deltaNNZ =
+                        inner vector ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
+
                     (mkNode vector newVector), deltaNNZ
-        | Node (x1,x2) -> 
-            let halfSize = size / 2UL 
-            if uint64 i < uint64 halfSize
-            then 
+        | Node(x1, x2) ->
+            let halfSize = size / 2UL
+
+            if uint64 i < uint64 halfSize then
                 let newVector, deltaNNZ = inner x1 i halfSize
                 (mkNode newVector x2), deltaNNZ
-            else 
-                let newVector, deltaNNZ = inner x2 ((uint64 i - uint64 halfSize)*1UL<index>) halfSize
+            else
+                let newVector, deltaNNZ =
+                    inner x2 ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
+
                 (mkNode x1 newVector), deltaNNZ
         | _ -> failwith "Unreachable. But seams that index out of range."
-    
-    if uint64 i <= uint64 vector.length
-    then
-        let storage, deltaNNZ =  inner vector.storage.data i vector.storage.size
+
+    if uint64 i <= uint64 vector.length then
+        let storage, deltaNNZ = inner vector.storage.data i vector.storage.size
         let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
-        Ok (SparseVector (vector.length, nvals, Storage(vector.storage.size, storage)))
-    else Error Error.InconsistentSizeOfArguments
+        Ok(SparseVector(vector.length, nvals, Storage(vector.storage.size, storage)))
+    else
+        Error Error.InconsistentSizeOfArguments
 
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
     let length = lst.length
@@ -127,24 +132,24 @@ let toCoordinateList (vector: SparseVector<'a>) =
             let lAccum = traverse left accum pointer halfSize
             let rAccum = traverse right lAccum (pointer + halfSize) halfSize
             rAccum
- 
+
     let lst =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
 
     CoordinateList(length, lst)
 
 let empty length =
-    fromCoordinateList (CoordinateList(length,[]))
+    fromCoordinateList (CoordinateList(length, []))
 
-let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state:'b) =
-    let rec inner state (size: uint64<storageSize>) vector= 
+let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state: 'b) =
+    let rec inner state (size: uint64<storageSize>) vector =
         match vector with
-        | Leaf (UserValue (Some v)) -> 
-            let lst = List.replicate (int size) v 
+        | Leaf(UserValue(Some v)) ->
+            let lst = List.replicate (int size) v
             List.fold f state lst
-        | Node (x1, x2) ->
+        | Node(x1, x2) ->
             let halfSize = size / 2UL
-            inner (inner state halfSize  x1) halfSize x2
+            inner (inner state halfSize x1) halfSize x2
         | _ -> state
 
     inner state vector.storage.size vector.storage.data
@@ -182,14 +187,22 @@ let mapi (vector: SparseVector<'a>) f =
             (mkNode t1 t2), nvals1 + nvals2
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
-            if size = 1UL<storageSize> then 
+            if size = 1UL<storageSize> then
                 let res = f pointer v
-                let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+                let nnz =
+                    match res with
+                    | Some _ -> 1UL<nvals>
+                    | None -> 0UL<nvals>
+
                 Leaf(UserValue(res)), nnz
-            else 
+            else
                 let halfSize = size / 2UL
                 let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
-                let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
+
+                let t2, nvals2 =
+                    inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
+
                 (mkNode t1 t2), nvals1 + nvals2
 
     let storage, nvals = inner 0UL<index> vector.storage.size vector.storage.data
@@ -208,7 +221,11 @@ let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseV
                 Leaf Dummy, 0UL<nvals>
             else
                 let v = f pointer
-                Leaf(UserValue v), (match v with Some _ -> 1UL<nvals> | None -> 0UL<nvals>)
+
+                Leaf(UserValue v),
+                (match v with
+                 | Some _ -> 1UL<nvals>
+                 | None -> 0UL<nvals>)
         else
             let halfSize = size / 2UL
             let left, nvals1 = build pointer halfSize
@@ -228,8 +245,7 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x2 y2) with
-            | Ok((t1, nvals1)), Ok((t2, nvals2)) ->
-                ((mkNode t1 t2), nvals1 + nvals2) |> Ok
+            | Ok((t1, nvals1)), Ok((t2, nvals2)) -> ((mkNode t1 t2), nvals1 + nvals2) |> Ok
             | Error(e), _
             | _, Error(e) -> Error(e)
 
@@ -253,8 +269,7 @@ let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     if len1 = vector2.length then
         match inner vector1.storage.size vector1.storage.data vector2.storage.data with
         | Error(e) -> Error(e)
-        | Ok((storage, nvals)) ->
-            Ok(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
+        | Ok((storage, nvals)) -> Ok(SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))))
     else
         Error Error.InconsistentSizeOfArguments
 
@@ -274,55 +289,81 @@ let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
         | Node(x1, x2), Leaf(v2) ->
             let halfSize = size / 2UL
             let t1, nvals1 = inner pointer halfSize x1 (Leaf(v2))
-            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2 (Leaf(v2))
+
+            let t2, nvals2 =
+                inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2 (Leaf(v2))
+
             (mkNode t1 t2), nvals1 + nvals2
         | Leaf(v1), Node(y1, y2) ->
             let halfSize = size / 2UL
             let t1, nvals1 = inner pointer halfSize (Leaf(v1)) y1
-            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(v1)) y2
+
+            let t2, nvals2 =
+                inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(v1)) y2
+
             (mkNode t1 t2), nvals1 + nvals2
         | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             let res = f pointer v1 v2
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | Leaf(UserValue(v)), Leaf(Dummy) ->
             let res = f pointer v None
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | Leaf(Dummy), Leaf(UserValue(v)) ->
             let res = f pointer None v
-            let nnz = match res with Some _ -> 1UL<nvals> | None -> 0UL<nvals>
+
+            let nnz =
+                match res with
+                | Some _ -> 1UL<nvals>
+                | None -> 0UL<nvals>
+
             Leaf(UserValue(res)), nnz
         | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
 
     if len1 = vector2.length then
-        let storage, nvals = inner 0UL<index> vector1.storage.size vector1.storage.data vector2.storage.data
+        let storage, nvals =
+            inner 0UL<index> vector1.storage.size vector1.storage.data vector2.storage.data
+
         SparseVector(len1, nvals, (Storage(vector1.storage.size, storage)))
     else
         failwithf "InconsistentSizeOfArguments: %A vs %A" vector1 vector2
 
 
 /// Returns None if index out of range
-let unsafeGet (v : SparseVector<'a>) (index : uint64<index>) =
+let unsafeGet (v: SparseVector<'a>) (index: uint64<index>) =
     let originalIndex = index
-    let rec getFromTree (tree : btree<Option<'a>>) (size : uint64<storageSize>) (index : uint64<index>) =
-        match tree with 
+
+    let rec getFromTree (tree: btree<Option<'a>>) (size: uint64<storageSize>) (index: uint64<index>) =
+        match tree with
         | Leaf Dummy -> None
-        | Leaf (UserValue v) -> v 
+        | Leaf(UserValue v) -> v
         | Node(l: Option<'a> btree, r) ->
-                let halfSize = size / 2UL
-                if uint64 index < uint64 halfSize then
-                    getFromTree l halfSize index
-                else
-                    getFromTree r halfSize ((uint64 index - uint64 halfSize)*1UL<index>)
+            let halfSize = size / 2UL
+
+            if uint64 index < uint64 halfSize then
+                getFromTree l halfSize index
+            else
+                getFromTree r halfSize ((uint64 index - uint64 halfSize) * 1UL<index>)
+
     getFromTree v.storage.data v.storage.size index
 
 /// Gather: w[i] = v[idx[i]]
-let gather (v : SparseVector<'value>) (idx : SparseVector<uint64<index>>) : SparseVector<'value> =
-    map idx (fun i -> 
-        match i with 
-        | Some  i-> unsafeGet v i 
+let gather (v: SparseVector<'value>) (idx: SparseVector<uint64<index>>) : SparseVector<'value> =
+    map idx (fun i ->
+        match i with
+        | Some i -> unsafeGet v i
         | None -> None)
 
 let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) : SparseVector<'a> =
@@ -334,7 +375,7 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
         match tree with
         | Leaf Dummy -> []
         | Leaf(UserValue None) -> []
-        | Leaf(UserValue v) -> [v]
+        | Leaf(UserValue v) -> [ v ]
         | Node(l, r) -> extract l @ extract r
 
     // Place sorted values into original tree structure
@@ -342,7 +383,7 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
         match tree, sortedVals with
         | Leaf Dummy, rest -> Leaf Dummy, rest
         | Leaf(UserValue None), rest -> Leaf(UserValue None), rest
-        | Leaf(UserValue _), v::rest -> Leaf(UserValue v), rest
+        | Leaf(UserValue _), v :: rest -> Leaf(UserValue v), rest
         | Leaf(UserValue _), [] -> Leaf Dummy, []
         | Node(l, r), vals ->
             let l', r1 = place l vals
@@ -373,17 +414,28 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
         merge mewLeft newRight 
 *)
 
-//type ScatterError<'a> = 
+//type ScatterError<'a> =
 
 /// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
-let scatter (w: SparseVector<'value>) (v: SparseVector<'value>) (idx: SparseVector<uint64<index>>)
-            (op: Option<'value> -> Option<'value> -> Option<'value>) =
-    let pairsVec = map2 idx v (fun i v -> match i, v with Some i, Some v -> Some(i, v) | _ -> None)
+let scatter
+    (w: SparseVector<'value>)
+    (v: SparseVector<'value>)
+    (idx: SparseVector<uint64<index>>)
+    (op: Option<'value> -> Option<'value> -> Option<'value>)
+    =
+    let pairsVec =
+        map2 idx v (fun i v ->
+            match i, v with
+            | Some i, Some v -> Some(i, v)
+            | _ -> None)
+
     match pairsVec with
-    | Ok pv -> 
-        foldValues pv (fun state (idx, v) -> 
-            match state with 
-            | Ok state -> update state idx (Some v) op
-            | Error x -> Error x)
-         (Ok w)
+    | Ok pv ->
+        foldValues
+            pv
+            (fun state (idx, v) ->
+                match state with
+                | Ok state -> update state idx (Some v) op
+                | Error x -> Error x)
+            (Ok w)
     | Error x -> Error Error.InconsistentStructureOfStorages

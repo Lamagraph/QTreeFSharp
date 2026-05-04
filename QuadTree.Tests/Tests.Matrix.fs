@@ -165,16 +165,24 @@ let ``Simple Matrix.map2i. Square where number of cols and rows are power of two
     let m1 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (1UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 1UL<colindex>, 4) ]
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
             )
         )
 
     let m2 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 10); (0UL<rowindex>, 1UL<colindex>, 20); (1UL<rowindex>, 0UL<colindex>, 30); (1UL<rowindex>, 1UL<colindex>, 40) ]
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (0UL<rowindex>, 1UL<colindex>, 20)
+                  (1UL<rowindex>, 0UL<colindex>, 30)
+                  (1UL<rowindex>, 1UL<colindex>, 40) ]
             )
         )
 
@@ -193,16 +201,28 @@ let ``Simple Matrix.map2i. Square where number of cols and rows are not power of
     let m1 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                3UL<nrows>, 3UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (0UL<rowindex>, 2UL<colindex>, 3); (1UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 1UL<colindex>, 5); (1UL<rowindex>, 2UL<colindex>, 6) ]
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
             )
         )
 
     let m2 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                3UL<nrows>, 3UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 10); (0UL<rowindex>, 1UL<colindex>, 10); (0UL<rowindex>, 2UL<colindex>, 10); (1UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 10); (1UL<rowindex>, 2UL<colindex>, 10) ]
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (0UL<rowindex>, 1UL<colindex>, 10)
+                  (0UL<rowindex>, 2UL<colindex>, 10)
+                  (1UL<rowindex>, 0UL<colindex>, 10)
+                  (1UL<rowindex>, 1UL<colindex>, 10)
+                  (1UL<rowindex>, 2UL<colindex>, 10) ]
             )
         )
 
@@ -221,7 +241,8 @@ let ``Simple Matrix.map2i. Mixed values.`` () =
     let m1 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
+                4UL<nrows>,
+                4UL<ncols>,
                 [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 3) ]
             )
         )
@@ -229,7 +250,8 @@ let ``Simple Matrix.map2i. Mixed values.`` () =
     let m2 =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
+                4UL<nrows>,
+                4UL<ncols>,
                 [ (1UL<rowindex>, 1UL<colindex>, 10); (3UL<rowindex>, 3UL<colindex>, 30) ]
             )
         )
@@ -251,8 +273,12 @@ let ``Simple Matrix.mapi. Square where number of cols and rows are power of two.
     let m =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (1UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 1UL<colindex>, 4) ]
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
             )
         )
 
@@ -271,8 +297,14 @@ let ``Simple Matrix.mapi. Square where number of cols and rows are not power of 
     let m =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                3UL<nrows>, 3UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2); (0UL<rowindex>, 2UL<colindex>, 3); (1UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 1UL<colindex>, 5); (1UL<rowindex>, 2UL<colindex>, 6) ]
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
             )
         )
 
@@ -291,8 +323,12 @@ let ``Simple Matrix.mapi. Multiply row index by value.`` () =
     let m =
         Matrix.fromCoordinateList (
             Matrix.CoordinateList(
-                4UL<nrows>, 4UL<ncols>,
-                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2); (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 3UL<colindex>, 4) ]
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (1UL<rowindex>, 1UL<colindex>, 2)
+                  (2UL<rowindex>, 2UL<colindex>, 3)
+                  (3UL<rowindex>, 3UL<colindex>, 4) ]
             )
         )
 

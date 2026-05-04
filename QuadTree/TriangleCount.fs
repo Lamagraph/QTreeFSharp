@@ -30,9 +30,7 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
             LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
             |> Result.mapError mapError
 
-        let! CMasked =
-            Matrix.mask C graph Option.isSome
-            |> Result.mapError mapError'
+        let! CMasked = Matrix.mask C graph Option.isSome |> Result.mapError mapError'
 
         return Matrix.foldAssociative op_add None CMasked
     }

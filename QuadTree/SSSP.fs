@@ -28,9 +28,7 @@ let sssp graph (startVertex: uint64) =
     let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iter_num =
         if frontier.nvals > 0UL<nvals> && iter_num <= int frontier.length then
             resultM {
-                let! new_frontier =
-                    LinearAlgebra.vxm op_add op_mult frontier graph
-                    |> Result.mapError mapError
+                let! new_frontier = LinearAlgebra.vxm op_add op_mult frontier graph |> Result.mapError mapError
 
                 let op_min x y =
                     match (x, y) with
@@ -38,13 +36,9 @@ let sssp graph (startVertex: uint64) =
                     | Some v, _ -> Some v
                     | _ -> None
 
-                let! frontier =
-                    Vector.map2 new_frontier visited op_min
-                    |> Result.mapError mapError'
+                let! frontier = Vector.map2 new_frontier visited op_min |> Result.mapError mapError'
 
-                let! visited =
-                    Vector.map2 visited frontier op_add
-                    |> Result.mapError mapError''
+                let! visited = Vector.map2 visited frontier op_add |> Result.mapError mapError''
 
                 return! inner frontier visited (iter_num + 1)
             }

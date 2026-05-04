@@ -16,18 +16,26 @@ let bfs_level graph startVertices =
     let rec inner level (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
         if frontier.nvals > 0UL<nvals> then
             resultM {
-                let! new_frontier = 
-                    LinearAlgebra.vxm 
-                        (fun x y -> match (x, y) with | Some(v), _ | _, Some(v) -> Some(v) | _ -> None)
-                        (fun x y -> match (x, y) with | Some(v), Some(_) -> Some(v) | _ -> None)
-                        frontier graph
+                let! new_frontier =
+                    LinearAlgebra.vxm
+                        (fun x y ->
+                            match (x, y) with
+                            | Some(v), _
+                            | _, Some(v) -> Some(v)
+                            | _ -> None)
+                        (fun x y ->
+                            match (x, y) with
+                            | Some(v), Some(_) -> Some(v)
+                            | _ -> None)
+                        frontier
+                        graph
                     |> Result.mapError mapError
 
-                let! frontier = 
+                let! frontier =
                     Vector.mask new_frontier visited (fun x -> x.IsNone)
                     |> Result.mapError mapError'
 
-                let! visited = 
+                let! visited =
                     Vector.map2 visited new_frontier (fun x y ->
                         match (x, y) with
                         | (Some(_), _) -> x

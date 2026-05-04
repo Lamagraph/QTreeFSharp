@@ -38,9 +38,8 @@ let op_add_i x y =
     | _, Some(a) -> Some(a)
     | _ -> None
 
-let op_mult_i (i,x) (row,col,y) =
-    Some(i,row,col)
-    
+let op_mult_i (i, x) (row, col, y) = Some(i, row, col)
+
 
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
@@ -271,11 +270,23 @@ let ``Simple vxmi_values. 3 * (3x5)`` () =
     let expected =
         let tree =
             Vector.btree.Node(
-                Vector.btree.Node(Vector.btree.Node(vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,0UL<Matrix.colindex>)
-                                                   , vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>))
-                                 , Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,2UL<Matrix.colindex>)
-                                                    , vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,3UL<Matrix.colindex>))),
-                Vector.btree.Node(Vector.btree.Node(vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,4UL<Matrix.colindex>), vleaf_d ()), vleaf_d ())
+                Vector.btree.Node(
+                    Vector.btree.Node(
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
+                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                    ),
+                    Vector.btree.Node(
+                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>),
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 3UL<Matrix.colindex>)
+                    )
+                ),
+                Vector.btree.Node(
+                    Vector.btree.Node(
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 4UL<Matrix.colindex>),
+                        vleaf_d ()
+                    ),
+                    vleaf_d ()
+                )
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
@@ -318,9 +329,14 @@ let ``Simple vxmi_values. 4 * (4x3).`` () =
 
 
     let expected =
-        let tree = Vector.btree.Node(Vector.btree.Node(vleaf_v (1UL<Vector.index>,1UL<Matrix.rowindex>,0UL<Matrix.colindex>)
-                                                                                          , vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,1UL<Matrix.colindex>))
-                                                                        , Vector.btree.Node(vleaf_v (0UL<Vector.index>,0UL<Matrix.rowindex>,2UL<Matrix.colindex>), vleaf_d ()))
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(
+                    vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
+                    vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                ),
+                Vector.btree.Node(vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>), vleaf_d ())
+            )
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))

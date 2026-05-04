@@ -29,10 +29,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
             let new_size = size / 2UL
 
             match (inner new_size x1 y1), (inner new_size x1 y2), (inner new_size x2 y3), (inner new_size x2 y4) with
-            | Ok((t1, nvals1)),
-              Ok((t2, nvals2)),
-              Ok((t3, nvals3)),
-              Ok((t4, nvals4)) ->
+            | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
                 let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
                 let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
                 let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
@@ -48,8 +45,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
                 let z2 = vAdd v2 v4
 
                 match (z1, z2) with
-                | Ok(v1), Ok(v2) ->
-                    Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                | Ok(v1), Ok(v2) -> Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
                 | Error(e), _
                 | _, Error(e) -> Error(VectorAdditionProblem(e))
 
@@ -106,23 +102,43 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
     else
         Error Error.InconsistentSizeOfArguments
 
-let vxmi_values 
+let vxmi_values
     (op_add: 'c option -> 'c option -> 'c option)
     (op_mult: uint64<Vector.index> * 'a -> uint64<Matrix.rowindex> * uint64<Matrix.colindex> * 'b -> Option<'c>)
-    (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
+    (vector: Vector.SparseVector<'a>)
+    (matrix: Matrix.SparseMatrix<'b>)
+    =
 
-    let rec inner (size: uint64<storageSize>) vector (vectorIdx: uint64<Vector.index>) matrix (rowIdx: uint64<Matrix.rowindex>) (colIdx: uint64<Matrix.colindex>) =
+    let rec inner
+        (size: uint64<storageSize>)
+        vector
+        (vectorIdx: uint64<Vector.index>)
+        matrix
+        (rowIdx: uint64<Matrix.rowindex>)
+        (colIdx: uint64<Matrix.colindex>)
+        =
         let _do x1 x2 y1 y2 y3 y4 =
             let new_size = size / 2UL
 
-            match (inner new_size x1 vectorIdx y1 rowIdx colIdx), 
-                  (inner new_size x1 vectorIdx y2 rowIdx (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)), 
-                  (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y3 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) colIdx), 
-                  (inner new_size x2 (vectorIdx + (uint64 new_size) * 1UL<Vector.index>) y4 (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>) (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)) with
-            | Ok((t1, nvals1)),
-              Ok((t2, nvals2)),
-              Ok((t3, nvals3)),
-              Ok((t4, nvals4)) ->
+            match
+                (inner new_size x1 vectorIdx y1 rowIdx colIdx),
+                (inner new_size x1 vectorIdx y2 rowIdx (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)),
+                (inner
+                    new_size
+                    x2
+                    (vectorIdx + (uint64 new_size) * 1UL<Vector.index>)
+                    y3
+                    (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>)
+                    colIdx),
+                (inner
+                    new_size
+                    x2
+                    (vectorIdx + (uint64 new_size) * 1UL<Vector.index>)
+                    y4
+                    (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>)
+                    (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>))
+            with
+            | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
                 let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
                 let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
                 let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
@@ -138,8 +154,7 @@ let vxmi_values
                 let z2 = vAdd v2 v4
 
                 match (z1, z2) with
-                | Ok(v1), Ok(v2) ->
-                    Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                | Ok(v1), Ok(v2) -> Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
                 | Error(e), _
                 | _, Error(e) -> Error(VectorAdditionProblem(e))
 
@@ -150,8 +165,7 @@ let vxmi_values
 
         match (vector, matrix) with
         | Vector.btree.Leaf(UserValue(Some(v1))), Matrix.qtree.Leaf(UserValue(Some(v2))) ->
-            if size = 1UL<storageSize> 
-            then 
+            if size = 1UL<storageSize> then
                 let res = op_mult (vectorIdx, v1) (rowIdx, colIdx, v2)
 
                 let nnz =
@@ -160,14 +174,20 @@ let vxmi_values
                     | _ -> 1UL<nvals>
 
                 Ok(Vector.btree.Leaf(UserValue(res)), nnz)
-            else 
-                inner size (Vector.btree.Node(vector,vector)) vectorIdx (Matrix.qtree.Node(matrix, matrix,matrix,matrix)) rowIdx colIdx
+            else
+                inner
+                    size
+                    (Vector.btree.Node(vector, vector))
+                    vectorIdx
+                    (Matrix.qtree.Node(matrix, matrix, matrix, matrix))
+                    rowIdx
+                    colIdx
 
         | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
         | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> _do x1 x2 matrix matrix matrix matrix
         | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
-        | Vector.btree.Leaf(UserValue(None)),_
-        | _, Matrix.qtree.Leaf(UserValue(None)) ->  Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
+        | Vector.btree.Leaf(UserValue(None)), _
+        | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
 
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
@@ -190,7 +210,15 @@ let vxmi_values
             else
                 vector.storage
 
-        match inner vector_storage.size vector_storage.data 0UL<Vector.index> matrix.storage.data 0UL<Matrix.rowindex> 0UL<Matrix.colindex> with
+        match
+            inner
+                vector_storage.size
+                vector_storage.data
+                0UL<Vector.index>
+                matrix.storage.data
+                0UL<Matrix.rowindex>
+                0UL<Matrix.colindex>
+        with
         | Error x -> Error x
         | Ok(storage, nvals) ->
             (Vector.SparseVector(
