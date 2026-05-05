@@ -71,7 +71,6 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
 
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
-        | (x, y) -> Error Error.InconsistentStructureOfStorages
 
     if uint64 vector.length = uint64 matrix.nrows then
         let vector_storage =
@@ -191,7 +190,6 @@ let vxmi_values
 
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
-        | (x, y) -> Error Error.InconsistentStructureOfStorages
 
     if uint64 vector.length = uint64 matrix.nrows then
         let vector_storage =
