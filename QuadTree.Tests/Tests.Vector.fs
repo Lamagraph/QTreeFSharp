@@ -311,6 +311,7 @@ let ``Simple Vector.map2i. Length is power of two.`` () =
                 [ (0UL<index>, 11); (1UL<index>, 23); (2UL<index>, 35); (3UL<index>, 47) ]
             )
         )
+        |> Ok
 
     let actual = Vector.map2i v1 v2 f
 
@@ -361,6 +362,7 @@ let ``Simple Vector.map2i. Length is not power of two.`` () =
                   (5UL<index>, 40) ]
             )
         )
+        |> Ok
 
     let actual = Vector.map2i v1 v2 f
 
@@ -377,14 +379,21 @@ let ``Simple Vector.map2i. Mixed values.`` () =
     let f idx x y =
         match (x, y) with
         | Some(a), Some(b) -> Some(a + b)
-        | Some(a), None -> Some(a * 2)
-        | None, Some(b) -> Some(b * 3)
+        | Some(a), None -> Some(int idx + a * 2)
+        | None, Some(b) -> Some(int idx * b * 3)
         | _ -> None
 
     let actual = Vector.map2i v1 v2 f
-    let actualCL = Vector.toCoordinateList actual
 
-    Assert.Equal(4UL<nvals>, actual.nvals)
+    let expected =
+        Vector.CoordinateList(
+            4UL<dataLength>,
+            [ (0UL<index>, 2); (1UL<index>, 30); (2UL<index>, 8); (3UL<index>, 270) ]
+        )
+        |> Vector.fromCoordinateList
+        |> Ok
+
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Conversion identity`` () =

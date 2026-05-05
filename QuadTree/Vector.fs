@@ -335,9 +335,9 @@ let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
         let storage, nvals =
             inner 0UL<index> vector1.storage.size vector1.storage.data vector2.storage.data
 
-        SparseVector(len1, nvals, (Storage(vector1.storage.size, storage)))
+        SparseVector(len1, nvals, (Storage(vector1.storage.size, storage))) |> Ok
     else
-        failwithf "InconsistentSizeOfArguments: %A vs %A" vector1 vector2
+        Error InconsistentSizeOfArguments
 
 
 /// Returns None if index out of range

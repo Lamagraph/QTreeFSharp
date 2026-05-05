@@ -10,6 +10,9 @@ type Error =
     | IndexCalculationProblem of Vector.Error
     | ScatterProblem of Vector.Error
     | FoldValuesProblem of Vector.Error
+    | TreeSelectionProblem of Matrix.Error
+    | IndexInnerCalculationProblem of Vector.Error
+    | DataForUpgradeParentCalculationProblem of Vector.Error
 
 
 let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
@@ -28,7 +31,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
     let op_mult (i, x) (row, col, w) = Some(w, row)
 
     let op_min x y =
-        match (x, y) with
+        match x, y with
         | Some v, Some u -> Some(min v u)
         | Some v, _ -> Some v
         | None, Some v -> Some v
@@ -66,7 +69,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
             let parent_i = Vector.unsafeGet parent i
             let parent_j = Vector.unsafeGet parent j
 
-            match (parent_i, parent_j) with
+            match parent_i, parent_j with
             | Some v1, Some v2 when v1 <> v2 -> true
             | _ -> false
 
@@ -111,11 +114,12 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
                 // Identify a representative vertex for each component
                 // For each vertex, if its own edge is the component's cheapest, mark it.
-                let indexInner =
+                let! indexInner =
                     Vector.map2i t edges (fun i t e ->
                         match (t, e) with
                         | Some v1, Some v2 when v1 = v2 -> Some i
                         | _ -> None)
+                    |> Result.mapError IndexInnerCalculationProblem
                 // Among the marked vertices in a component, keep the smallest index.
                 let! index =
                     Vector.scatter (Vector.empty length) indexInner parent op_min
@@ -131,17 +135,18 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 // and (i, j, w) is the cheapest edge of that component.
                 let treeFilter = treeFilter edges index
 
-                let tree =
+                let! tree =
                     Matrix.map2i tree graph (fun i j t g ->
-                        match (t, g) with
+                        match t, g with
                         | Some t, _ -> Some t
                         | None, Some g when treeFilter i j g -> Some g
                         | _ -> None)
+                    |> Result.mapError TreeSelectionProblem
 
                 // Compute new parent assignments (merge components)
                 // For each component representative i with cheapest edge (w, j), we want to merge
                 // the component of i with the component of j. Choose the smaller root.
-                let data_for_update_parent =
+                let! data_for_update_parent =
                     Vector.map2i edges index (fun i e idx ->
                         match e, idx with
                         | Some(v, j), Some(_i) when _i = i ->
@@ -153,6 +158,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                             | Some p_i, Some p_j -> if p_i < p_j then Some(j, p_i) else Some(i, p_j)
                             | x -> failwithf "Unreachable: %A" x
                         | _ -> None)
+                    |> Result.mapError DataForUpgradeParentCalculationProblem
 
                 printfn "=== Data for update parent ==="
                 printVector data_for_update_parent
@@ -164,7 +170,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                         (fun state (i, v) ->
                             match state with
                             | Ok state ->
-                                let updateResult = Vector.update state i (Some v) (fun old _new -> _new)
+                                let updateResult = Vector.update state i (Some v) (fun _ _new -> _new)
 
                                 match updateResult with
                                 | Ok u -> Ok u
