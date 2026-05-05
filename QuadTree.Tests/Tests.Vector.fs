@@ -574,7 +574,6 @@ let ``Sort long vector with one element`` () =
         |> Vector.fromCoordinateList
 
     let actual = Vector.mergeSort data compare
-    printVector actual
     Assert.Equal(data, actual)
 
 
@@ -596,6 +595,4 @@ let ``Init vector`` () =
         |> Vector.fromCoordinateList
 
     let actual = Vector.init 3UL<dataLength> (fun i -> Some(int i))
-    //printfn "++++ Vector inint ++++"
-    //printVector actual
     Assert.Equal(expected, actual)

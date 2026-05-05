@@ -14,18 +14,6 @@ type Error =
     | IndexInnerCalculationProblem of Vector.Error
     | DataForUpgradeParentCalculationProblem of Vector.Error
 
-
-let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
-    printfn "Matrix:"
-    printfn "   Nvals: %A" matrix.nvals
-    printfn "   Data: %A" (Matrix.toCoordinateList matrix).list
-
-let printVector (vector: Vector.SparseVector<_>) =
-    printfn "Vector:"
-    printfn "   Nvals: %A" vector.nvals
-    printfn "   Data: %A" (Vector.toCoordinateList vector).data
-
-
 let mst (graph: Matrix.SparseMatrix<_>) =
 
     let op_mult (i, x) (row, col, w) = Some(w, row)
@@ -57,9 +45,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 | Some(w, dst), Some idxVal -> g = w && idxVal = i && uint64 dst = uint64 j
                 | _ -> false
 
-            if result then
-                printfn "TREE FILTER: edge (%A,%A) -> tree" i j
-
             result
 
     let graphFilter parent =
@@ -78,11 +63,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
     let parent = Vector.init length (fun i -> Some i)
 
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
-        printfn "=== Iter %d: graph=%A, tree=%A ===" iteration graph.nvals tree.nvals
-        printfn "=== Graph ==="
-        printMatrixCoordinate graph
-        printfn "Parent at start of iter %d:" iteration
-        printVector parent
 
         if graph.nvals > 0UL<nvals> then
 
@@ -96,17 +76,11 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     LinearAlgebra.vxmi_values op_min op_mult parent graph
                     |> Result.mapError EdgesCalculationProblem
 
-                printfn "=== Edges ==="
-                printVector edges
-
                 // Per‑component cheapest edge
                 // For each component, keep the smallest edges among its vertices.
                 let! cedges =
                     Vector.scatter (Vector.empty length) edges parent op_min
                     |> Result.mapError CEdgesCalculationProblem
-
-                printfn "=== Component Edges ==="
-                printVector cedges
 
                 // Propagate component's cheapest edge to all its vertices
                 // Each vertex gets its component's edge
@@ -126,9 +100,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError IndexCalculationProblem
                 // now each vertex knows its component's representative
                 let index = Vector.gather index parent
-
-                printfn "=== Index ==="
-                printVector index
 
                 // Add selected edges to the MST tree
                 // An edge (i, j, w) is added if vertex i is the representative for its component
@@ -160,9 +131,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                         | _ -> None)
                     |> Result.mapError DataForUpgradeParentCalculationProblem
 
-                printfn "=== Data for update parent ==="
-                printVector data_for_update_parent
-
                 // Apply the updates
                 let! initial_parent_update =
                     Vector.foldValues
@@ -179,22 +147,13 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                         (Ok parent)
                     |> Result.mapError FoldValuesProblem
 
-                printfn "=== Initial parent update ==="
-                printVector initial_parent_update
-
                 let! parent =
                     Vector.scatter parent initial_parent_update parent op_min
                     |> Result.mapError ScatterProblem
 
-                printfn "=== Initially updated parent ==="
-                printVector parent
-
                 // Then ensure that all vertices in a merged component point to the same root.
                 // This is done by a fixpoint (path compression) that repeatedly gathers parents.
                 let parent = fixPoint parent
-
-                printfn "=== Parent before data propagation ==="
-                printVector parent
 
                 // Filter the graph to keep only edges between different components
                 let graphFilter = graphFilter parent
