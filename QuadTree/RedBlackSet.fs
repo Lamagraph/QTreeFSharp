@@ -1,4 +1,4 @@
-//в качестве референса использовались "Faster, Simpler Red-Black Trees" и Data/Set/RBTree.hs
+//The following sources were used as a reference: 'Faster, Simpler Red-Black Trees' and Data/Set/RBTree.hs.
 module RedBlackSet
 
 type Color =
@@ -11,24 +11,20 @@ type Tree<'T> =
 
 let emptySet = Empty
 
-//оболочка, чтобы понимать, надо ли вызывать балансировку на следующих шагах рекурсии
 type private Result<'T> =
     | Done of 'T
     | ToDo of 'T
 
-//перекраска листа в черный
 let private blacken tree =
     match tree with
     | Node(Red, a, x, b) -> Done(Node(Black, a, x, b))
     | _ -> ToDo tree
 
-//убирает оболочку
 let private justTree resultTree =
     match resultTree with
     | Done t -> t
     | ToDo t -> t
 
-//считает черную высоту
 let rec private blackHeight tree =
     match tree with
     | Empty -> 0
@@ -36,7 +32,6 @@ let rec private blackHeight tree =
     | Node(Black, l, _, _) -> 1 + (blackHeight l)
 
 
-//проверка на наличие
 let rec contains tree v =
     match tree with
     | Empty -> false
@@ -45,7 +40,6 @@ let rec contains tree v =
         elif value < v then contains right v
         else true
 
-//балансировка
 let private balance tree =
     match tree with
     | Node(Black, Node(Red, Node(Red, a, x, b), y, c), z, d)
@@ -56,7 +50,6 @@ let private balance tree =
     | Node(Black, a, x, b) as n -> Done(n)
     | _ -> ToDo(tree)
 
-//вставка
 let insert tree v =
 
     let rec insertRec tree v =
@@ -81,7 +74,6 @@ let insert tree v =
     let newTree = insertRec tree v
     newTree |> justTree |> blacken |> justTree
 
-//удаление
 let delete tree v =
 
     let balanceDel tree =
@@ -162,7 +154,6 @@ let delete tree v =
     let newTree = deleteRec tree v
     newTree |> justTree |> blacken |> justTree
 
-//join
 let private join t1 g t2 =
 
     let rec joinLT t1 g t2 targetHeight currentHeight =
@@ -209,7 +200,6 @@ let private join t1 g t2 =
     else
         Node(Black, t1, g, t2)
 
-//merge
 let private merge t1 t2 =
 
     let rec minimum tree =
@@ -277,7 +267,6 @@ let private merge t1 t2 =
         let t = mergeEQ t1 t2
         t |> blacken |> justTree
 
-//split
 let rec private split kx tree =
     match tree with
     | Empty -> (Empty, Empty)
@@ -292,7 +281,6 @@ let rec private split kx tree =
             (justTree (blacken (l)), justTree (blacken (r)))
 
 
-//объединение
 let rec union t1 t2 =
     match t1 with
     | Empty -> t2
@@ -303,7 +291,6 @@ let rec union t1 t2 =
             let (l', r') = split x t1
             join (union l' l) x (union r' r)
 
-//пересечение
 let rec intersection t1 t2 =
     match t1 with
     | Empty -> Empty
@@ -318,7 +305,6 @@ let rec intersection t1 t2 =
             else
                 merge (intersection l' l) (intersection r' r)
 
-//разность
 let rec difference t1 t2 =
     match t1 with
     | Empty -> Empty
