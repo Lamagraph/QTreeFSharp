@@ -475,47 +475,35 @@ let ``Gather`` () =
         |> Vector.fromCoordinateList
 
     Assert.Equal(expected, actual)
-(*
-[<Fact>]    
-let ``Scatter``() =
-    let data = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 4.0)
-                  (2UL<index>, 5.0)
-                  ]
-        )
+
+[<Fact>]
+let ``Scatter`` () =
+    let data =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 4.0); (2UL<index>, 5.0) ])
         |> Vector.fromCoordinateList
 
-    let indices = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 3UL<index>)
-                  (2UL<index>, 3UL<index>)
-                  ]
-        )
+    let indices =
+        Vector.CoordinateList(5UL<dataLength>, [ (0UL<index>, 3UL<index>); (2UL<index>, 3UL<index>) ])
         |> Vector.fromCoordinateList
 
-    let result = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (3UL<index>, 1.0)
-                  (4UL<index>, 3.0)
-                  ]
-        )
-        |> Vector.fromCoordinateList
-    let actual = Vector.scatter result data indices (fun x y -> match (x,y) with | (Some x, Some y) -> Some (x + y) | Some x, _ | _, Some x -> Some x | _ -> None)
-    printVector actual
-    let expected = 
-        Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (3UL<index>, 10.0)
-                  (4UL<index>, 3.0)
-                 ]
-        )
+    let result =
+        Vector.CoordinateList(5UL<dataLength>, [ (3UL<index>, 1.0); (4UL<index>, 3.0) ])
         |> Vector.fromCoordinateList
 
-    Assert.Equal(expected, actual)*)
+    let actual =
+        Vector.scatter result data indices (fun x y ->
+            match (x, y) with
+            | Some x, Some y -> Some(x + y)
+            | Some x, _
+            | _, Some x -> Some x
+            | _ -> None)
+
+    let expected =
+        Vector.CoordinateList(5UL<dataLength>, [ (3UL<index>, 10.0); (4UL<index>, 3.0) ])
+        |> Vector.fromCoordinateList
+        |> Result.Ok
+
+    Assert.Equal(expected, actual)
 
 let compare x y =
     match (x, y) with
