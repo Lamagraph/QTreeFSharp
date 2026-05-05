@@ -30,6 +30,17 @@ let op_mult x y =
     | Some(a), Some(b) -> Some(a * b)
     | _ -> None
 
+
+let op_add_i x y =
+    match (x, y) with
+    | Some(a), Some(b) -> Some(min a b)
+    | Some(a), _
+    | _, Some(a) -> Some(a)
+    | _ -> None
+
+let op_mult_i (i, x) (row, col, y) = Some(i, row, col)
+
+
 let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
 let leaf_d () = qtree.Leaf Dummy
@@ -64,7 +75,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -104,7 +115,7 @@ let ``Simple vxm. 3 * (3x4)`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 8, vleaf_v 10))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
+        Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -146,7 +157,7 @@ let ``Simple vxm. 4 * (4x3).`` () =
         let tree = Vector.btree.Node(vleaf_v 6, Vector.btree.Node(vleaf_v 14, vleaf_d ()))
 
         let store = Vector.Storage(4UL<storageSize>, tree)
-        Result.Success(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
+        Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
@@ -205,11 +216,135 @@ let ``Simple vxm. 3 * (3x5)`` () =
             )
 
         let store = Vector.Storage(8UL<storageSize>, tree)
-        Result.Success(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
+        Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
     let actual = LinearAlgebra.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
+
+(*
+2,2,2,D
+*
+N,1,1,N,N,D,D,D
+3,2,2,3,1,D,D,D
+N,N,1,2,N,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+D,D,D,D,D,D,D,D
+=
+// 6,6,8,10,2,D,D,D
+(1,1,0),(0,0,1),(0,0,2),(1,1,3),(1,1,4)
+*)
+[<Fact>]
+let ``Simple vxmi_values. 3 * (3x5)`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(
+                    Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                    Matrix.qtree.Node(leaf_v 1, leaf_n (), leaf_v 2, leaf_v 3),
+                    Matrix.qtree.Node(leaf_n (), leaf_n (), leaf_d (), leaf_d ()),
+                    Matrix.qtree.Node(leaf_v 1, leaf_v 2, leaf_d (), leaf_d ())
+                ),
+                Matrix.qtree.Node(
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_v 1, leaf_d ()),
+                    leaf_d (),
+                    Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ()),
+                    leaf_d ()
+                ),
+                leaf_d (),
+                leaf_d ()
+            )
+
+        let store = Matrix.Storage(8UL<storageSize>, tree)
+        SparseMatrix(3UL<nrows>, 5UL<ncols>, 9UL<nvals>, store)
+
+    let v =
+        let tree = Vector.btree.Node(vleaf_v 2, Vector.btree.Node(vleaf_v 2, vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(3UL<dataLength>, 3UL<nvals>, store)
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(
+                    Vector.btree.Node(
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
+                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                    ),
+                    Vector.btree.Node(
+                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>),
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 3UL<Matrix.colindex>)
+                    )
+                ),
+                Vector.btree.Node(
+                    Vector.btree.Node(
+                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 4UL<Matrix.colindex>),
+                        vleaf_d ()
+                    ),
+                    vleaf_d ()
+                )
+            )
+
+        let store = Vector.Storage(8UL<storageSize>, tree)
+        Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
+
+    Assert.Equal(expected, actual)
+
+
+(*
+2,2,2,2
+*
+N,1,1,D
+3,2,2,D
+N,N,1,D
+N,N,3,D
+=
+6,6,14,D
+*)
+[<Fact>]
+let ``Simple vxmi_values. 4 * (4x3).`` () =
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1, leaf_v 3, leaf_v 2),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 2, leaf_d ()),
+                leaf_n (),
+                Matrix.qtree.Node(leaf_v 1, leaf_d (), leaf_v 3, leaf_d ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(4UL<nrows>, 3UL<ncols>, 7UL<nvals>, store)
+
+    let v =
+        let tree = vleaf_v 2
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(4UL<dataLength>, 4UL<nvals>, store)
+
+
+    let expected =
+        let tree =
+            Vector.btree.Node(
+                Vector.btree.Node(
+                    vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
+                    vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                ),
+                Vector.btree.Node(vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>), vleaf_d ())
+            )
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
+
+    Assert.Equal(expected, actual)
+
 
 [<Fact>]
 let ``Simple mxm`` () =
@@ -243,7 +378,7 @@ let ``Simple mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
+        | Ok m -> m
         | _ -> failwith "Unreachable"
 
     Assert.Equal(expected.storage.data, actual.storage.data)
@@ -279,8 +414,8 @@ let ``Sparse mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)
 
@@ -325,8 +460,8 @@ let ``Shrinking mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)
 
@@ -374,7 +509,7 @@ let ``Expanding mxm`` () =
 
     let actual =
         match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Result.Success m -> m
-        | Result.Failure e -> failwith (e.ToString())
+        | Ok m -> m
+        | Error e -> failwith (e.ToString())
 
     Assert.Equal(expected, actual)
