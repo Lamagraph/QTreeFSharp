@@ -8,10 +8,6 @@ type Error =
     | FrontierCalculationProblem of Vector.Error
     | VisitedCalculationProblem of Vector.Error
 
-let mapError (err: LinearAlgebra.Error) = NewFrontierCalculationProblem err
-let mapError' (err: Vector.Error) = FrontierCalculationProblem err
-let mapError'' (err: Vector.Error) = VisitedCalculationProblem err
-
 let bfs_level graph startVertices =
     let rec inner level (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) =
         if frontier.nvals > 0UL<nvals> then
@@ -29,19 +25,19 @@ let bfs_level graph startVertices =
                             | _ -> None)
                         frontier
                         graph
-                    |> Result.mapError mapError
+                    |> Result.mapError NewFrontierCalculationProblem
 
                 let! frontier =
                     Vector.mask new_frontier visited (fun x -> x.IsNone)
-                    |> Result.mapError mapError'
+                    |> Result.mapError FrontierCalculationProblem
 
                 let! visited =
                     Vector.map2 visited new_frontier (fun x y ->
                         match (x, y) with
-                        | (Some(_), _) -> x
-                        | (None, Some(_)) -> Some(level)
+                        | Some(_), _ -> x
+                        | None, Some(_) -> Some(level)
                         | _ -> None)
-                    |> Result.mapError mapError''
+                    |> Result.mapError VisitedCalculationProblem
 
                 return! inner (level + 1UL) frontier visited
             }
