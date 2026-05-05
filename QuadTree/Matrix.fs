@@ -249,8 +249,9 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
             inner 0UL<rowindex> 0UL<colindex> matrix1.storage.size matrix1.storage.data matrix2.storage.data
 
         SparseMatrix(matrix1.nrows, matrix1.ncols, nvals, (Storage(matrix1.storage.size, storage)))
+        |> Ok
     else
-        failwithf "InconsistentSizeOfArguments: %A vs %A" matrix1 matrix2
+        Error Error.InconsistentSizeOfArguments
 
 let mapi (matrix: SparseMatrix<'a>) f =
     let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix =
