@@ -1,6 +1,5 @@
 module Vector.Tests
 
-open System
 open Xunit
 
 open Vector
@@ -166,7 +165,6 @@ let ``Simple Vector.mapi. Uniform leaf expansion.`` () =
         let store = Storage(1UL<storageSize>, tree)
         SparseVector(1UL<dataLength>, 1UL<nvals>, store)
 
-    // f idx x = x + idx (5 + 0 = 5)
     let f (idx: uint64<index>) x =
         match x with
         | Some(a) -> Some(a + int idx)
@@ -193,10 +191,11 @@ let ``Simple Vector.mapi. All indices identity.`` () =
         | _ -> None
 
     let actual = Vector.mapi v f
-    let outputCL = Vector.toCoordinateList actual
 
-    Assert.Equal(2UL<nvals>, actual.nvals)
-    Assert.Equal<list<uint64<index> * int>>([ (0UL<index>, 0); (2UL<index>, 2) ], outputCL.data)
+    let expected =
+        Vector.fromCoordinateList (Vector.CoordinateList(4UL<dataLength>, [ (0UL<index>, 0); (2UL<index>, 2) ]))
+
+    Assert.Equal(expected, actual)
 
 
 [<Fact>]
@@ -315,9 +314,7 @@ let ``Simple Vector.map2i. Length is power of two.`` () =
 
     let actual = Vector.map2i v1 v2 f
 
-    match actual with
-    | Error e -> failwithf "Unexpected error: %A" e
-    | Ok result -> Assert.Equal(expected, result)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Simple Vector.map2i. Length is not power of two.`` () =
@@ -368,9 +365,7 @@ let ``Simple Vector.map2i. Length is not power of two.`` () =
 
     let actual = Vector.map2i v1 v2 f
 
-    match actual with
-    | Error e -> failwithf "Unexpected error: %A" e
-    | Ok result -> Assert.Equal(expected, result)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Simple Vector.map2i. Mixed values.`` () =
@@ -403,29 +398,32 @@ let ``Simple Vector.map2i. Mixed values.`` () =
 let ``Simple Vector.map2Values.`` () =
     let v1 =
         let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(1))),
-                Vector.btree.Leaf(UserValue(Some(2)))
-            )
+            Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(1))), Vector.btree.Leaf(UserValue(Some(2))))
+
         let store = Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 2UL<nvals>, store)
 
     let v2 =
         let tree =
-            Vector.btree.Node(
-                Vector.btree.Leaf(UserValue(Some(10))),
-                Vector.btree.Leaf(UserValue(Some(20)))
-            )
+            Vector.btree.Node(Vector.btree.Leaf(UserValue(Some(10))), Vector.btree.Leaf(UserValue(Some(20))))
+
         let store = Storage(4UL<storageSize>, tree)
         SparseVector(4UL<dataLength>, 2UL<nvals>, store)
 
     let f a b = Some(a + b)
 
-    match Vector.map2Values v1 v2 f with
-    | Error e -> failwithf "Unexpected error: %A" e
-    | Ok result ->
-        Assert.Equal(4UL<nvals>, result.nvals)
-        Assert.Equal(4UL<dataLength>, result.length)
+    let actual = Vector.map2Values v1 v2 f
+
+    let expected =
+        Vector.fromCoordinateList (
+            Vector.CoordinateList(
+                4UL<dataLength>,
+                [ (0UL<index>, 11); (1UL<index>, 11); (2UL<index>, 22); (3UL<index>, 22) ]
+            )
+        )
+        |> Ok
+
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Simple Vector.map2AllCells.`` () =
@@ -461,7 +459,7 @@ let ``Simple Vector.map2AtLeastOne.`` () =
         let store = Storage(1UL<storageSize>, tree)
         SparseVector(1UL<dataLength>, 0UL<nvals>, store)
 
-    let f (x: AtLeastOne<int,int>) =
+    let f (x: AtLeastOne<int, int>) =
         match x with
         | AtLeastOne.Both(a, b) -> Some(a + b)
         | AtLeastOne.Left a -> Some(a * 2)
@@ -500,30 +498,27 @@ let ``Simple Vector.map2LeftValues.`` () =
 
 [<Fact>]
 let ``Vector.map2Values compressed`` () =
-    let dataLength = 5UL<dataLength>    
+    let dataLength = 5UL<dataLength>
 
     let v1 =
         let data =
-            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let v2 =
         let data =
-            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6]
+            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let f a b = Some(a + b)
 
     let expected =
         let data =
-            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7]
+            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList |> Ok
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList |> Ok
 
     let actual = Vector.map2Values v1 v2 f
     Assert.Equal(expected, actual)
@@ -531,26 +526,23 @@ let ``Vector.map2Values compressed`` () =
 
 [<Fact>]
 let ``Vector.map2Values compressed to None`` () =
-    let dataLength = 5UL<dataLength>    
+    let dataLength = 5UL<dataLength>
 
     let v1 =
         let data =
-            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let v2 =
         let data =
-            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6]
+            [ 0UL<index>, 2; 1UL<index>, 3; 2UL<index>, 4; 3UL<index>, 5; 4UL<index>, 6 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let f a b = None
 
-    let expected =
-        Vector.empty dataLength |> Ok
+    let expected = Vector.empty dataLength |> Ok
 
     let actual = Vector.map2Values v1 v2 f
     Assert.Equal(expected, actual)
@@ -558,88 +550,79 @@ let ``Vector.map2Values compressed to None`` () =
 
 [<Fact>]
 let ``Vector.map2Values compressed both`` () =
-    let dataLength = 5UL<dataLength>    
+    let dataLength = 5UL<dataLength>
 
     let v1 =
         let data =
-            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let v2 =
         let data =
-            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let f a b = Some(a + b)
 
     let expected =
         let data =
-            [ 0UL<index>, 3; 1UL<index>, 3; 2UL<index>, 3; 3UL<index>, 3; 4UL<index>, 3]
+            [ 0UL<index>, 3; 1UL<index>, 3; 2UL<index>, 3; 3UL<index>, 3; 4UL<index>, 3 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList |> Ok
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList |> Ok
 
     let actual = Vector.map2Values v1 v2 f
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.map2Values compressed both indexed`` () =
-    let dataLength = 5UL<dataLength>    
+    let dataLength = 5UL<dataLength>
 
     let v1 =
         let data =
-            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let v2 =
         let data =
-            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let f i a b = Some(int i + a + b)
 
     let expected =
         let data =
-            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7]
+            [ 0UL<index>, 3; 1UL<index>, 4; 2UL<index>, 5; 3UL<index>, 6; 4UL<index>, 7 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList |> Ok
-    
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList |> Ok
+
     let actual = Vector.map2iValues v1 v2 f
-    match actual with Ok actual -> printVector actual  
-    Assert.Equal(expected, actual)    
+
+    Assert.Equal(expected, actual)
 
 
 [<Fact>]
 let ``Vector.map2Values compressed both to None`` () =
-    let dataLength = 5UL<dataLength>    
+    let dataLength = 5UL<dataLength>
 
     let v1 =
         let data =
-            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1]
+            [ 0UL<index>, 1; 1UL<index>, 1; 2UL<index>, 1; 3UL<index>, 1; 4UL<index>, 1 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let v2 =
         let data =
-            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2]
+            [ 0UL<index>, 2; 1UL<index>, 2; 2UL<index>, 2; 3UL<index>, 2; 4UL<index>, 2 ]
 
-        CoordinateList(dataLength, data)
-        |> Vector.fromCoordinateList
+        CoordinateList(dataLength, data) |> Vector.fromCoordinateList
 
     let f a b = None
 
-    let expected =
-        Vector.empty dataLength |> Ok
+    let expected = Vector.empty dataLength |> Ok
 
     let actual = Vector.map2Values v1 v2 f
     Assert.Equal(expected, actual)
@@ -679,7 +662,7 @@ let ``Vector.map2AtLeastOne Both case`` () =
         let store = Storage(1UL<storageSize>, tree)
         SparseVector(1UL<dataLength>, 1UL<nvals>, store)
 
-    let f (x: AtLeastOne<int,int>) =
+    let f (x: AtLeastOne<int, int>) =
         match x with
         | AtLeastOne.Both(a, b) -> Some(a + b)
         | AtLeastOne.Left a -> Some(a)
@@ -705,7 +688,7 @@ let ``Vector.map2AtLeastOne Right case`` () =
         let store = Storage(1UL<storageSize>, tree)
         SparseVector(1UL<dataLength>, 1UL<nvals>, store)
 
-    let f (x: AtLeastOne<int,int>) =
+    let f (x: AtLeastOne<int, int>) =
         match x with
         | AtLeastOne.Both(a, b) -> Some(a + b)
         | AtLeastOne.Left a -> Some(a)
