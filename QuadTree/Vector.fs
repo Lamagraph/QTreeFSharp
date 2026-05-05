@@ -330,7 +330,6 @@ let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
                 | None -> 0UL<nvals>
 
             Leaf(UserValue(res)), nnz
-        | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
 
     if len1 = vector2.length then
         let storage, nvals =

@@ -243,7 +243,6 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
                 | None -> 0UL<nvals>
 
             Leaf(UserValue(res)), nnz
-        | (x, y) -> failwithf "InconsistentStructureOfStorages: %A vs %A" x y
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
         let storage, nvals =
