@@ -9,13 +9,7 @@ type Error =
     | CEdgesCalculationProblem of Vector.Error
     | IndexCalculationProblem of Vector.Error
     | ScatterProblem of Vector.Error
-    | FoldValuesError of Vector.Error
-
-let mapError (err: LinearAlgebra.Error) = EdgesCalculationProblem err
-let mapError' (err: Vector.Error) = CEdgesCalculationProblem err
-let mapError'' (err: Vector.Error) = IndexCalculationProblem err
-let mapError''' (err: Vector.Error) = ScatterProblem err
-let mapError'''' (err: Vector.Error) = FoldValuesError err
+    | FoldValuesProblem of Vector.Error
 
 
 let printMatrixCoordinate (matrix: Matrix.SparseMatrix<_>) =
@@ -97,7 +91,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
             resultM {
                 let! edges =
                     LinearAlgebra.vxmi_values op_min op_mult parent graph
-                    |> Result.mapError mapError
+                    |> Result.mapError EdgesCalculationProblem
 
                 printfn "=== Edges ==="
                 printVector edges
@@ -106,7 +100,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 // For each component, keep the smallest edges among its vertices.
                 let! cedges =
                     Vector.scatter (Vector.empty length) edges parent op_min
-                    |> Result.mapError mapError'
+                    |> Result.mapError CEdgesCalculationProblem
 
                 printfn "=== Component Edges ==="
                 printVector cedges
@@ -125,7 +119,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 // Among the marked vertices in a component, keep the smallest index.
                 let! index =
                     Vector.scatter (Vector.empty length) indexInner parent op_min
-                    |> Result.mapError mapError''
+                    |> Result.mapError IndexCalculationProblem
                 // now each vertex knows its component's representative
                 let index = Vector.gather index parent
 
@@ -177,14 +171,14 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                                 | Error e -> Error e
                             | Error e -> Error e)
                         (Ok parent)
-                    |> Result.mapError mapError''''
+                    |> Result.mapError FoldValuesProblem
 
                 printfn "=== Initial parent update ==="
                 printVector initial_parent_update
 
                 let! parent =
                     Vector.scatter parent initial_parent_update parent op_min
-                    |> Result.mapError mapError'''
+                    |> Result.mapError ScatterProblem
 
                 printfn "=== Initially updated parent ==="
                 printVector parent

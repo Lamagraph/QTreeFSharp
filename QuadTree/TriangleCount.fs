@@ -4,11 +4,8 @@ open Common
 open Result
 
 type Error =
-    | MXMError of LinearAlgebra.Error
-    | MaskingError of Matrix.Error
-
-let mapError (err: LinearAlgebra.Error) = MXMError err
-let mapError' (err: Matrix.Error) = MaskingError err
+    | MXMProblem of LinearAlgebra.Error
+    | MaskingProblem of Matrix.Error
 
 let triangle_count (graph: Matrix.SparseMatrix<_>) =
     let graph = Matrix.getLowerTriangle graph
@@ -28,9 +25,9 @@ let triangle_count (graph: Matrix.SparseMatrix<_>) =
     resultM {
         let! C =
             LinearAlgebra.mxm op_add op_mult graph (Matrix.transpose graph)
-            |> Result.mapError mapError
+            |> Result.mapError MXMProblem
 
-        let! CMasked = Matrix.mask C graph Option.isSome |> Result.mapError mapError'
+        let! CMasked = Matrix.mask C graph Option.isSome |> Result.mapError MaskingProblem
 
         return Matrix.foldAssociative op_add None CMasked
     }
