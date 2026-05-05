@@ -395,26 +395,6 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
 
     SparseVector(v.length, nvals, Storage(storageSize, newTree))
 
-(*let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) : SparseVector<'a> =
-    let rec merge t1 t2 =
-        match (t1, t2) with
-        | Leaf (UserValue v1), Leaf (UserValue v2) -> 
-            if compare v1 v2 <= 0 then mkNode t1 t2 else mkNode  (Leaf (UserValue v2)) (Leaf (UserValue v1))
-        | Leaf (UserValue v1), Leaf Dummy -> tree
-
-    let rec inner tree =
-        match tree with
-        | Node (Leaf (UserValue v1), Leaf (UserValue v2) ) -> 
-            if compare v1 v2 <= 0 then tree else Node  (Leaf (UserValue v2), Leaf (UserValue v1))
-        | Node (Leaf (UserValue v1), Leaf Dummy) -> tree
-        | Node (n1, n2) -> 
-        let newLeft = inner n1
-        let newRight = inner n2
-        merge mewLeft newRight 
-*)
-
-//type ScatterError<'a> =
-
 /// Scatter: w[idx[i]] = op(w[idx[i]], v[i])
 let scatter
     (w: SparseVector<'value>)
