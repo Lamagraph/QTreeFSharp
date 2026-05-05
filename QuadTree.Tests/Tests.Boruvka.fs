@@ -24,7 +24,6 @@ let checkResult name actual expected =
 
 [<Fact>]
 let ``Boruvka MST 2 nodes.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -51,7 +50,6 @@ let ``Boruvka MST 2 nodes.`` () =
 
 [<Fact>]
 let ``Boruvka MST 3 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -85,7 +83,6 @@ let ``Boruvka MST 3 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 4 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -122,7 +119,6 @@ let ``Boruvka MST 4 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes line.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -163,7 +159,6 @@ let ``Boruvka MST 5 nodes line.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes star.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -204,7 +199,6 @@ let ``Boruvka MST 5 nodes star.`` () =
 
 [<Fact>]
 let ``Boruvka MST 5 nodes complete.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -257,7 +251,6 @@ let ``Boruvka MST 5 nodes complete.`` () =
 
 [<Fact>]
 let ``Boruvka MST two components.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -305,7 +298,6 @@ let ``Boruvka MST two components.`` () =
 
 [<Fact>]
 let ``Boruvka MST cycle graph 6 nodes.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -349,10 +341,8 @@ let ``Boruvka MST cycle graph 6 nodes.`` () =
 
     checkResult (Graph.Boruvka.mst graph) expected
 
-///!!!!!!!!
 [<Fact>]
 let ``Boruvka MST complete bipartite K3,3.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -414,7 +404,6 @@ let ``Boruvka MST complete bipartite K3,3.`` () =
 
 [<Fact>]
 let ``Boruvka MST random weights.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -481,7 +470,6 @@ let ``Boruvka MST random weights.`` () =
 
 [<Fact>]
 let ``Boruvka MST 8 nodes grid.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -543,7 +531,6 @@ let ``Boruvka MST 8 nodes grid.`` () =
 
 [<Fact>]
 let ``Boruvka MST 10 nodes random.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -620,7 +607,6 @@ let ``Boruvka MST 10 nodes random.`` () =
 
 [<Fact>]
 let ``Boruvka MST simple triangle.`` () =
-    printfn "!!! TEST STARTING !!!"
 
     let graph =
         let clist =
@@ -661,7 +647,6 @@ let ``Boruvka MST simple triangle.`` () =
 
 [<Fact>]
 let ``Boruvka MST simple square.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -710,7 +695,6 @@ let ``Boruvka MST simple square.`` () =
 
 [<Fact>]
 let ``Boruvka MST simple square in two steps.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -759,7 +743,6 @@ let ``Boruvka MST simple square in two steps.`` () =
 
 [<Fact>]
 let ``Boruvka MST.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -836,7 +819,6 @@ let ``Boruvka MST.`` () =
 
 [<Fact>]
 let ``Boruvka MST big.`` () =
-    System.Console.Error.WriteLine("TEST STARTING")
 
     let graph =
         let clist =
@@ -879,7 +861,6 @@ let ``Boruvka MST big.`` () =
                   8UL<rowindex>, 10UL<colindex>, 1UL
                   10UL<rowindex>, 8UL<colindex>, 1UL
                   //================================================
-                  //================================================
                   1UL<rowindex>, 2UL<colindex>, 2UL
                   2UL<rowindex>, 1UL<colindex>, 2UL
 
@@ -891,7 +872,6 @@ let ``Boruvka MST big.`` () =
 
                   8UL<rowindex>, 7UL<colindex>, 2UL
                   7UL<rowindex>, 8UL<colindex>, 2UL
-                  //================================================
                   //================================================
                   10UL<rowindex>, 11UL<colindex>, 3UL
                   11UL<rowindex>, 10UL<colindex>, 3UL
