@@ -13,6 +13,7 @@
         <Compile Include="BFS.fs"/>
         <Compile Include="TriangleCount.fs"/>
         <Compile Include="SSSP.fs"/>
+        <Compile Include="Boruvka.fs"/>
         <Compile Include="RedBlackSet.fs"/>
     </ItemGroup>
 

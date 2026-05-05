@@ -10,7 +10,6 @@ type 'value treeValue =
     | Dummy
     | UserValue of 'value
 
-
 type BinSearchTree<'value> =
     | Leaf of 'value
     | Node of BinSearchTree<'value> * 'value * BinSearchTree<'value>
