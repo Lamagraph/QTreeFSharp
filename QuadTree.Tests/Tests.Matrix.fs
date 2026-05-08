@@ -642,3 +642,1065 @@ let ``Fold sum`` () =
     let actual = foldAssociative op_add None m1 |> Option.get
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``fromCoordinateList with index out of range`` () =
+    let coo =
+        CoordinateList(6UL<nrows>, 6UL<ncols>, [ (9UL<rowindex>, 9UL<colindex>, 13) ])
+
+    let matrix = fromCoordinateList coo
+    let result = toCoordinateList matrix
+    Assert.Equal(CoordinateList(6UL<nrows>, 6UL<ncols>, []), result)
+
+[<Fact>]
+let ``fromCoordinateList with unsorted coordinates works correctly`` () =
+    let coo =
+        CoordinateList(
+            7UL<nrows>,
+            7UL<ncols>,
+            [ (6UL<rowindex>, 6UL<colindex>, 10)
+              (1UL<rowindex>, 2UL<colindex>, 8)
+              (1UL<rowindex>, 1UL<colindex>, 100) ]
+        )
+
+    let matrix = fromCoordinateList coo
+    let result = toCoordinateList matrix
+
+    Assert.Equal(
+        CoordinateList(
+            7UL<nrows>,
+            7UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 100)
+              (1UL<rowindex>, 2UL<colindex>, 8)
+              (6UL<rowindex>, 6UL<colindex>, 10) ]
+        ),
+        result
+    )
+
+[<Fact>]
+let ``fromCoordinateList with zero length and some values returns empty matrix`` () =
+    let coo =
+        CoordinateList(
+            0UL<nrows>,
+            0UL<ncols>,
+            [ (33UL<rowindex>, 33UL<colindex>, 33); (39UL<rowindex>, 39UL<colindex>, 1) ]
+        )
+
+    let matrix = fromCoordinateList coo
+    let result = toCoordinateList matrix
+    Assert.Equal(CoordinateList(0UL<nrows>, 0UL<ncols>, []), result)
+
+[<Fact>]
+let ``map works on square matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 22); (2UL<rowindex>, 3UL<colindex>, 37) ]
+            )
+        )
+
+    let result =
+        map matrix (fun (x: int option) ->
+            match x with
+            | Some(v) -> Some(v + 9)
+            | None -> None)
+
+    let coo = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            4UL<nrows>,
+            4UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 31); (2UL<rowindex>, 3UL<colindex>, 46) ]
+        ),
+        coo
+    )
+
+[<Fact>]
+let ``map works on rectangular matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 21); (4UL<rowindex>, 3UL<colindex>, 36) ]
+            )
+        )
+
+    let result =
+        map matrix (fun (x: int option) ->
+            match x with
+            | Some(v) -> Some(v / 3)
+            | None -> None)
+
+    let coo = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            5UL<nrows>,
+            6UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 7); (4UL<rowindex>, 3UL<colindex>, 12) ]
+        ),
+        coo
+    )
+
+[<Fact>]
+let ``map on empty matrix returns empty matrix`` () =
+    let matrix = fromCoordinateList (CoordinateList(0UL<nrows>, 0UL<ncols>, []))
+
+    let result =
+        map matrix (fun (x: int option) ->
+            match x with
+            | Some(v) -> Some(v * 5)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(0UL<nrows>, 0UL<ncols>, []), coo)
+
+[<Fact>]
+let ``map with function that turns all the elements into zeros`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                7UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 5)
+                  (4UL<rowindex>, 1UL<colindex>, 17)
+                  (4UL<rowindex>, 6UL<colindex>, 33) ]
+            )
+        )
+
+    let result = map matrix (fun _ -> Some(0))
+    let coo = toCoordinateList result
+
+    let expectedData =
+        [ for i in 0UL .. 4UL do
+              for j in 0UL .. 6UL -> (i * 1UL<rowindex>, j * 1UL<colindex>, 0) ]
+
+    let expected = CoordinateList(5UL<nrows>, 7UL<ncols>, expectedData)
+    Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``map with function that turns all the elements to None`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                7UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 5)
+                  (4UL<rowindex>, 1UL<colindex>, 17)
+                  (4UL<rowindex>, 6UL<colindex>, 33) ]
+            )
+        )
+
+    let result = map matrix (fun _ -> None)
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(5UL<nrows>, 7UL<ncols>, []), coo)
+
+[<Fact>]
+let ``map can change type from int to string`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                5UL<ncols>,
+                [ (4UL<rowindex>, 1UL<colindex>, 17); (4UL<rowindex>, 6UL<colindex>, 33) ]
+            )
+        )
+
+    let result =
+        map matrix (fun (x: int option) ->
+            match x with
+            | Some v -> Some(sprintf "str %d" v)
+            | None -> None)
+
+    let coo = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            3UL<nrows>,
+            5UL<ncols>,
+            [ (4UL<rowindex>, 1UL<colindex>, "str 17")
+              (4UL<rowindex>, 6UL<colindex>, "str 33") ]
+        ),
+        coo
+    )
+
+[<Fact>]
+let ``mapi works with row index and col index on square matrix`` () =
+    let coo =
+        CoordinateList(
+            4UL<nrows>,
+            4UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 12); (2UL<rowindex>, 3UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let result =
+        mapi matrix (fun (i: uint64<rowindex>) (j: uint64<colindex>) (x: int option) ->
+            match x with
+            | Some v -> Some(v * int (i) + int (j))
+            | None -> None)
+
+    let actual = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            4UL<nrows>,
+            4UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 13); (2UL<rowindex>, 3UL<colindex>, 29) ]
+        ),
+        actual
+    )
+
+[<Fact>]
+let ``mapi works with row index and col index on rectangular matrix`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            5UL<ncols>,
+            [ (1UL<rowindex>, 2UL<colindex>, 15); (2UL<rowindex>, 2UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let result =
+        mapi matrix (fun (i: uint64<rowindex>) (j: uint64<colindex>) (x: int option) ->
+            match x with
+            | Some v -> Some(v * int (j) + int (i))
+            | None -> None)
+
+    let actual = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            3UL<nrows>,
+            5UL<ncols>,
+            [ (1UL<rowindex>, 2UL<colindex>, 31); (2UL<rowindex>, 2UL<colindex>, 28) ]
+        ),
+        actual
+    )
+
+[<Fact>]
+let ``mapi on empty matrix returns empty matrix`` () =
+    let matrix = fromCoordinateList (CoordinateList(0UL<nrows>, 0UL<ncols>, []))
+
+    let result =
+        mapi matrix (fun (i: uint64<rowindex>) (j: uint64<colindex>) (x: int option) ->
+            match x with
+            | Some v -> Some((v + int (1)) * 3 + 2 * int (j))
+            | None -> None)
+
+    let actual = toCoordinateList result
+    Assert.Equal(CoordinateList(0UL<nrows>, 0UL<ncols>, []), actual)
+
+[<Fact>]
+let ``mapi with special function returns empty matrix`` () =
+    let coo =
+        CoordinateList(
+            5UL<nrows>,
+            7UL<ncols>,
+            [ (1UL<rowindex>, 2UL<colindex>, 15); (4UL<rowindex>, 5UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let result =
+        mapi matrix (fun (i: uint64<rowindex>) (j: uint64<colindex>) (x: int option) ->
+            match x with
+            | Some v ->
+                match (int (i) + int (j)) % 2 with
+                | 0 -> Some(v * 2)
+                | _ -> None
+            | None -> None)
+
+    let actual = toCoordinateList result
+    Assert.Equal(CoordinateList(5UL<nrows>, 7UL<ncols>, []), actual)
+
+[<Fact>]
+let ``mapi works with function does not depend on the indexes`` () =
+    let coo =
+        CoordinateList(
+            5UL<nrows>,
+            7UL<ncols>,
+            [ (1UL<rowindex>, 2UL<colindex>, 15); (4UL<rowindex>, 5UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let result =
+        mapi matrix (fun (i: uint64<rowindex>) (j: uint64<colindex>) (x: int option) ->
+            match x with
+            | Some v -> Some(v * 2)
+            | None -> None)
+
+    let actual = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            5UL<nrows>,
+            7UL<ncols>,
+            [ (1UL<rowindex>, 2UL<colindex>, 30); (4UL<rowindex>, 5UL<colindex>, 26) ]
+        ),
+        actual
+    )
+
+[<Fact>]
+let ``slice returns error when row start is negative`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix -1 4 2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start row should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when row end is negative`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 -4 2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End row should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when col start is negative`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 4 -2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start column should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when col end is negative`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 4 2 -3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End column should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when row start is out of range`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 6 4 2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start row is out of matrix length", msg)
+
+[<Fact>]
+let ``slice returns error when row end is out of range`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 10 2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End row is out of matrix length", msg)
+
+[<Fact>]
+let ``slice returns error when col start is out of range`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 4 10 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start column is out of matrix length", msg)
+
+[<Fact>]
+let ``slice returns error when col end is out of range`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 2 2 10 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End column is out of matrix length", msg)
+
+[<Fact>]
+let ``slice returns error when row end is less than row start`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 2 1 2 3 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start row should be <= end row", msg)
+
+[<Fact>]
+let ``slice returns error when col end is less than col start`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                6UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 3); (3UL<rowindex>, 4UL<colindex>, 17) ]
+            )
+        )
+
+    match slice matrix 1 2 3 2 with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start column should be <= end column", msg)
+
+[<Fact>]
+let ``slice returns correct square submatrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                7UL<ncols>,
+                [ (2UL<rowindex>, 2UL<colindex>, 33); (5UL<rowindex>, 5UL<colindex>, 28) ]
+            )
+        )
+
+    match slice matrix 1 3 1 3 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<nrows>, 3UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct rectangular submatrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                5UL<nrows>,
+                9UL<ncols>,
+                [ (3UL<rowindex>, 7UL<colindex>, 33); (1UL<rowindex>, 2UL<colindex>, 28) ]
+            )
+        )
+
+    match slice matrix 2 4 5 8 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns empty matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                9UL<ncols>,
+                [ (3UL<rowindex>, 3UL<colindex>, 33); (1UL<rowindex>, 2UL<colindex>, 28) ]
+            )
+        )
+
+    match slice matrix 4 6 5 8 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<nrows>, 4UL<ncols>, []), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns single submatrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                9UL<ncols>,
+                [ (3UL<rowindex>, 3UL<colindex>, 33); (1UL<rowindex>, 2UL<colindex>, 28) ]
+            )
+        )
+
+    match slice matrix 1 1 2 2 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 28) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct submatrix equals to matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                9UL<ncols>,
+                [ (3UL<rowindex>, 3UL<colindex>, 33); (1UL<rowindex>, 2UL<colindex>, 28) ]
+            )
+        )
+
+    match slice matrix 0 6 0 8 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+
+        Assert.Equal(
+            CoordinateList(
+                7UL<nrows>,
+                9UL<ncols>,
+                [ (1UL<rowindex>, 2UL<colindex>, 28); (3UL<rowindex>, 3UL<colindex>, 33) ]
+            ),
+            coo
+        )
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct submatrix when row start of submatrix equals to row start of matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                7UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (3UL<rowindex>, 3UL<colindex>, 33)
+                  (6UL<rowindex>, 6UL<colindex>, 6) ]
+            )
+        )
+
+    match slice matrix 0 4 0 4 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+
+        Assert.Equal(
+            CoordinateList(
+                5UL<nrows>,
+                5UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10); (3UL<rowindex>, 3UL<colindex>, 33) ]
+            ),
+            coo
+        )
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct submatrix when row end of submatrix equals to row end of matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                7UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (3UL<rowindex>, 3UL<colindex>, 33)
+                  (6UL<rowindex>, 6UL<colindex>, 6) ]
+            )
+        )
+
+    match slice matrix 2 6 2 4 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(5UL<nrows>, 3UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct submatrix when col start of submatrix equals to col start of matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                7UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (3UL<rowindex>, 3UL<colindex>, 33)
+                  (6UL<rowindex>, 6UL<colindex>, 6) ]
+            )
+        )
+
+    match slice matrix 2 5 0 6 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(4UL<nrows>, 7UL<ncols>, [ (1UL<rowindex>, 3UL<colindex>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct submatrix when col end of submatrix equals to col end of matrix`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                7UL<nrows>,
+                7UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (3UL<rowindex>, 3UL<colindex>, 33)
+                  (6UL<rowindex>, 6UL<colindex>, 6) ]
+            )
+        )
+
+    match slice matrix 2 4 2 6 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<nrows>, 5UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns single column`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                10UL<nrows>,
+                10UL<ncols>,
+                [ (1UL<rowindex>, 3UL<colindex>, 1)
+                  (2UL<rowindex>, 2UL<colindex>, 2)
+                  (5UL<rowindex>, 7UL<colindex>, 3) ]
+            )
+        )
+
+    match slice matrix 1 6 2 2 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(6UL<nrows>, 1UL<ncols>, [ (1UL<rowindex>, 0UL<colindex>, 2) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns single row`` () =
+    let matrix =
+        fromCoordinateList (
+            CoordinateList(
+                10UL<nrows>,
+                10UL<ncols>,
+                [ (1UL<rowindex>, 3UL<colindex>, 1)
+                  (2UL<rowindex>, 2UL<colindex>, 2)
+                  (5UL<rowindex>, 7UL<colindex>, 3) ]
+            )
+        )
+
+    match slice matrix 5 5 3 9 with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(1UL<nrows>, 7UL<ncols>, [ (0UL<rowindex>, 4UL<colindex>, 3) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``let reduceRows sum on square power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 12)
+              (0UL<rowindex>, 1UL<colindex>, 15)
+              (1UL<rowindex>, 0UL<colindex>, 17)
+              (1UL<rowindex>, 1UL<colindex>, 3) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceRows add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 27); (1UL<Vector.index>, 20) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows sum on square power of two matrix with empty row`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (1UL<rowindex>, 0UL<colindex>, 17); (1UL<rowindex>, 1UL<colindex>, 3) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceRows add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(2UL<Vector.dataLength>, [ (1UL<Vector.index>, 20) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows sum on square not power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13)
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 17) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceRows add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(
+            3UL<Vector.dataLength>,
+            [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24); (2UL<Vector.index>, 32) ]
+        )
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows mul on square not power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13)
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 17) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let mul x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a * b)
+
+    let result = reduceRows mul matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(
+            3UL<Vector.dataLength>,
+            [ (0UL<Vector.index>, 315); (1UL<Vector.index>, 143); (2UL<Vector.index>, 255) ]
+        )
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows sum on rectangular matrix`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let sum x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceRows sum matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows sum on empty matrix`` () =
+    let coo = CoordinateList(2UL<nrows>, 3UL<ncols>, [])
+    let matrix = fromCoordinateList coo
+
+    let sum x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceRows sum matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+    let expected = Vector.CoordinateList(2UL<Vector.dataLength>, [])
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceRows mul on single matrix`` () =
+    let coo =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ])
+
+    let matrix = fromCoordinateList coo
+
+    let mul x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a * b)
+
+    let result = reduceRows mul matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+
+[<Fact>]
+let ``let reduceCols sum on square power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 12)
+              (0UL<rowindex>, 1UL<colindex>, 15)
+              (1UL<rowindex>, 0UL<colindex>, 17)
+              (1UL<rowindex>, 1UL<colindex>, 3) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceCols add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 29); (1UL<Vector.index>, 18) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols sum on square power of two matrix with empty col`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 17); (1UL<rowindex>, 0UL<colindex>, 3) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceCols add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 20) ])
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols sum on square not power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13)
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 17) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let add x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceCols add matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(
+            3UL<Vector.dataLength>,
+            [ (0UL<Vector.index>, 20); (1UL<Vector.index>, 35); (2UL<Vector.index>, 22) ]
+        )
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols mul on square not power of two matrix`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13)
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 17) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let mul x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a * b)
+
+    let result = reduceCols mul matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(
+            3UL<Vector.dataLength>,
+            [ (0UL<Vector.index>, 75); (1UL<Vector.index>, 1309); (2UL<Vector.index>, 117) ]
+        )
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols sum on rectangular matrix`` () =
+    let coo =
+        CoordinateList(
+            2UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 7)
+              (0UL<rowindex>, 2UL<colindex>, 9)
+              (1UL<rowindex>, 1UL<colindex>, 11)
+              (1UL<rowindex>, 2UL<colindex>, 13) ]
+        )
+
+    let matrix = fromCoordinateList coo
+
+    let sum x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceCols sum matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(
+            3UL<Vector.dataLength>,
+            [ (0UL<Vector.index>, 5); (1UL<Vector.index>, 18); (2UL<Vector.index>, 22) ]
+        )
+
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols sum on empty matrix`` () =
+    let coo = CoordinateList(2UL<nrows>, 3UL<ncols>, [])
+    let matrix = fromCoordinateList coo
+
+    let sum x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a + b)
+
+    let result = reduceCols sum matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+    let expected = Vector.CoordinateList(3UL<Vector.dataLength>, [])
+    Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``let reduceCols mul on single matrix`` () =
+    let coo =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ])
+
+    let matrix = fromCoordinateList coo
+
+    let mul x y =
+        match x, y with
+        | None, None -> None
+        | None, Some(b) -> Some(b)
+        | Some(a), None -> Some(a)
+        | Some(a), Some(b) -> Some(a * b)
+
+    let result = reduceCols mul matrix
+    let vectorCoordinates = Vector.toCoordinateList result
+
+    let expected =
+        Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ])
+
+    Assert.Equal(expected, vectorCoordinates)

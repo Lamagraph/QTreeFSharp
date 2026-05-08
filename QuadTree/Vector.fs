@@ -561,3 +561,46 @@ let scatter
                 | Error x -> Error x)
             (Ok w)
     | Error x -> Error Error.InconsistentStructureOfStorages
+
+
+let slice (_start: int) (_end: int) (vector: SparseVector<'a>) : Result<SparseVector<'a>, string> =
+    match () with
+    | _ when _start < 0 -> Error "Start should be >= 0"
+    | _ when _end < 0 -> Error "End should be >= 0"
+    | _ when _start > int vector.length - 1 -> Error "Start is out of Vector length"
+    | _ when _end > int vector.length - 1 -> Error "End is out of Vector length"
+    | _ when _start > _end -> Error "End should be >= Start"
+    | _ ->
+        let startIdx = uint64 _start * 1UL<index>
+        let endIdx = uint64 _end * 1UL<index>
+
+        let rec inner (size: uint64<storageSize>) (pos: uint64<index>) vector =
+            let sizeIdx = (uint64 size) * 1UL<index>
+
+            match vector with
+            | Node(x1, x2) ->
+                let half = size / 2UL
+                let halfIdx = (uint64 half) * 1UL<index>
+                let t1, n1 = inner half pos x1
+                let t2, n2 = inner half (pos + halfIdx) x2
+                (mkNode t1 t2), n1 + n2
+            | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when pos >= startIdx && pos + sizeIdx - 1UL<index> <= endIdx ->
+                Leaf(UserValue(v)), (uint64 size) * 1UL<nvals>
+            | Leaf(UserValue(v)) when pos + sizeIdx - 1UL<index> < startIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when pos > endIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) -> Leaf(Dummy), 0UL<nvals>
+
+        let storage, nvals = inner vector.storage.size 0UL<index> vector.storage.data
+        let newLength = uint64 (_end - _start + 1) * 1UL<dataLength>
+
+        let coo =
+            toCoordinateList (SparseVector(newLength, nvals, Storage(vector.storage.size, storage)))
+
+        let shiftedData =
+            coo.data
+            |> List.map (fun (idx, value) -> (idx - uint64 _start * 1UL<index>, value))
+
+        let shiftedCoo = CoordinateList(newLength, shiftedData)
+        let newVec = fromCoordinateList shiftedCoo
+        Ok newVec

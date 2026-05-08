@@ -135,10 +135,34 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     let coo =
         traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size)
 
-    CoordinateList(nrows, ncols, coo)
+    let sorted = List.sort coo
+    CoordinateList(nrows, ncols, sorted)
 
 let empty nrows ncols =
     fromCoordinateList (CoordinateList(nrows, ncols, []))
+
+let map (matrix: SparseMatrix<'a>) f =
+    let rec inner (size: uint64<storageSize>) (tree: qtree<Option<'a>>) =
+        match tree with
+        | Node(nw, ne, sw, se) ->
+            let nwTree, nwNvals = inner (size / 2UL) nw
+            let neTree, neNvals = inner (size / 2UL) ne
+            let swTree, swNvals = inner (size / 2UL) sw
+            let seTree, seNvals = inner (size / 2UL) se
+            (mkNode nwTree neTree swTree seTree), nwNvals + neNvals + swNvals + seNvals
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(v)) ->
+            let res = f v
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * (uint64 size) * 1UL<nvals>
+
+            Leaf(UserValue(res)), nnz
+
+    let newTree, newNvals = inner matrix.storage.size matrix.storage.data
+    SparseMatrix(matrix.nrows, matrix.ncols, newNvals, Storage(matrix.storage.size, newTree))
 
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
@@ -394,3 +418,164 @@ let transpose (matrix: SparseMatrix<_>) =
 
 let mask (m1: SparseMatrix<'a>) (m2: SparseMatrix<'b>) f =
     map2 m1 m2 (fun m1 m2 -> if f m2 then m1 else None)
+
+let slice
+    (matrix: SparseMatrix<'a>)
+    (rowStart: int)
+    (rowEnd: int)
+    (colStart: int)
+    (colEnd: int)
+    : Result<SparseMatrix<'a>, string> =
+    match () with
+    | _ when rowStart < 0 -> Error "Start row should be >= 0"
+    | _ when rowEnd < 0 -> Error "End row should be >= 0"
+    | _ when colStart < 0 -> Error "Start column should be >= 0"
+    | _ when colEnd < 0 -> Error "End column should be >= 0"
+    | _ when rowStart > int matrix.nrows - 1 -> Error "Start row is out of matrix length"
+    | _ when rowEnd > int matrix.nrows - 1 -> Error "End row is out of matrix length"
+    | _ when colStart > int matrix.ncols - 1 -> Error "Start column is out of matrix length"
+    | _ when colEnd > int matrix.ncols - 1 -> Error "End column is out of matrix length"
+    | _ when rowStart > rowEnd -> Error "Start row should be <= end row"
+    | _ when colStart > colEnd -> Error "Start column should be <= end column"
+    | _ ->
+        let rowStartIdx = uint64 rowStart * 1UL<rowindex>
+        let rowEndIdx = uint64 rowEnd * 1UL<rowindex>
+        let colStartIdx = uint64 colStart * 1UL<colindex>
+        let colEndIdx = uint64 colEnd * 1UL<colindex>
+
+        let rec inner (size: uint64<storageSize>) (row: uint64<rowindex>) (col: uint64<colindex>) matrix =
+            let sizeRow = (uint64 size) * 1UL<rowindex>
+            let sizeCol = (uint64 size) * 1UL<colindex>
+
+            match matrix with
+            | Node(nw, ne, sw, se) ->
+                let halfSize = size / 2UL
+                let halfRow = (uint64 halfSize) * 1UL<rowindex>
+                let halfCol = (uint64 halfSize) * 1UL<colindex>
+                let nwTree, nwNvals = inner halfSize row col nw
+                let neTree, neNvals = inner halfSize row (col + halfCol) ne
+                let swTree, swNvals = inner halfSize (row + halfRow) col sw
+                let seTree, seNvals = inner halfSize (row + halfRow) (col + halfCol) se
+                (mkNode nwTree neTree swTree seTree), nwNvals + neNvals + swNvals + seNvals
+            | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when
+                row >= rowStartIdx
+                && row + sizeRow - 1UL<rowindex> <= rowEndIdx
+                && col >= colStartIdx
+                && col + sizeCol - 1UL<colindex> <= colEndIdx
+                ->
+                Leaf(UserValue(v)), (uint64 size) * (uint64 size) * 1UL<nvals>
+            | Leaf(UserValue(v)) when row + sizeRow - 1UL<rowindex> < rowStartIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when col + sizeCol - 1UL<colindex> < colStartIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when row > rowEndIdx -> Leaf(Dummy), 0UL<nvals>
+            | Leaf(UserValue(v)) when col > colEndIdx -> Leaf(Dummy), 0UL<nvals>
+            | _ -> Leaf(Dummy), 0UL<nvals>
+
+        let storage, nvals =
+            inner matrix.storage.size 0UL<rowindex> 0UL<colindex> matrix.storage.data
+
+        let newRows = uint64 (rowEnd - rowStart + 1) * 1UL<nrows>
+        let newCols = uint64 (colEnd - colStart + 1) * 1UL<ncols>
+
+        let coo =
+            toCoordinateList (SparseMatrix(newRows, newCols, nvals, Storage(matrix.storage.size, storage)))
+
+        let shiftedData =
+            coo.list
+            |> List.map (fun (i, j, v) -> (i - uint64 rowStart * 1UL<rowindex>, j - uint64 colStart * 1UL<colindex>, v))
+
+        let shiftedCoo = CoordinateList(newRows, newCols, shiftedData)
+        let newMatrix = fromCoordinateList shiftedCoo
+        Ok newMatrix
+
+let reduceRows (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'a>) : Vector.SparseVector<'a> =
+    let rows = matrix.nrows
+
+    let rec inner (size: uint64<storageSize>) (row: uint64<rowindex>) (col: uint64<colindex>) tree acc =
+        match tree with
+        | Node(nw, ne, sw, se) ->
+            let half = size / 2UL
+            let halfRow = (uint64 half) * 1UL<rowindex>
+            let halfCol = (uint64 half) * 1UL<colindex>
+            let acc = inner half row col nw acc
+            let acc = inner half row (col + halfCol) ne acc
+            let acc = inner half (row + halfRow) col sw acc
+            let acc = inner half (row + halfRow) (col + halfCol) se acc
+            acc
+        | Leaf(Dummy) -> acc
+        | Leaf(UserValue(None)) -> acc
+        | Leaf(UserValue(Some v)) -> (row, v) :: acc
+
+    let pairs =
+        inner matrix.storage.size 0UL<rowindex> 0UL<colindex> matrix.storage.data []
+
+    let grouped =
+        List.sortBy fst pairs
+        |> List.groupBy fst
+        |> List.map (fun (row, rowSet) -> row, rowSet |> List.map snd |> List.map Some)
+
+    let reduced =
+        grouped
+        |> List.map (fun (row, values) ->
+            match values with
+            | [] -> row, None
+            | head :: tail -> row, List.fold op head tail)
+
+    let data =
+        reduced
+        |> List.choose (fun (row, v) ->
+            match v with
+            | None -> None
+            | Some x -> Some(row, 0UL<colindex>, x))
+        |> List.sort
+
+    let vectorData =
+        data |> List.map (fun (row, _, v) -> (uint64 row * 1UL<Vector.index>, v))
+
+    Vector.fromCoordinateList (Vector.CoordinateList(uint64 rows * 1UL<Vector.dataLength>, vectorData))
+
+let reduceCols (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'a>) : Vector.SparseVector<'a> =
+    let cols = matrix.ncols
+
+    let rec inner (size: uint64<storageSize>) (row: uint64<rowindex>) (col: uint64<colindex>) tree acc =
+        match tree with
+        | Node(nw, ne, sw, se) ->
+            let half = size / 2UL
+            let halfRow = (uint64 half) * 1UL<rowindex>
+            let halfCol = (uint64 half) * 1UL<colindex>
+            let acc = inner half row col nw acc
+            let acc = inner half row (col + halfCol) ne acc
+            let acc = inner half (row + halfRow) col sw acc
+            let acc = inner half (row + halfRow) (col + halfCol) se acc
+            acc
+        | Leaf(Dummy) -> acc
+        | Leaf(UserValue(None)) -> acc
+        | Leaf(UserValue(Some v)) -> (col, v) :: acc
+
+    let pairs =
+        inner matrix.storage.size 0UL<rowindex> 0UL<colindex> matrix.storage.data []
+
+    let grouped =
+        List.sortBy fst pairs
+        |> List.groupBy fst
+        |> List.map (fun (col, colSet) -> col, colSet |> List.map snd |> List.map Some)
+
+    let reduced =
+        grouped
+        |> List.map (fun (col, values) ->
+            match values with
+            | [] -> col, None
+            | head :: tail -> col, List.fold op head tail)
+
+    let data =
+        reduced
+        |> List.choose (fun (col, v) ->
+            match v with
+            | None -> None
+            | Some x -> Some(0UL<rowindex>, col, x))
+        |> List.sort
+
+    let vectorData =
+        data |> List.map (fun (_, col, v) -> (uint64 col * 1UL<Vector.index>, v))
+
+    Vector.fromCoordinateList (Vector.CoordinateList(uint64 cols * 1UL<Vector.dataLength>, vectorData))

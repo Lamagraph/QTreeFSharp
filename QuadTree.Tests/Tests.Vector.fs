@@ -903,3 +903,256 @@ let ``Init vector`` () =
 
     let actual = Vector.init 3UL<dataLength> (fun i -> Some(int i))
     Assert.Equal(expected, actual)
+
+
+[<Fact>]
+let ``map on empty vector returns empty vector`` () =
+    let vec = fromCoordinateList (CoordinateList(0UL<dataLength>, []))
+
+    let result =
+        map vec (fun (x: int option) ->
+            match x with
+            | Some v -> Some(v * 3)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(0UL<dataLength>, []), coo)
+
+[<Fact>]
+let ``map with function that turns all the elements into zeros`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (1UL<index>, 3); (2UL<index>, 3); (5UL<index>, 100) ]))
+
+    let result = map vec (fun _ -> Some 0)
+    let coo = toCoordinateList result
+
+    Assert.Equal(
+        CoordinateList(
+            7UL<dataLength>,
+            [ (0UL<index>, 0)
+              (1UL<index>, 0)
+              (2UL<index>, 0)
+              (3UL<index>, 0)
+              (4UL<index>, 0)
+              (5UL<index>, 0)
+              (6UL<index>, 0) ]
+        ),
+        coo
+    )
+
+[<Fact>]
+let ``map with function that resets all the elements`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (1UL<index>, 3); (2UL<index>, 3); (5UL<index>, 100) ]))
+
+    let result = map vec (fun _ -> None)
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(7UL<dataLength>, []), coo)
+
+[<Fact>]
+let ``map can change type from int to string`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(3UL<dataLength>, [ (1UL<index>, 11); (2UL<index>, 33) ]))
+
+    let result =
+        map vec (fun (x: int option) ->
+            match x with
+            | Some v -> Some(sprintf "str %d" v)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(3UL<dataLength>, [ (1UL<index>, "str 11"); (2UL<index>, "str 33") ]), coo)
+
+[<Fact>]
+let ``fromCoordinateList with index out of range`` () =
+    let coo = CoordinateList(6UL<dataLength>, [ (9UL<index>, 8) ])
+    let vec = fromCoordinateList coo
+    let result = toCoordinateList vec
+    Assert.Equal(CoordinateList(6UL<dataLength>, []), result)
+
+[<Fact>]
+let ``fromCoordinateList with unsorted coordinates works correctly`` () =
+    let coo =
+        CoordinateList(7UL<dataLength>, [ (5UL<index>, 3); (3UL<index>, 2); (1UL<index>, 100) ])
+
+    let vec = fromCoordinateList coo
+    let result = toCoordinateList vec
+    Assert.Equal(CoordinateList(7UL<dataLength>, [ (1UL<index>, 100); (3UL<index>, 2); (5UL<index>, 3) ]), result)
+(*
+[<Fact>]
+let ``fromCoordinateList with duplicate indicies returns the last of them`` () =
+    let coo = CoordinateList(3UL<dataLength>, [(1UL<index>, 33); (1UL<index>, 100)])
+    let vec = Vector.fromCoordinateList coo
+    let result = Vector.toCoordinateList vec
+    Assert.Equal(CoordinateList(3UL<dataLength>, [(1UL<index>, 100)]), result)
+*)
+[<Fact>]
+let ``fromCoordinateList with zero length and some values returns empty vector`` () =
+    let coo = CoordinateList(0UL<dataLength>, [ (33UL<index>, 33); (39UL<index>, 1) ])
+    let vec = fromCoordinateList coo
+    let result = toCoordinateList vec
+    Assert.Equal(CoordinateList(0UL<dataLength>, []), result)
+
+[<Fact>]
+let ``mapi works with index`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10); (3UL<index>, 23) ]))
+
+    let result =
+        mapi vec (fun (i: uint64<index>) (x: int option) ->
+            match x with
+            | Some v -> Some(int i + v)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(5UL<dataLength>, [ (2UL<index>, 12); (3UL<index>, 26) ]), coo)
+
+[<Fact>]
+let ``mapi on empty vector returns empty vector`` () =
+    let vec = fromCoordinateList (CoordinateList(0UL<dataLength>, []))
+
+    let result =
+        mapi vec (fun (i: uint64<index>) (x: int option) ->
+            match x with
+            | Some v -> Some(int i + v)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(0UL<dataLength>, []), coo)
+
+[<Fact>]
+let ``mapi with special function returns empty vector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(5UL<dataLength>, [ (1UL<index>, 33); (3UL<index>, 88) ]))
+
+    let result =
+        mapi vec (fun (i: uint64<index>) (x: int option) ->
+            match x with
+            | Some v ->
+                match int i % 2 with
+                | 0 -> Some(v * 2)
+                | _ -> None
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(5UL<dataLength>, []), coo)
+
+[<Fact>]
+let ``mapi works with function does not depend on the index`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10); (3UL<index>, 23) ]))
+
+    let result =
+        mapi vec (fun (i: uint64<index>) (x: int option) ->
+            match x with
+            | Some v -> Some(v + 4)
+            | None -> None)
+
+    let coo = toCoordinateList result
+    Assert.Equal(CoordinateList(5UL<dataLength>, [ (2UL<index>, 14); (3UL<index>, 27) ]), coo)
+
+[<Fact>]
+let ``slice returns error when start is negative`` () =
+    let vec = fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10) ]))
+
+    match slice -1 3 vec with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when end is negative`` () =
+    let vec = fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10) ]))
+
+    match slice 1 -3 vec with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End should be >= 0", msg)
+
+[<Fact>]
+let ``slice returns error when start is out of range`` () =
+    let vec = fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10) ]))
+
+    match slice 7 3 vec with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("Start is out of Vector length", msg)
+
+[<Fact>]
+let ``slice returns error when end is out of range`` () =
+    let vec = fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10) ]))
+
+    match slice 3 7 vec with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End is out of Vector length", msg)
+
+[<Fact>]
+let ``slice returns error when end is less than start`` () =
+    let vec = fromCoordinateList (CoordinateList(5UL<dataLength>, [ (2UL<index>, 10) ]))
+
+    match slice 4 3 vec with
+    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Error msg -> Assert.Equal("End should be >= Start", msg)
+
+[<Fact>]
+let ``slice returns correct subvector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (2UL<index>, 10); (6UL<index>, 20) ]))
+
+    match slice 1 3 vec with
+    | Result.Ok result ->
+        let coo = Vector.toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<dataLength>, [ (1UL<index>, 10) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns subvector without elements`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (5UL<index>, 10); (6UL<index>, 20) ]))
+
+    match slice 0 2 vec with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(3UL<dataLength>, []), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns single subvector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (2UL<index>, 10); (6UL<index>, 20) ]))
+
+    match slice 2 2 vec with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(1UL<dataLength>, [ (0UL<index>, 10) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct subvector equals to vector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (2UL<index>, 10); (3UL<index>, 33); (6UL<index>, 20) ]))
+
+    match slice 0 6 vec with
+    | Result.Ok result ->
+        let coo = toCoordinateList result
+        Assert.Equal(CoordinateList(7UL<dataLength>, [ (2UL<index>, 10); (3UL<index>, 33); (6UL<index>, 20) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct subvector when start of subvector equals to start of vector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (0UL<index>, 10); (3UL<index>, 33); (6UL<index>, 20) ]))
+
+    match slice 0 4 vec with
+    | Result.Ok result ->
+        let coo = Vector.toCoordinateList result
+        Assert.Equal(CoordinateList(5UL<dataLength>, [ (0UL<index>, 10); (3UL<index>, 33) ]), coo)
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``slice returns correct subvector when end of subvector equals to end of vector`` () =
+    let vec =
+        fromCoordinateList (CoordinateList(7UL<dataLength>, [ (0UL<index>, 10); (3UL<index>, 33); (6UL<index>, 20) ]))
+
+    match slice 2 6 vec with
+    | Result.Ok result ->
+        let coo = Vector.toCoordinateList result
+        Assert.Equal(CoordinateList(5UL<dataLength>, [ (1UL<index>, 33); (4UL<index>, 20) ]), coo)
+    | Result.Error msg -> failwith msg
