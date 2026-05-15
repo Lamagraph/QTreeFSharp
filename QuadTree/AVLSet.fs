@@ -1,12 +1,10 @@
 ﻿namespace QuadTree.AVLSet
 
-open System.Threading.Tasks
-
 type AVLTree<'Value> =
     | Empty
     | Node of int * 'Value * AVLTree<'Value> * AVLTree<'Value>
 
-module Node =
+module internal Node =
     let height n =
         match n with
         | Empty -> -1
@@ -14,23 +12,23 @@ module Node =
 
     let value n =
         match n with
-        | Empty -> failwith "Empty node has no value"
+        | Empty -> failwith "Empty node has no value. This error should be unreachable"
         | Node(_, v, _, _) -> v
 
     let leftChild n =
         match n with
-        | Empty -> failwith "Empty node has no left child"
+        | Empty -> failwith "Empty node has no left child. This error should be unreachable"
         | Node(_, _, ln, _) -> ln
 
     let rightChild n =
         match n with
-        | Empty -> failwith "Empty node has no right child"
+        | Empty -> failwith "Empty node has no right child. This error should be unreachable"
         | Node(_, _, _, rn) -> rn
 
     let maxMinNodesByHeights n1 n2 =
         if height n1 >= height n2 then n1, n2 else n2, n1
 
-module Tree =
+module internal Tree =
     let LLrotate n =
         let ln = Node.leftChild n
         let lln = Node.leftChild ln
@@ -82,7 +80,7 @@ module Tree =
 
     let rec minNode n =
         match n with
-        | Empty -> failwith "minNode: cannot find minimum of an empty node"
+        | Empty -> failwith "minNode: cannot find minimum of an empty node. This error should be unreachable"
         | Node(_, v, Empty, rn) -> v, rn
         | Node(_, v, ln, rn) ->
             let value, lnNew = minNode ln
@@ -151,13 +149,13 @@ module Tree =
         | diff when abs diff <= 1 -> Node(max leftHeight rightHeight + 1, key, left, right)
         | diff when diff >= 2 ->
             match left with
-            | Empty -> failwith "Unreacheable message 1"
+            | Empty -> failwith "Left subtree is Empty in join operation. This error should be unreachable"
             | Node(h, v, ln, rn) ->
                 let rnNew = join rn key right
                 balance ln rnNew v
         | _ ->
             match right with
-            | Empty -> failwith "Unreacheable message 2"
+            | Empty -> failwith "Right subtree is Empty in join operation. This error should be unreachable"
             | Node(h, v, ln, rn) ->
                 let lnNew = join left key ln
                 balance lnNew rn v
@@ -183,7 +181,7 @@ module Tree =
                 let lesser, greater, wasFound = split key rn
                 join ln v lesser, greater, wasFound
 
-module AVLSet =
+module public AVLSet =
     let empty = Empty
 
     let add value set = Tree.insert value set
@@ -252,119 +250,37 @@ module AVLSet =
             else
                 Tree.join leftSymm v rightSymm
 
-    let unionTraversal set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
-        let unSet = Tree.copy maxSet
-        Tree.traverse Tree.insert unSet minSet
+    module Traversal =
+        let union set1 set2 =
+            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let unSet = Tree.copy maxSet
+            Tree.traverse Tree.insert unSet minSet
 
-    let intersectionTraversal set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+        let intersection set1 set2 =
+            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
 
-        Tree.traverse
-            (fun value set ->
-                if Tree.contains value maxSet then
-                    Tree.insert value set
-                else
-                    set)
-            Empty
-            minSet
+            Tree.traverse
+                (fun value set ->
+                    if Tree.contains value maxSet then
+                        Tree.insert value set
+                    else
+                        set)
+                Empty
+                minSet
 
-    let differenceTraversal minuendSet subtrahendSet =
-        let diffSet = Tree.copy minuendSet
-        Tree.traverse Tree.remove diffSet subtrahendSet
+        let difference minuendSet subtrahendSet =
+            let diffSet = Tree.copy minuendSet
+            Tree.traverse Tree.remove diffSet subtrahendSet
 
-    let symmDifferenceTraversal set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
-        let symmSet = Tree.copy maxSet
+        let symmDifference set1 set2 =
+            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let symmSet = Tree.copy maxSet
 
-        Tree.traverse
-            (fun value set ->
-                if Tree.contains value maxSet then
-                    Tree.remove value set
-                else
-                    Tree.insert value set)
-            symmSet
-            minSet
-
-    let rec parallelUnion (opts: ParallelOptions) set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
-
-        match maxSet, minSet with
-        | Empty, _ -> minSet
-        | _, Empty -> maxSet
-        | Node(_, v, ln, rn), _ ->
-            let lesser, greater, _ = Tree.split v minSet
-            let mutable leftUnion = Empty
-            let mutable rightUnion = Empty
-
-            Parallel.Invoke(
-                opts,
-                (fun () -> leftUnion <- parallelUnion opts ln lesser),
-                (fun () -> rightUnion <- parallelUnion opts rn greater)
-            )
-
-            Tree.join leftUnion v rightUnion
-
-    let rec parallelIntersection (opts: ParallelOptions) set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
-
-        match maxSet, minSet with
-        | Empty, _ -> Empty
-        | _, Empty -> Empty
-        | Node(_, v, ln, rn), _ ->
-            let lesser, greater, wasFound = Tree.split v minSet
-            let mutable leftInter = Empty
-            let mutable rightInter = Empty
-
-            Parallel.Invoke(
-                opts,
-                (fun () -> leftInter <- parallelIntersection opts ln lesser),
-                (fun () -> rightInter <- parallelIntersection opts rn greater)
-            )
-
-            if wasFound then
-                Tree.join leftInter v rightInter
-            else
-                Tree.merge leftInter rightInter
-
-    let rec parallelDifference (opts: ParallelOptions) minuendSet subtrahendSet =
-        match minuendSet, subtrahendSet with
-        | Empty, _ -> Empty
-        | _, Empty -> minuendSet
-        | Node(_, v, ln, rn), _ ->
-            let lesser, greater, wasFound = Tree.split v subtrahendSet
-            let mutable leftDiff = Empty
-            let mutable rightDiff = Empty
-
-            Parallel.Invoke(
-                opts,
-                (fun () -> leftDiff <- parallelDifference opts ln lesser),
-                (fun () -> rightDiff <- parallelDifference opts rn greater)
-            )
-
-            if wasFound then
-                Tree.merge leftDiff rightDiff
-            else
-                Tree.join leftDiff v rightDiff
-
-    let rec parallelSymmDifference (opts: ParallelOptions) set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
-
-        match maxSet, minSet with
-        | Empty, _ -> minSet
-        | _, Empty -> maxSet
-        | Node(_, v, ln, rn), _ ->
-            let lesser, greater, wasFound = Tree.split v minSet
-            let mutable leftSymm = Empty
-            let mutable rightSymm = Empty
-
-            Parallel.Invoke(
-                opts,
-                (fun () -> leftSymm <- parallelSymmDifference opts ln lesser),
-                (fun () -> rightSymm <- parallelSymmDifference opts rn greater)
-            )
-
-            if wasFound then
-                Tree.merge leftSymm rightSymm
-            else
-                Tree.join leftSymm v rightSymm
+            Tree.traverse
+                (fun value set ->
+                    if Tree.contains value maxSet then
+                        Tree.remove value set
+                    else
+                        Tree.insert value set)
+                symmSet
+                minSet

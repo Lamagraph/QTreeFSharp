@@ -1,17 +1,15 @@
 ﻿namespace QuadTree.Benchmarks.AVLSet
 
-open System.Threading.Tasks
-open BenchmarkDotNet.Diagnosers
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Configs
 open QuadTree.AVLSet
+open QuadTree.AVLSet.Parallel
 
 [<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
 [<CategoriesColumn>]
 [<HtmlExporter>]
 [<MemoryDiagnoser>]
 [<ThreadingDiagnoser>]
-[<HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions)>]
 type Benchmark() =
     let rnd = System.Random(1234561)
 
@@ -29,7 +27,7 @@ type Benchmark() =
 
     [<Params(1, 2, 4, 8)>]
     [<DefaultValue>]
-    val mutable public Threads: int
+    val mutable public threads: int
 
     [<DefaultValue>]
     val mutable public rndInt: int
@@ -69,15 +67,12 @@ type Benchmark() =
     [<Benchmark>]
     [<BenchmarkCategory("Union")>]
     member self.``Union via tree traversal``() =
-        AVLSet.unionTraversal self.setA self.setB
+        AVLSet.Traversal.union self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Union")>]
     member self.``Parallel union with threads``() =
-        let opts = ParallelOptions()
-        opts.MaxDegreeOfParallelism <- self.Threads
-
-        AVLSet.parallelUnion opts self.setA self.setB
+        ParallelAVLSet.union (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Intersection")>]
@@ -86,15 +81,12 @@ type Benchmark() =
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
     member self.``Intersection via tree traversal``() =
-        AVLSet.intersectionTraversal self.setA self.setB
+        AVLSet.Traversal.intersection self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
     member self.``Parallel intersection with threads``() =
-        let opts = ParallelOptions()
-        opts.MaxDegreeOfParallelism <- self.Threads
-
-        AVLSet.parallelIntersection opts self.setA self.setB
+        ParallelAVLSet.intersection (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Difference")>]
@@ -103,30 +95,24 @@ type Benchmark() =
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
     member self.``Difference via tree traversal``() =
-        AVLSet.differenceTraversal self.setA self.setB
+        AVLSet.Traversal.difference self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
     member self.``Parallel difference with threads``() =
-        let opts = ParallelOptions()
-        opts.MaxDegreeOfParallelism <- self.Threads
-
-        AVLSet.parallelDifference opts self.setA self.setB
+        ParallelAVLSet.difference (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Symmetrical Difference")>]
-    member self.``Sequential symmetrical difference``() =
+    member self.``Sequential symmetric difference``() =
         AVLSet.symmDifference self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Symmetrical Difference")>]
-    member self.``Symmetrical difference via tree traversal``() =
-        AVLSet.symmDifferenceTraversal self.setA self.setB
+    member self.``Symmetric difference via tree traversal``() =
+        AVLSet.Traversal.symmDifference self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Symmetrical Difference")>]
-    member self.``Parallel symmetrical difference with threads``() =
-        let opts = ParallelOptions()
-        opts.MaxDegreeOfParallelism <- self.Threads
-
-        AVLSet.parallelSymmDifference opts self.setA self.setB
+    member self.``Parallel symmetric difference with threads``() =
+        ParallelAVLSet.symmDifference (Some self.threads) self.setA self.setB
