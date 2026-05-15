@@ -1,9 +1,10 @@
 namespace QuadTree.Tests.AVLSet
 
-open System.Threading.Tasks
 open Xunit
 open FsUnit.Xunit
+open FsCheck.Xunit
 open QuadTree.AVLSet
+open QuadTree.AVLSet.Parallel
 
 module SetTests =
     let rec isSetValid n mn mx =
@@ -217,66 +218,37 @@ module SetTests =
             )
 
         resultSet |> should equal correctSet
+    
+    [<Property>]
+    let ``Adding elemements to set`` (elements: int list) =
+        let set = elements |> List.fold (fun t x -> AVLSet.add x t) AVLSet.empty 
 
-    [<Fact>]
-    let ``Search for missing element`` () =
-        let set =
-            Node(
-                3,
-                15,
-                Node(1, 10, Node(0, 6, Empty, Empty), Node(0, 12, Empty, Empty)),
-                Node(
-                    2,
-                    25,
-                    Node(0, 20, Empty, Empty),
-                    Node(1, 30, Node(0, 27, Empty, Empty), Node(0, 33, Empty, Empty))
-                )
-            )
+        let rec setContainsList list set = 
+            match list with
+            | [ ] -> true
+            | head :: tail -> AVLSet.contains head set && setContainsList tail set
+            
+        isSetValid set None None |> should be True
+        setContainsList elements set |> should be True
 
-        AVLSet.contains 100 set |> should be False
-
-    [<Fact>]
-    let ``Search for negative value`` () =
-        let set =
-            Node(
-                3,
-                15,
-                Node(2, 5, Node(1, 0, Node(0, -3, Empty, Empty), Node(0, 2, Empty, Empty)), Node(0, 10, Empty, Empty)),
-                Node(1, 20, Node(0, 16, Empty, Empty), Node(0, 24, Empty, Empty))
-            )
-
-        AVLSet.contains -3 set |> should be True
-
-    [<Fact>]
-    let ``Tree structure cloning`` () =
-        let set =
-            Node(
-                3,
-                15,
-                Node(2, 5, Node(1, 0, Node(0, -3, Empty, Empty), Node(0, 2, Empty, Empty)), Node(0, 10, Empty, Empty)),
-                Node(1, 20, Node(0, 16, Empty, Empty), Node(0, 24, Empty, Empty))
-            )
+    [<Property>]
+    let ``Set cloning`` (elements: int list) =
+        let set = elements |> List.fold (fun t x -> AVLSet.add x t) AVLSet.empty
 
         AVLSet.copy set |> should equal set
+    
+    [<Property>]
+    let ``Deleting elements from set`` (elements: int list) =
+        let set = elements |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let emptySet = elements |> List.fold (fun t e -> AVLSet.delete e t) set
+        let empty: AVLTree<int> = AVLSet.empty
 
-    let rnd = System.Random(123561)
+        emptySet |> should equal empty
 
-    let dataA = Array.init 10000 (fun _ -> rnd.Next())
-    let dataB = Array.init 2000 (fun _ -> rnd.Next())
-
-    let setA = dataA |> Array.fold (fun s v -> AVLSet.add v s) AVLSet.empty
-    let setB = dataB |> Array.fold (fun s v -> AVLSet.add v s) AVLSet.empty
-
-    [<Fact>]
-    let ``100k operations stress test`` () =
-        let data = Array.init 100000 (fun _ -> rnd.Next())
-
-        let set = data |> Array.fold (fun s v -> AVLSet.add v s) AVLSet.empty
-
-        isSetValid set None None |> should be True
-
-    [<Fact>]
-    let ``Standard set union`` () =
+    [<Property>]
+    let ``Standard set union`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
         let unionSet = AVLSet.union setA setB
 
         isSetValid unionSet None None |> should be True
@@ -285,10 +257,17 @@ module SetTests =
          && advancedContains (fun v x -> x) setB unionSet)
         |> should be True
 
-        AVLSet.union setB setA |> should equal unionSet
+        let unionSetSwapped = AVLSet.union setB setA
 
-    [<Fact>]
-    let ``Standard set intersection`` () =
+        (advancedContains (fun v x -> x) unionSet unionSetSwapped
+         && advancedContains (fun v x -> x) unionSetSwapped unionSet)
+        |> should be True
+
+
+    [<Property>]
+    let ``Standard set intersection`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
         let intersectionSet = AVLSet.intersection setA setB
 
         isSetValid intersectionSet None None |> should be True
@@ -296,10 +275,16 @@ module SetTests =
         advancedContains (fun v x -> if AVLSet.contains v setB then x else not x) setA intersectionSet
         |> should be True
 
-        AVLSet.intersection setB setA |> should equal intersectionSet
+        let intersectionSetSwapped = AVLSet.intersection setB setA
 
-    [<Fact>]
-    let ``Standard set difference`` () =
+        (advancedContains (fun v x -> x) intersectionSet intersectionSetSwapped
+         && advancedContains (fun v x -> x) intersectionSetSwapped intersectionSet)
+        |> should be True
+
+    [<Property>]
+    let ``Standard set difference`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
         let differenceSet = AVLSet.difference setA setB
 
         isSetValid differenceSet None None |> should be True
@@ -307,8 +292,10 @@ module SetTests =
         advancedContains (fun v x -> if AVLSet.contains v setB then not x else x) setA differenceSet
         |> should be True
 
-    [<Fact>]
-    let ``Standard symmetric difference`` () =
+    [<Property>]
+    let ``Standard symmetric difference`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
         let symmDiffSet = AVLSet.symmDifference setA setB
 
         isSetValid symmDiffSet None None |> should be True
@@ -317,11 +304,17 @@ module SetTests =
          && advancedContains (fun v x -> if AVLSet.contains v setA then not x else x) setB symmDiffSet)
         |> should be True
 
-        AVLSet.symmDifference setB setA |> should equal symmDiffSet
+        let symmDiffSetSwapped = AVLSet.symmDifference setB setA
 
-    [<Fact>]
-    let ``Union via tree traversal`` () =
-        let unionSet = AVLSet.unionTraversal setA setB
+        (advancedContains (fun v x -> x) symmDiffSet symmDiffSetSwapped
+         && advancedContains (fun v x -> x) symmDiffSetSwapped symmDiffSet)
+        |> should be True
+
+    [<Property>]
+    let ``Union via tree traversal`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let unionSet = AVLSet.Traversal.union setA setB
 
         isSetValid unionSet None None |> should be True
 
@@ -329,83 +322,45 @@ module SetTests =
          && advancedContains (fun v x -> x) setB unionSet)
         |> should be True
 
-        AVLSet.unionTraversal setB setA |> should equal unionSet
+        let unionSetSwapped = AVLSet.union setB setA
 
-    [<Fact>]
-    let ``Intersection via tree traversal`` () =
-        let intersectionSet = AVLSet.intersectionTraversal setA setB
+        (advancedContains (fun v x -> x) unionSet unionSetSwapped
+         && advancedContains (fun v x -> x) unionSetSwapped unionSet)
+        |> should be True
+
+    [<Property>]
+    let ``Intersection via tree traversal`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let intersectionSet = AVLSet.Traversal.intersection setA setB
 
         isSetValid intersectionSet None None |> should be True
 
         advancedContains (fun v x -> if AVLSet.contains v setB then x else not x) setA intersectionSet
         |> should be True
 
-        AVLSet.intersectionTraversal setB setA |> should equal intersectionSet
+        let intersectionSetSwapped = AVLSet.intersection setB setA
 
-    [<Fact>]
-    let ``Difference via tree traversal`` () =
-        let differenceSet = AVLSet.differenceTraversal setA setB
+        (advancedContains (fun v x -> x) intersectionSet intersectionSetSwapped
+         && advancedContains (fun v x -> x) intersectionSetSwapped intersectionSet)
+        |> should be True
+
+    [<Property>]
+    let ``Difference via tree traversal`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let differenceSet = AVLSet.Traversal.difference setA setB
 
         isSetValid differenceSet None None |> should be True
 
         advancedContains (fun v x -> if AVLSet.contains v setB then not x else x) setA differenceSet
         |> should be True
 
-    [<Fact>]
-    let ``Symmetric difference via tree traversal`` () =
-        let symmDiffSet = AVLSet.symmDifferenceTraversal setA setB
-
-        isSetValid symmDiffSet None None |> should be True
-
-        (advancedContains (fun v x -> if AVLSet.contains v setB then not x else x = true) setA symmDiffSet
-         && advancedContains (fun v x -> if AVLSet.contains v setA then not x else x) setB symmDiffSet)
-        |> should be True
-
-        AVLSet.symmDifferenceTraversal setB setA |> should equal symmDiffSet
-
-    [<Fact>]
-    let ``Parallel set union with threads`` () =
-        let opts = ParallelOptions()
-
-        let unionSet = AVLSet.parallelUnion opts setA setB
-
-        isSetValid unionSet None None |> should be True
-
-        (advancedContains (fun v x -> x) setA unionSet
-         && advancedContains (fun v x -> x) setB unionSet)
-        |> should be True
-
-        AVLSet.parallelUnion opts setB setA |> should equal unionSet
-
-    [<Fact>]
-    let ``Parallel set intersection with threads`` () =
-        let opts = ParallelOptions()
-
-        let intersectionSet = AVLSet.parallelIntersection opts setA setB
-
-        isSetValid intersectionSet None None |> should be True
-
-        advancedContains (fun v x -> if AVLSet.contains v setB then x else not x) setA intersectionSet
-        |> should be True
-
-        AVLSet.parallelIntersection opts setB setA |> should equal intersectionSet
-
-    [<Fact>]
-    let ``Parallel set difference with threads`` () =
-        let opts = ParallelOptions()
-
-        let differenceSet = AVLSet.parallelDifference opts setA setB
-
-        isSetValid differenceSet None None |> should be True
-
-        advancedContains (fun v x -> if AVLSet.contains v setB then not x else x) setA differenceSet
-        |> should be True
-
-    [<Fact>]
-    let ``Parallel set symmetrical difference with threads`` () =
-        let opts = ParallelOptions()
-
-        let symmDiffSet = AVLSet.parallelSymmDifference opts setA setB
+    [<Property>]
+    let ``Symmetric difference via tree traversal`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let symmDiffSet = AVLSet.Traversal.symmDifference setA setB
 
         isSetValid symmDiffSet None None |> should be True
 
@@ -413,4 +368,73 @@ module SetTests =
          && advancedContains (fun v x -> if AVLSet.contains v setA then not x else x) setB symmDiffSet)
         |> should be True
 
-        AVLSet.parallelSymmDifference opts setB setA |> should equal symmDiffSet
+        let symmDiffSetSwapped = AVLSet.symmDifference setB setA
+
+        (advancedContains (fun v x -> x) symmDiffSet symmDiffSetSwapped
+         && advancedContains (fun v x -> x) symmDiffSetSwapped symmDiffSet)
+        |> should be True
+
+    [<Property>]
+    let ``Parallel set union with threads`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let unionSet = ParallelAVLSet.union None setA setB
+
+        isSetValid unionSet None None |> should be True
+
+        (advancedContains (fun v x -> x) setA unionSet
+         && advancedContains (fun v x -> x) setB unionSet)
+        |> should be True
+
+        let unionSetSwapped = AVLSet.union setB setA
+
+        (advancedContains (fun v x -> x) unionSet unionSetSwapped
+         && advancedContains (fun v x -> x) unionSetSwapped unionSet)
+        |> should be True
+
+    [<Property>]
+    let ``Parallel set intersection with threads`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let intersectionSet = ParallelAVLSet.intersection None setA setB
+
+        isSetValid intersectionSet None None |> should be True
+
+        advancedContains (fun v x -> if AVLSet.contains v setB then x else not x) setA intersectionSet
+        |> should be True
+
+        let intersectionSetSwapped = AVLSet.intersection setB setA
+
+        (advancedContains (fun v x -> x) intersectionSet intersectionSetSwapped
+         && advancedContains (fun v x -> x) intersectionSetSwapped intersectionSet)
+        |> should be True
+
+    [<Property>]
+    let ``Parallel set difference with threads`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let differenceSet = ParallelAVLSet.difference None setA setB
+
+        isSetValid differenceSet None None |> should be True
+
+        advancedContains (fun v x -> if AVLSet.contains v setB then not x else x) setA differenceSet
+        |> should be True
+
+    [<Property>]
+    let ``Parallel set symmetric difference with threads`` (elementsA: int list, elementsB: int list) =
+        let setA = elementsA |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty 
+        let setB = elementsB |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
+        let symmDiffSet = ParallelAVLSet.symmDifference None setA setB
+
+        isSetValid symmDiffSet None None |> should be True
+
+        (advancedContains (fun v x -> if AVLSet.contains v setB then not x else x) setA symmDiffSet
+         && advancedContains (fun v x -> if AVLSet.contains v setA then not x else x) setB symmDiffSet)
+        |> should be True
+
+        let symmDiffSetSwapped = AVLSet.symmDifference setB setA
+
+        (advancedContains (fun v x -> x) symmDiffSet symmDiffSetSwapped
+         && advancedContains (fun v x -> x) symmDiffSetSwapped symmDiffSet)
+        |> should be True
+
