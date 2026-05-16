@@ -14,7 +14,7 @@ open QuadTree.AVLSet
 module ParallelAVLSet =
     let rec unionAsync threads set1 set2 =
         async {
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
             match maxSet, minSet with
             | Empty, _ -> return minSet
@@ -35,7 +35,7 @@ module ParallelAVLSet =
 
     let rec intersectionAsync threads set1 set2 =
         async {
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
             match maxSet, minSet with
             | Empty, _ -> return Empty
@@ -83,7 +83,7 @@ module ParallelAVLSet =
 
     let rec symmDifferenceAsync threads set1 set2 =
         async {
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
             match maxSet, minSet with
             | Empty, _ -> return minSet

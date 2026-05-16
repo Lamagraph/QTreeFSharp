@@ -33,10 +33,10 @@ type Benchmark() =
     val mutable public rndInt: int
 
     [<DefaultValue>]
-    val mutable public setA: AVLTree<int>
+    val mutable public setA: AVLSet<int>
 
     [<DefaultValue>]
-    val mutable public setB: AVLTree<int>
+    val mutable public setB: AVLSet<int>
 
     [<GlobalSetup>]
     member self.Setup() =

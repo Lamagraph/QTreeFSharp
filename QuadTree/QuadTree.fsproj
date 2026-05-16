@@ -5,7 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="AssemblyInfo.fs" />
         <Compile Include="Common.fs" />
         <Compile Include="AVLSet.fs" />
         <Compile Include="ParallelAVLSet.fs" />
