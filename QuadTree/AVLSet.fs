@@ -1,101 +1,92 @@
 ﻿namespace QuadTree.AVLSet
 
-type AVLTree<'Value> =
+type AVLSet<'Value> =
     | Empty
-    | Node of int * 'Value * AVLTree<'Value> * AVLTree<'Value>
+    | Node of int * 'Value * AVLSet<'Value> * AVLSet<'Value>
 
-module internal Node =
+module Tree =
     let height n =
         match n with
         | Empty -> -1
         | Node(h, _, _, _) -> h
 
-    let value n =
-        match n with
-        | Empty -> failwith "Empty node has no value. This error should be unreachable"
-        | Node(_, v, _, _) -> v
-
-    let leftChild n =
-        match n with
-        | Empty -> failwith "Empty node has no left child. This error should be unreachable"
-        | Node(_, _, ln, _) -> ln
-
-    let rightChild n =
-        match n with
-        | Empty -> failwith "Empty node has no right child. This error should be unreachable"
-        | Node(_, _, _, rn) -> rn
-
     let maxMinNodesByHeights n1 n2 =
-        if height n1 >= height n2 then n1, n2 else n2, n1
+        match n1, n2 with
+        | Empty, _ -> n2, n1
+        | _, Empty -> n1, n2
+        | Node(h1, _, _, _), Node(h2, _, _, _) -> if h1 >= h2 then n1, n2 else n2, n1
 
-module internal Tree =
     let LLrotate n =
-        let ln = Node.leftChild n
-        let lln = Node.leftChild ln
-        let rln = Node.rightChild ln
-        let rn = Node.rightChild n
-        let rlnNew = Node(max (Node.height rln) (Node.height rn) + 1, Node.value n, rln, rn)
-        Node(max (Node.height lln) (Node.height rlnNew) + 1, Node.value ln, lln, rlnNew)
+        match n with
+        | Node(_, vn, Node(_, vln, lln, rln), rn) ->
+            let rlnNew = Node(max (height rln) (height rn) + 1, vn, rln, rn)
+            Node(max (height lln) (height rlnNew) + 1, vln, lln, rlnNew)
+        | _ -> invalidArg "n" "Node cannot be rotated"
 
     let RRrotate n =
-        let ln = Node.leftChild n
-        let rn = Node.rightChild n
-        let rrn = Node.rightChild rn
-        let lrn = Node.leftChild rn
-        let lrnNew = Node(max (Node.height ln) (Node.height lrn) + 1, Node.value n, ln, lrn)
-        Node(max (Node.height lrnNew) (Node.height rrn) + 1, Node.value rn, lrnNew, rrn)
+        match n with
+        | Node(_, vn, ln, Node(_, vrn, lrn, rrn)) ->
+            let lrnNew = Node(max (height ln) (height lrn) + 1, vn, ln, lrn)
+            Node(max (height lrnNew) (height rrn) + 1, vrn, lrnNew, rrn)
+        | _ -> invalidArg "n" "Node cannot be rotated"
 
     let LRrotate n =
-        let lnNew = RRrotate(Node.leftChild n)
-        let rn = Node.rightChild n
-        LLrotate(Node(max (Node.height lnNew) (Node.height rn) + 1, Node.value n, lnNew, rn))
+        match n with
+        | Node(hn, vn, ln, rn) ->
+            let lnNew = RRrotate ln
+            LLrotate(Node(max (height lnNew) (height rn) + 1, vn, lnNew, rn))
+        | _ -> invalidArg "n" "Node cannot be rotated"
 
     let RLrotate n =
-        let rnNew = LLrotate(Node.rightChild n)
-        let ln = Node.leftChild n
-        RRrotate(Node(max (Node.height ln) (Node.height rnNew) + 1, Node.value n, ln, rnNew))
+        match n with
+        | Node(hn, vn, ln, rn) ->
+            let rnNew = LLrotate rn
+            RRrotate(Node(max (height ln) (height rnNew) + 1, vn, ln, rnNew))
+        | _ -> invalidArg "n" "Node cannot be rotated"
 
     let balance ln rn v =
-        let lnHeight = Node.height ln
-        let rnHeight = Node.height rn
+        let lnHeight = height ln
+        let rnHeight = height rn
+        let diff = lnHeight - rnHeight
 
-        match lnHeight - rnHeight with
-        | 2 ->
-            let llnHeight = Node.height (Node.leftChild ln)
-            let rlnHeight = Node.height (Node.rightChild ln)
-
-            if llnHeight >= rlnHeight then
-                LLrotate(Node(0, v, ln, rn))
-            else
-                LRrotate(Node(0, v, ln, rn))
-        | -2 ->
-            let lrnHeight = Node.height (Node.leftChild rn)
-            let rrnHeight = Node.height (Node.rightChild rn)
-
-            if lrnHeight <= rrnHeight then
-                RRrotate(Node(0, v, ln, rn))
-            else
-                RLrotate(Node(0, v, ln, rn))
-        | _ -> Node(max lnHeight rnHeight + 1, v, ln, rn)
+        if diff >= 2 then
+            match ln with
+            | Empty -> invalidArg "rn" "left child is Empty but diff is lesser than 2"
+            | Node(_, _, lln, rln) ->
+                if height lln >= height rln then
+                    LLrotate(Node(0, v, ln, rn))
+                else
+                    LRrotate(Node(0, v, ln, rn))
+        elif diff <= -2 then
+            match rn with
+            | Empty -> invalidArg "rn" "right child is Empty but diff is greater than -2"
+            | Node(_, _, lrn, rrn) ->
+                if height lrn <= height rrn then
+                    RRrotate(Node(0, v, ln, rn))
+                else
+                    RLrotate(Node(0, v, ln, rn))
+        else
+            Node(max lnHeight rnHeight + 1, v, ln, rn)
 
     let rec minNode n =
         match n with
-        | Empty -> failwith "minNode: cannot find minimum of an empty node. This error should be unreachable"
-        | Node(_, v, Empty, rn) -> v, rn
+        | Empty -> None
+        | Node(_, v, Empty, rn) -> Some(v, rn)
         | Node(_, v, ln, rn) ->
-            let value, lnNew = minNode ln
-            value, balance lnNew rn v
+            match minNode ln with
+            | None -> None
+            | Some(value, lnNew) -> Some(value, balance lnNew rn v)
 
     let rec insert value n =
         match n with
         | Empty -> Node(0, value, Empty, Empty)
         | Node(h, v, ln, rn) ->
-            match value with
-            | value when value = v -> n
-            | value when value < v ->
+            if value = v then
+                n
+            elif value < v then
                 let lnNew = insert value ln
                 balance lnNew rn v
-            | _ ->
+            else
                 let rnNew = insert value rn
                 balance ln rnNew v
 
@@ -103,18 +94,18 @@ module internal Tree =
         match n with
         | Empty -> Empty
         | Node(h, v, ln, rn) ->
-            match value with
-            | value when value = v ->
+            if value = v then
                 match ln, rn with
                 | Empty, _ -> rn
                 | _, Empty -> ln
                 | _, _ ->
-                    let newValue, rnNew = minNode rn
-                    balance ln rnNew newValue
-            | value when value < v ->
+                    match minNode rn with
+                    | None -> failwith "impossible error: rn is not Empty"
+                    | Some(newValue, rnNew) -> balance ln rnNew newValue
+            elif value < v then
                 let lnNew = remove value ln
                 balance lnNew rn v
-            | _ ->
+            else
                 let rnNew = remove value rn
                 balance ln rnNew v
 
@@ -123,12 +114,11 @@ module internal Tree =
         match n with
         | Empty -> false
         | Node(h, v, ln, rn) ->
-            match value with
-            | value when value = v -> true
-            | value when value < v -> contains value ln
-            | _ -> contains value rn
+            if value = v then true
+            elif value < v then contains value ln
+            else contains value rn
 
-    let rec traverse (func: 'A -> AVLTree<'B> -> AVLTree<'B>) nArg n =
+    let rec traverse (func: 'A -> AVLSet<'B> -> AVLSet<'B>) nArg n =
         match n with
         | Empty -> nArg
         | Node(_, v, ln, rn) ->
@@ -142,20 +132,21 @@ module internal Tree =
         | Node(h, v, ln, rn) -> Node(h, v, copy ln, copy rn)
 
     let rec join left key right =
-        let leftHeight = Node.height left
-        let rightHeight = Node.height right
+        let leftHeight = height left
+        let rightHeight = height right
+        let diff = leftHeight - rightHeight
 
-        match leftHeight - rightHeight with
-        | diff when abs diff <= 1 -> Node(max leftHeight rightHeight + 1, key, left, right)
-        | diff when diff >= 2 ->
+        if abs diff <= 1 then
+            Node(max leftHeight rightHeight + 1, key, left, right)
+        elif diff >= 2 then
             match left with
-            | Empty -> failwith "Left subtree is Empty in join operation. This error should be unreachable"
+            | Empty -> invalidArg "right" "left child is Empty but diff is lesser than 2"
             | Node(h, v, ln, rn) ->
                 let rnNew = join rn key right
                 balance ln rnNew v
-        | _ ->
+        else
             match right with
-            | Empty -> failwith "Right subtree is Empty in join operation. This error should be unreachable"
+            | Empty -> invalidArg "left" "right child is Empty but diff is greater than -2"
             | Node(h, v, ln, rn) ->
                 let lnNew = join left key ln
                 balance lnNew rn v
@@ -165,23 +156,24 @@ module internal Tree =
         | Empty, _ -> right
         | _, Empty -> left
         | _, _ ->
-            let key, newRight = minNode right
-            join left key newRight
+            match minNode right with
+            | None -> failwith "impossible error. right is not Empty"
+            | Some(key, newRight) -> join left key newRight
 
     let rec split key n =
         match n with
         | Empty -> Empty, Empty, false
         | Node(_, v, ln, rn) ->
-            match key with
-            | key when key = v -> ln, rn, true
-            | key when key < v ->
+            if key = v then
+                ln, rn, true
+            elif key < v then
                 let lesser, greater, wasFound = split key ln
                 lesser, join greater v rn, wasFound
-            | _ ->
+            else
                 let lesser, greater, wasFound = split key rn
                 join ln v lesser, greater, wasFound
 
-module public AVLSet =
+module AVLSet =
     let empty = Empty
 
     let add value set = Tree.insert value set
@@ -193,7 +185,7 @@ module public AVLSet =
     let copy set = Tree.copy set
 
     let rec union set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+        let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
         match maxSet, minSet with
         | Empty, _ -> minSet
@@ -205,7 +197,7 @@ module public AVLSet =
             Tree.join leftUnion v rightUnion
 
     let rec intersection set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+        let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
         match maxSet, minSet with
         | Empty, _ -> Empty
@@ -235,7 +227,7 @@ module public AVLSet =
                 Tree.join leftDiff v rightDiff
 
     let rec symmDifference set1 set2 =
-        let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+        let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
         match maxSet, minSet with
         | Empty, _ -> minSet
@@ -252,12 +244,12 @@ module public AVLSet =
 
     module Traversal =
         let union set1 set2 =
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
             let unSet = Tree.copy maxSet
             Tree.traverse Tree.insert unSet minSet
 
         let intersection set1 set2 =
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
             Tree.traverse
                 (fun value set ->
@@ -273,7 +265,7 @@ module public AVLSet =
             Tree.traverse Tree.remove diffSet subtrahendSet
 
         let symmDifference set1 set2 =
-            let maxSet, minSet = Node.maxMinNodesByHeights set1 set2
+            let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
             let symmSet = Tree.copy maxSet
 
             Tree.traverse

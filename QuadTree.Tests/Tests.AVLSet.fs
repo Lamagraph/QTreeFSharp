@@ -14,8 +14,8 @@ module SetTests =
             let isInBounds =
                 mn |> Option.forall (fun mn -> v > mn) && mx |> Option.forall (fun mx -> v < mx)
 
-            let lnHeight = Node.height ln
-            let rnHeight = Node.height rn
+            let lnHeight = Tree.height ln
+            let rnHeight = Tree.height rn
 
             isInBounds
             && h = (max lnHeight rnHeight + 1)
@@ -112,7 +112,7 @@ module SetTests =
     let ``Single-node deletion`` () =
         let resultSet = Node(0, 15, Empty, Empty) |> AVLSet.delete 15
 
-        let correctSet: AVLTree<int> = Empty
+        let correctSet: AVLSet<int> = Empty
 
         resultSet |> should equal correctSet
 
@@ -241,7 +241,7 @@ module SetTests =
     let ``Deleting elements from set`` (elements: int list) =
         let set = elements |> List.fold (fun t e -> AVLSet.add e t) AVLSet.empty
         let emptySet = elements |> List.fold (fun t e -> AVLSet.delete e t) set
-        let empty: AVLTree<int> = AVLSet.empty
+        let empty: AVLSet<int> = AVLSet.empty
 
         emptySet |> should equal empty
 
