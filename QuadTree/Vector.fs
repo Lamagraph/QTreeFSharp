@@ -307,6 +307,16 @@ let update (vector: SparseVector<_>) i v op =
         Error Error.InconsistentSizeOfArguments
 
 let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
+    let unique =
+        lst.data
+        |> List.groupBy fst
+        |> List.map (fun (idx, entries) ->
+            let value = entries |> List.map snd |> List.last
+            (idx, value))
+
+    if unique |> List.exists (fun (idx, _) -> uint64 idx >= uint64 lst.length) then
+        failwith "Index out of range"
+
     let length = lst.length
     let nvals = (uint64 <| List.length lst.data) * 1UL<nvals>
     let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
@@ -325,7 +335,7 @@ let fromCoordinateList (lst: CoordinateList<'a>) : SparseVector<'a> =
 
             mkNode left right, rCoordinates
 
-    let sortedCoordinates = List.sort lst.data
+    let sortedCoordinates = List.sort unique
 
     let tree, _ =
         traverse sortedCoordinates 0UL<index> ((uint64 storageSize) * 1UL<index>)
@@ -561,3 +571,91 @@ let scatter
                 | Error x -> Error x)
             (Ok w)
     | Error x -> Error Error.InconsistentStructureOfStorages
+
+
+let slice (_start: int) (_end: int) (vector: SparseVector<'a>) : Result<SparseVector<'a>, string> =
+    if _start < 0 then
+        Error "Start should be >= 0"
+    elif _end < 0 then
+        Error "End should be >= 0"
+    elif _start > int vector.length - 1 then
+        Error "Start is out of Vector length"
+    elif _end > int vector.length - 1 then
+        Error "End is out of Vector length"
+    elif _start > _end then
+        Error "End should be >= Start"
+    else
+        let startIdx = uint64 _start * 1UL<index>
+        let endIdx = uint64 _end * 1UL<index>
+        let newLength = uint64 (_end - _start + 1) * 1UL<dataLength>
+        let newSize = getNearestUpperPowerOfTwo (uint64 newLength) * 1UL<storageSize>
+
+        let rec cut (size: uint64<storageSize>) (pos: uint64<index>) tree =
+            let sizeIdx = (uint64 size) * 1UL<index>
+
+            match tree with
+            | Node(l, r) ->
+                let half = size / 2UL
+                let halfIdx = (uint64 half) * 1UL<index>
+                Node(cut half pos l, cut half (pos + halfIdx) r)
+            | Leaf(Dummy) -> Leaf Dummy
+            | Leaf(UserValue(v)) when pos >= startIdx && pos + sizeIdx - 1UL<index> <= endIdx -> Leaf(UserValue(v))
+            | _ -> Leaf Dummy
+
+        let cutTree = cut vector.storage.size 0UL<index> vector.storage.data
+
+        let rec empty (size: uint64<storageSize>) =
+            match size with
+            | 1UL<storageSize> -> Leaf Dummy
+            | _ ->
+                let half = size / 2UL
+                let subtree = empty half
+                Node(subtree, subtree)
+
+        let rec insert (size: uint64<storageSize>) (idx: uint64<index>) value tree =
+            match size with
+            | 1UL<storageSize> -> Leaf(UserValue(value))
+            | _ ->
+                let half = size / 2UL
+                let border = (uint64 half) * 1UL<index>
+
+                match tree with
+                | Node(left, right) ->
+                    if idx < border then
+                        Node(insert half idx value left, right)
+                    else
+                        Node(left, insert half (idx - border) value right)
+                | _ ->
+                    let emptySub = empty half
+
+                    if idx < border then
+                        Node(insert half idx value emptySub, emptySub)
+                    else
+                        Node(emptySub, insert half (idx - border) value emptySub)
+
+        let rec rebuild (size: uint64<storageSize>) (pos: uint64<index>) tree acc =
+            match tree with
+            | Leaf(Dummy) -> acc
+            | Leaf(UserValue(v)) ->
+                let newIdx = pos - startIdx
+                insert newSize newIdx v acc
+            | Node(left, right) ->
+                let half = size / 2UL
+                let border = (uint64 half) * 1UL<index>
+                let acc = rebuild half pos left acc
+                rebuild half (pos + border) right acc
+
+        let emptyTree = empty newSize
+        let shiftedTree = rebuild vector.storage.size 0UL<index> cutTree emptyTree
+
+        let rec count (size: uint64<storageSize>) tree =
+            match tree with
+            | Node(l, r) ->
+                let half = size / 2UL
+                count half l + count half r
+            | Leaf(UserValue(_)) -> (uint64 size) * 1UL<nvals>
+            | _ -> 0UL<nvals>
+
+        let nvals = count newSize shiftedTree
+
+        Ok(SparseVector(newLength, nvals, Storage(newSize, shiftedTree)))
