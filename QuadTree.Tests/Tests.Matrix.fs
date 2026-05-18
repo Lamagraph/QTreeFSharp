@@ -644,13 +644,11 @@ let ``Fold sum`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
-let ``fromCoordinateList with index out of range`` () =
+let ``fromCoordinateList with out-of-range coordinates throws exception`` () =
     let coo =
         CoordinateList(6UL<nrows>, 6UL<ncols>, [ (9UL<rowindex>, 9UL<colindex>, 13) ])
 
-    let matrix = fromCoordinateList coo
-    let result = toCoordinateList matrix
-    Assert.Equal(CoordinateList(6UL<nrows>, 6UL<ncols>, []), result)
+    Assert.Throws<Exception>(fun () -> fromCoordinateList coo |> ignore)
 
 [<Fact>]
 let ``fromCoordinateList with unsorted coordinates works correctly`` () =
@@ -678,7 +676,20 @@ let ``fromCoordinateList with unsorted coordinates works correctly`` () =
     )
 
 [<Fact>]
-let ``fromCoordinateList with zero length and some values returns empty matrix`` () =
+let ``fromCoordinateList with duplicate indices returns the last of them`` () =
+    let coo =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (1UL<rowindex>, 1UL<colindex>, 33); (1UL<rowindex>, 1UL<colindex>, 100) ]
+        )
+
+    let matrix = fromCoordinateList coo
+    let result = toCoordinateList matrix
+    Assert.Equal(CoordinateList(3UL<nrows>, 3UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 100) ]), result)
+
+[<Fact>]
+let ``fromCoordinateList with zero size throws Exception`` () =
     let coo =
         CoordinateList(
             0UL<nrows>,
@@ -686,9 +697,7 @@ let ``fromCoordinateList with zero length and some values returns empty matrix``
             [ (33UL<rowindex>, 33UL<colindex>, 33); (39UL<rowindex>, 39UL<colindex>, 1) ]
         )
 
-    let matrix = fromCoordinateList coo
-    let result = toCoordinateList matrix
-    Assert.Equal(CoordinateList(0UL<nrows>, 0UL<ncols>, []), result)
+    Assert.Throws<Exception>(fun () -> fromCoordinateList coo |> ignore)
 
 [<Fact>]
 let ``map works on square matrix`` () =
@@ -806,7 +815,7 @@ let ``map can change type from int to string`` () =
             CoordinateList(
                 3UL<nrows>,
                 5UL<ncols>,
-                [ (4UL<rowindex>, 1UL<colindex>, 17); (4UL<rowindex>, 6UL<colindex>, 33) ]
+                [ (2UL<rowindex>, 1UL<colindex>, 17); (2UL<rowindex>, 4UL<colindex>, 33) ]
             )
         )
 
@@ -822,8 +831,8 @@ let ``map can change type from int to string`` () =
         CoordinateList(
             3UL<nrows>,
             5UL<ncols>,
-            [ (4UL<rowindex>, 1UL<colindex>, "str 17")
-              (4UL<rowindex>, 6UL<colindex>, "str 33") ]
+            [ (2UL<rowindex>, 1UL<colindex>, "str 17")
+              (2UL<rowindex>, 4UL<colindex>, "str 33") ]
         ),
         coo
     )
@@ -960,7 +969,7 @@ let ``slice returns error when row start is negative`` () =
         )
 
     match slice matrix -1 4 2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start row should be >= 0", msg)
 
 [<Fact>]
@@ -975,7 +984,7 @@ let ``slice returns error when row end is negative`` () =
         )
 
     match slice matrix 1 -4 2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("End row should be >= 0", msg)
 
 [<Fact>]
@@ -990,7 +999,7 @@ let ``slice returns error when col start is negative`` () =
         )
 
     match slice matrix 1 4 -2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start column should be >= 0", msg)
 
 [<Fact>]
@@ -1005,7 +1014,7 @@ let ``slice returns error when col end is negative`` () =
         )
 
     match slice matrix 1 4 2 -3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("End column should be >= 0", msg)
 
 [<Fact>]
@@ -1020,7 +1029,7 @@ let ``slice returns error when row start is out of range`` () =
         )
 
     match slice matrix 6 4 2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start row is out of matrix length", msg)
 
 [<Fact>]
@@ -1035,7 +1044,7 @@ let ``slice returns error when row end is out of range`` () =
         )
 
     match slice matrix 1 10 2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("End row is out of matrix length", msg)
 
 [<Fact>]
@@ -1050,7 +1059,7 @@ let ``slice returns error when col start is out of range`` () =
         )
 
     match slice matrix 1 4 10 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start column is out of matrix length", msg)
 
 [<Fact>]
@@ -1065,7 +1074,7 @@ let ``slice returns error when col end is out of range`` () =
         )
 
     match slice matrix 1 2 2 10 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("End column is out of matrix length", msg)
 
 [<Fact>]
@@ -1080,7 +1089,7 @@ let ``slice returns error when row end is less than row start`` () =
         )
 
     match slice matrix 2 1 2 3 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start row should be <= end row", msg)
 
 [<Fact>]
@@ -1095,7 +1104,7 @@ let ``slice returns error when col end is less than col start`` () =
         )
 
     match slice matrix 1 2 3 2 with
-    | Result.Ok _ -> failwith "Expected Error"
+    | Result.Ok _ -> Assert.Fail("Expected Error")
     | Result.Error msg -> Assert.Equal("Start column should be <= end column", msg)
 
 [<Fact>]
@@ -1113,7 +1122,7 @@ let ``slice returns correct square submatrix`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(3UL<nrows>, 3UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct rectangular submatrix`` () =
@@ -1130,7 +1139,7 @@ let ``slice returns correct rectangular submatrix`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(3UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 33) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns empty matrix`` () =
@@ -1147,7 +1156,7 @@ let ``slice returns empty matrix`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(3UL<nrows>, 4UL<ncols>, []), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns single submatrix`` () =
@@ -1164,7 +1173,7 @@ let ``slice returns single submatrix`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 28) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct submatrix equals to matrix`` () =
@@ -1189,7 +1198,7 @@ let ``slice returns correct submatrix equals to matrix`` () =
             ),
             coo
         )
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct submatrix when row start of submatrix equals to row start of matrix`` () =
@@ -1216,7 +1225,7 @@ let ``slice returns correct submatrix when row start of submatrix equals to row 
             ),
             coo
         )
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct submatrix when row end of submatrix equals to row end of matrix`` () =
@@ -1235,7 +1244,7 @@ let ``slice returns correct submatrix when row end of submatrix equals to row en
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(5UL<nrows>, 3UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct submatrix when col start of submatrix equals to col start of matrix`` () =
@@ -1254,7 +1263,7 @@ let ``slice returns correct submatrix when col start of submatrix equals to col 
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(4UL<nrows>, 7UL<ncols>, [ (1UL<rowindex>, 3UL<colindex>, 33) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns correct submatrix when col end of submatrix equals to col end of matrix`` () =
@@ -1273,7 +1282,7 @@ let ``slice returns correct submatrix when col end of submatrix equals to col en
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(3UL<nrows>, 5UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 33) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns single column`` () =
@@ -1292,7 +1301,7 @@ let ``slice returns single column`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(6UL<nrows>, 1UL<ncols>, [ (1UL<rowindex>, 0UL<colindex>, 2) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``slice returns single row`` () =
@@ -1311,7 +1320,7 @@ let ``slice returns single row`` () =
     | Result.Ok result ->
         let coo = toCoordinateList result
         Assert.Equal(CoordinateList(1UL<nrows>, 7UL<ncols>, [ (0UL<rowindex>, 4UL<colindex>, 3) ]), coo)
-    | Result.Error msg -> failwith msg
+    | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
 let ``let reduceRows sum on square power of two matrix`` () =
@@ -1704,3 +1713,615 @@ let ``let reduceCols mul on single matrix`` () =
         Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ])
 
     Assert.Equal(expected, vectorCoordinates)
+
+[<Fact>]
+let ``kronecker product with square power of 2 x square power of two matrixes`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 6)
+              (1UL<rowindex>, 0UL<colindex>, 7)
+              (1UL<rowindex>, 1UL<colindex>, 8) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let multiplyOp a b = Some(a * b)
+
+    match kroneckerProduct A B multiplyOp with
+    | Error msg -> Assert.True(false, msg)
+    | Ok result ->
+        let coo = toCoordinateList result
+
+        let expected =
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 5)
+                  (0UL<rowindex>, 1UL<colindex>, 6)
+                  (0UL<rowindex>, 2UL<colindex>, 10)
+                  (0UL<rowindex>, 3UL<colindex>, 12)
+                  (1UL<rowindex>, 0UL<colindex>, 7)
+                  (1UL<rowindex>, 1UL<colindex>, 8)
+                  (1UL<rowindex>, 2UL<colindex>, 14)
+                  (1UL<rowindex>, 3UL<colindex>, 16)
+                  (2UL<rowindex>, 0UL<colindex>, 15)
+                  (2UL<rowindex>, 1UL<colindex>, 18)
+                  (2UL<rowindex>, 2UL<colindex>, 20)
+                  (2UL<rowindex>, 3UL<colindex>, 24)
+                  (3UL<rowindex>, 0UL<colindex>, 21)
+                  (3UL<rowindex>, 1UL<colindex>, 24)
+                  (3UL<rowindex>, 2UL<colindex>, 28)
+                  (3UL<rowindex>, 3UL<colindex>, 32) ]
+            )
+
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product with square not power of 2 x square not power of two matrixes`` () =
+    let cooA =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (0UL<rowindex>, 2UL<colindex>, 3)
+              (1UL<rowindex>, 0UL<colindex>, 4)
+              (1UL<rowindex>, 1UL<colindex>, 5)
+              (1UL<rowindex>, 2UL<colindex>, 6)
+              (2UL<rowindex>, 0UL<colindex>, 7)
+              (2UL<rowindex>, 1UL<colindex>, 8)
+              (2UL<rowindex>, 2UL<colindex>, 9) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 10)
+              (0UL<rowindex>, 1UL<colindex>, 11)
+              (0UL<rowindex>, 2UL<colindex>, 12)
+              (1UL<rowindex>, 0UL<colindex>, 13)
+              (1UL<rowindex>, 1UL<colindex>, 14)
+              (1UL<rowindex>, 2UL<colindex>, 15)
+              (2UL<rowindex>, 0UL<colindex>, 16)
+              (2UL<rowindex>, 1UL<colindex>, 17)
+              (2UL<rowindex>, 2UL<colindex>, 18) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let multiplyOp a b = Some(a * b)
+
+    match kroneckerProduct A B multiplyOp with
+    | Error msg -> Assert.True(false, msg)
+    | Ok result ->
+        let coo = toCoordinateList result
+
+        let expected =
+            CoordinateList(
+                9UL<nrows>,
+                9UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10)
+                  (0UL<rowindex>, 1UL<colindex>, 11)
+                  (0UL<rowindex>, 2UL<colindex>, 12)
+                  (0UL<rowindex>, 3UL<colindex>, 20)
+                  (0UL<rowindex>, 4UL<colindex>, 22)
+                  (0UL<rowindex>, 5UL<colindex>, 24)
+                  (0UL<rowindex>, 6UL<colindex>, 30)
+                  (0UL<rowindex>, 7UL<colindex>, 33)
+                  (0UL<rowindex>, 8UL<colindex>, 36)
+                  (1UL<rowindex>, 0UL<colindex>, 13)
+                  (1UL<rowindex>, 1UL<colindex>, 14)
+                  (1UL<rowindex>, 2UL<colindex>, 15)
+                  (1UL<rowindex>, 3UL<colindex>, 26)
+                  (1UL<rowindex>, 4UL<colindex>, 28)
+                  (1UL<rowindex>, 5UL<colindex>, 30)
+                  (1UL<rowindex>, 6UL<colindex>, 39)
+                  (1UL<rowindex>, 7UL<colindex>, 42)
+                  (1UL<rowindex>, 8UL<colindex>, 45)
+                  (2UL<rowindex>, 0UL<colindex>, 16)
+                  (2UL<rowindex>, 1UL<colindex>, 17)
+                  (2UL<rowindex>, 2UL<colindex>, 18)
+                  (2UL<rowindex>, 3UL<colindex>, 32)
+                  (2UL<rowindex>, 4UL<colindex>, 34)
+                  (2UL<rowindex>, 5UL<colindex>, 36)
+                  (2UL<rowindex>, 6UL<colindex>, 48)
+                  (2UL<rowindex>, 7UL<colindex>, 51)
+                  (2UL<rowindex>, 8UL<colindex>, 54)
+                  (3UL<rowindex>, 0UL<colindex>, 40)
+                  (3UL<rowindex>, 1UL<colindex>, 44)
+                  (3UL<rowindex>, 2UL<colindex>, 48)
+                  (3UL<rowindex>, 3UL<colindex>, 50)
+                  (3UL<rowindex>, 4UL<colindex>, 55)
+                  (3UL<rowindex>, 5UL<colindex>, 60)
+                  (3UL<rowindex>, 6UL<colindex>, 60)
+                  (3UL<rowindex>, 7UL<colindex>, 66)
+                  (3UL<rowindex>, 8UL<colindex>, 72)
+                  (4UL<rowindex>, 0UL<colindex>, 52)
+                  (4UL<rowindex>, 1UL<colindex>, 56)
+                  (4UL<rowindex>, 2UL<colindex>, 60)
+                  (4UL<rowindex>, 3UL<colindex>, 65)
+                  (4UL<rowindex>, 4UL<colindex>, 70)
+                  (4UL<rowindex>, 5UL<colindex>, 75)
+                  (4UL<rowindex>, 6UL<colindex>, 78)
+                  (4UL<rowindex>, 7UL<colindex>, 84)
+                  (4UL<rowindex>, 8UL<colindex>, 90)
+                  (5UL<rowindex>, 0UL<colindex>, 64)
+                  (5UL<rowindex>, 1UL<colindex>, 68)
+                  (5UL<rowindex>, 2UL<colindex>, 72)
+                  (5UL<rowindex>, 3UL<colindex>, 80)
+                  (5UL<rowindex>, 4UL<colindex>, 85)
+                  (5UL<rowindex>, 5UL<colindex>, 90)
+                  (5UL<rowindex>, 6UL<colindex>, 96)
+                  (5UL<rowindex>, 7UL<colindex>, 102)
+                  (5UL<rowindex>, 8UL<colindex>, 108)
+                  (6UL<rowindex>, 0UL<colindex>, 70)
+                  (6UL<rowindex>, 1UL<colindex>, 77)
+                  (6UL<rowindex>, 2UL<colindex>, 84)
+                  (6UL<rowindex>, 3UL<colindex>, 80)
+                  (6UL<rowindex>, 4UL<colindex>, 88)
+                  (6UL<rowindex>, 5UL<colindex>, 96)
+                  (6UL<rowindex>, 6UL<colindex>, 90)
+                  (6UL<rowindex>, 7UL<colindex>, 99)
+                  (6UL<rowindex>, 8UL<colindex>, 108)
+                  (7UL<rowindex>, 0UL<colindex>, 91)
+                  (7UL<rowindex>, 1UL<colindex>, 98)
+                  (7UL<rowindex>, 2UL<colindex>, 105)
+                  (7UL<rowindex>, 3UL<colindex>, 104)
+                  (7UL<rowindex>, 4UL<colindex>, 112)
+                  (7UL<rowindex>, 5UL<colindex>, 120)
+                  (7UL<rowindex>, 6UL<colindex>, 117)
+                  (7UL<rowindex>, 7UL<colindex>, 126)
+                  (7UL<rowindex>, 8UL<colindex>, 135)
+                  (8UL<rowindex>, 0UL<colindex>, 112)
+                  (8UL<rowindex>, 1UL<colindex>, 119)
+                  (8UL<rowindex>, 2UL<colindex>, 126)
+                  (8UL<rowindex>, 3UL<colindex>, 128)
+                  (8UL<rowindex>, 4UL<colindex>, 136)
+                  (8UL<rowindex>, 5UL<colindex>, 144)
+                  (8UL<rowindex>, 6UL<colindex>, 144)
+                  (8UL<rowindex>, 7UL<colindex>, 153)
+                  (8UL<rowindex>, 8UL<colindex>, 162) ]
+            )
+
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product with rectangular and square matrixes`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 2UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 6)
+              (1UL<rowindex>, 0UL<colindex>, 7)
+              (1UL<rowindex>, 1UL<colindex>, 8) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expectedElements =
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 6)
+              (1UL<rowindex>, 0UL<colindex>, 7)
+              (1UL<rowindex>, 1UL<colindex>, 8)
+
+              (0UL<rowindex>, 2UL<colindex>, 10)
+              (0UL<rowindex>, 3UL<colindex>, 12)
+              (1UL<rowindex>, 2UL<colindex>, 14)
+              (1UL<rowindex>, 3UL<colindex>, 16)
+
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 18)
+              (3UL<rowindex>, 0UL<colindex>, 21)
+              (3UL<rowindex>, 1UL<colindex>, 24)
+
+              (2UL<rowindex>, 4UL<colindex>, 20)
+              (2UL<rowindex>, 5UL<colindex>, 24)
+              (3UL<rowindex>, 4UL<colindex>, 28)
+              (3UL<rowindex>, 5UL<colindex>, 32) ]
+            |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        let actualElements = coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        Assert.Equal(4UL<nrows>, coo.nrows)
+        Assert.Equal(6UL<ncols>, coo.ncols)
+        Assert.Equal<seq<uint64<rowindex> * uint64<colindex> * int>>(expectedElements, actualElements)
+
+[<Fact>]
+let ``kronecker product with square and rectangular matrixes`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 6)
+              (0UL<rowindex>, 2UL<colindex>, 7)
+              (1UL<rowindex>, 0UL<colindex>, 8)
+              (1UL<rowindex>, 1UL<colindex>, 9)
+              (1UL<rowindex>, 2UL<colindex>, 10) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expectedElements =
+            [ (0UL<rowindex>, 0UL<colindex>, 5)
+              (0UL<rowindex>, 1UL<colindex>, 6)
+              (0UL<rowindex>, 2UL<colindex>, 7)
+              (1UL<rowindex>, 0UL<colindex>, 8)
+              (1UL<rowindex>, 1UL<colindex>, 9)
+              (1UL<rowindex>, 2UL<colindex>, 10)
+
+              (0UL<rowindex>, 3UL<colindex>, 10)
+              (0UL<rowindex>, 4UL<colindex>, 12)
+              (0UL<rowindex>, 5UL<colindex>, 14)
+              (1UL<rowindex>, 3UL<colindex>, 16)
+              (1UL<rowindex>, 4UL<colindex>, 18)
+              (1UL<rowindex>, 5UL<colindex>, 20)
+
+              (2UL<rowindex>, 0UL<colindex>, 15)
+              (2UL<rowindex>, 1UL<colindex>, 18)
+              (2UL<rowindex>, 2UL<colindex>, 21)
+              (3UL<rowindex>, 0UL<colindex>, 24)
+              (3UL<rowindex>, 1UL<colindex>, 27)
+              (3UL<rowindex>, 2UL<colindex>, 30)
+
+              (2UL<rowindex>, 3UL<colindex>, 20)
+              (2UL<rowindex>, 4UL<colindex>, 24)
+              (2UL<rowindex>, 5UL<colindex>, 28)
+              (3UL<rowindex>, 3UL<colindex>, 32)
+              (3UL<rowindex>, 4UL<colindex>, 36)
+              (3UL<rowindex>, 5UL<colindex>, 40) ]
+            |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        let actualElements = coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        Assert.Equal(4UL<nrows>, coo.nrows)
+        Assert.Equal(6UL<ncols>, coo.ncols)
+        Assert.Equal<seq<uint64<rowindex> * uint64<colindex> * int>>(expectedElements, actualElements)
+
+[<Fact>]
+let ``kronecker product of matrix with empty matrix`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let emptyMatrix = fromCoordinateList (CoordinateList(2UL<nrows>, 2UL<ncols>, []))
+
+    let result = kroneckerProduct A emptyMatrix (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+        let expected = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product of empty matrix with matrix`` () =
+    let emptyMatrix = fromCoordinateList (CoordinateList(2UL<nrows>, 2UL<ncols>, []))
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct emptyMatrix B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+        let expected = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product of matrix with zeros`` () =
+    let cooA =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 2) ])
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 0); (1UL<rowindex>, 1UL<colindex>, 3) ])
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expectedElements =
+            [ (0UL<rowindex>, 0UL<colindex>, 0); (1UL<rowindex>, 1UL<colindex>, 6) ]
+            |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        let actualElements = coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        Assert.Equal(2UL<nrows>, coo.nrows)
+        Assert.Equal(2UL<ncols>, coo.ncols)
+        Assert.Equal<seq<uint64<rowindex> * uint64<colindex> * int>>(expectedElements, actualElements)
+
+[<Fact>]
+let ``kronecker product resulting entirely in explicit zeros`` () =
+    let cooA =
+        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 0); (1UL<rowindex>, 1UL<colindex>, 0) ])
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 5) ])
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expectedElements =
+            [ (0UL<rowindex>, 0UL<colindex>, 0); (1UL<rowindex>, 1UL<colindex>, 0) ]
+            |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        let actualElements = coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        Assert.Equal(2UL<nrows>, coo.nrows)
+        Assert.Equal(2UL<ncols>, coo.ncols)
+        Assert.Equal<seq<uint64<rowindex> * uint64<colindex> * int>>(expectedElements, actualElements)
+
+[<Fact>]
+let ``kronecker product of square matrix with matrix 1x1`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 3) ])
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expected =
+            CoordinateList(
+                2UL<nrows>,
+                2UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 3)
+                  (0UL<rowindex>, 1UL<colindex>, 6)
+                  (1UL<rowindex>, 0UL<colindex>, 9)
+                  (1UL<rowindex>, 1UL<colindex>, 12) ]
+            )
+
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product of matrix 1x1 with square matrix`` () =
+    let cooA =
+        CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 3) ])
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expected =
+            CoordinateList(
+                2UL<nrows>,
+                2UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 3)
+                  (0UL<rowindex>, 1UL<colindex>, 6)
+                  (1UL<rowindex>, 0UL<colindex>, 9)
+                  (1UL<rowindex>, 1UL<colindex>, 12) ]
+            )
+
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker dimension check`` () =
+    let cooA =
+        CoordinateList(3UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(2UL<nrows>, 5UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        Assert.Equal(6UL<nrows>, res.nrows)
+        Assert.Equal(20UL<ncols>, res.ncols)
+
+[<Fact>]
+let ``kronecker product with sparse matrix on dense matrix`` () =
+    let cooA =
+        CoordinateList(10UL<nrows>, 10UL<ncols>, [ (5UL<rowindex>, 5UL<colindex>, 2) ])
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (0UL<rowindex>, 2UL<colindex>, 3)
+              (1UL<rowindex>, 0UL<colindex>, 4)
+              (1UL<rowindex>, 1UL<colindex>, 5)
+              (1UL<rowindex>, 2UL<colindex>, 6)
+              (2UL<rowindex>, 0UL<colindex>, 7)
+              (2UL<rowindex>, 1UL<colindex>, 8)
+              (2UL<rowindex>, 2UL<colindex>, 9) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let result = kroneckerProduct A B (fun a b -> Some(a * b))
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+
+        let expected =
+            CoordinateList(
+                30UL<nrows>,
+                30UL<ncols>,
+                [ (15UL<rowindex>, 15UL<colindex>, 2)
+                  (15UL<rowindex>, 16UL<colindex>, 4)
+                  (15UL<rowindex>, 17UL<colindex>, 6)
+                  (16UL<rowindex>, 15UL<colindex>, 8)
+                  (16UL<rowindex>, 16UL<colindex>, 10)
+                  (16UL<rowindex>, 17UL<colindex>, 12)
+                  (17UL<rowindex>, 15UL<colindex>, 14)
+                  (17UL<rowindex>, 16UL<colindex>, 16)
+                  (17UL<rowindex>, 17UL<colindex>, 18) ]
+            )
+
+        Assert.Equal(expected, coo)
+
+[<Fact>]
+let ``kronecker product with filtering (only even results)`` () =
+    let cooA =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let A = fromCoordinateList cooA
+
+    let cooB =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 4) ]
+        )
+
+    let B = fromCoordinateList cooB
+
+    let evenOnly a b =
+        let prod = a * b
+        if prod % 2 = 0 then Some prod else None
+
+    let result = kroneckerProduct A B evenOnly
+
+    match result with
+    | Error msg -> Assert.True(false, msg)
+    | Ok res ->
+        let coo = toCoordinateList res
+        Assert.True(coo.list |> List.forall (fun (_, _, v) -> v % 2 = 0))
+        Assert.True(List.length coo.list < 16)
