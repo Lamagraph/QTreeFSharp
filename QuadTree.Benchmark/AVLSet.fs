@@ -49,17 +49,23 @@ type Benchmark() =
 
         let dataB = Array.init self.B (fun _ -> rnd.Next())
 
-        self.setA <- dataA |> Array.fold (fun (set: AVLSet<int>) v -> 
-            match AVLSet.add v set with
-            | Ok nextSet -> nextSet
-            | Error err -> failwithf "Benchmark setup failed: %A" err
-        ) AVLSet.empty
+        self.setA <-
+            dataA
+            |> Array.fold
+                (fun (set: AVLSet<int>) v ->
+                    match AVLSet.add v set with
+                    | Ok nextSet -> nextSet
+                    | Error err -> failwithf "Benchmark setup failed: %A" err)
+                AVLSet.empty
 
-        self.setB <- dataB |> Array.fold (fun (set: AVLSet<int>) v -> 
-            match AVLSet.add v set with
-            | Ok nextSet -> nextSet
-            | Error err -> failwithf "Benchmark setup failed: %A" err
-        ) AVLSet.empty
+        self.setB <-
+            dataB
+            |> Array.fold
+                (fun (set: AVLSet<int>) v ->
+                    match AVLSet.add v set with
+                    | Ok nextSet -> nextSet
+                    | Error err -> failwithf "Benchmark setup failed: %A" err)
+                AVLSet.empty
 
     [<Benchmark>]
     [<BenchmarkCategory("Adding")>]

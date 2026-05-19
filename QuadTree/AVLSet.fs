@@ -6,7 +6,7 @@ type AVLSet<'Value> =
     | Empty
     | Node of int * 'Value * AVLSet<'Value> * AVLSet<'Value>
 
-type AVLSetError = 
+type AVLSetError =
     | RotationError
     | InvalidHeightOfNode
     | EmptyNodeWasNotExpected
@@ -27,14 +27,14 @@ module Tree =
         match n with
         | Node(_, vn, Node(_, vln, lln, rln), rn) ->
             let rlnNew = Node(max (height rln) (height rn) + 1, vn, rln, rn)
-            Ok (Node(max (height lln) (height rlnNew) + 1, vln, lln, rlnNew))
+            Ok(Node(max (height lln) (height rlnNew) + 1, vln, lln, rlnNew))
         | _ -> Error RotationError
 
     let RRrotate n =
         match n with
         | Node(_, vn, ln, Node(_, vrn, lrn, rrn)) ->
             let lrnNew = Node(max (height ln) (height lrn) + 1, vn, ln, lrn)
-            Ok (Node(max (height lrnNew) (height rrn) + 1, vrn, lrnNew, rrn))
+            Ok(Node(max (height lrnNew) (height rrn) + 1, vrn, lrnNew, rrn))
         | _ -> Error RotationError
 
 
@@ -78,14 +78,14 @@ module Tree =
                 else
                     RLrotate(Node(0, v, ln, rn))
         else
-            Ok (Node(max lnHeight rnHeight + 1, v, ln, rn))
+            Ok(Node(max lnHeight rnHeight + 1, v, ln, rn))
 
     let rec minNode n =
         resultM {
             match n with
             | Empty -> return! Error EmptyNodeWasNotExpected
-            | Node(_, v, Empty, rn) -> return! Ok (v, rn)
-            | Node(_, v, ln, rn) -> 
+            | Node(_, v, Empty, rn) -> return! Ok(v, rn)
+            | Node(_, v, ln, rn) ->
                 let! value, lnNew = minNode ln
                 let! balanceRes = balance lnNew rn v
                 return value, balanceRes
@@ -96,7 +96,8 @@ module Tree =
             match n with
             | Empty -> return Node(0, value, Empty, Empty)
             | Node(h, v, ln, rn) ->
-                if value = v then return n
+                if value = v then
+                    return n
                 elif value < v then
                     let! lnNew = insert value ln
                     return! balance lnNew rn v
@@ -141,8 +142,8 @@ module Tree =
             let newNArg = traverse func nArg ln
             let newNArg2 = func v newNArg
             traverse func newNArg2 rn
-            
-    let rec traverseRes (func: 'A -> AVLSet<'B> -> Result<AVLSet<'B>,AVLSetError>) nArg n =
+
+    let rec traverseRes (func: 'A -> AVLSet<'B> -> Result<AVLSet<'B>, AVLSetError>) nArg n =
         resultM {
             match n with
             | Empty -> return nArg
@@ -243,7 +244,11 @@ module AVLSet =
                 let! leftInter = intersection ln lesser
                 let! rightInter = intersection rn greater
 
-                return! if wasFound then Tree.join leftInter v rightInter else Tree.merge leftInter rightInter
+                return!
+                    if wasFound then
+                        Tree.join leftInter v rightInter
+                    else
+                        Tree.merge leftInter rightInter
         }
 
     let rec difference minuendSet subtrahendSet =
@@ -256,7 +261,11 @@ module AVLSet =
                 let! leftDiff = difference ln lesser
                 let! rightDiff = difference rn greater
 
-                return! if wasFound then Tree.merge leftDiff rightDiff else Tree.join leftDiff v rightDiff
+                return!
+                    if wasFound then
+                        Tree.merge leftDiff rightDiff
+                    else
+                        Tree.join leftDiff v rightDiff
         }
 
     let rec symmDifference set1 set2 =
@@ -271,13 +280,17 @@ module AVLSet =
                 let! leftSymm = symmDifference ln lesser
                 let! rightSymm = symmDifference rn greater
 
-                return! if wasFound then Tree.merge leftSymm rightSymm else Tree.join leftSymm v rightSymm
+                return!
+                    if wasFound then
+                        Tree.merge leftSymm rightSymm
+                    else
+                        Tree.join leftSymm v rightSymm
         }
 
     module Traversal =
         let union set1 set2 =
             let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
-            let unSet = Tree.copy maxSet 
+            let unSet = Tree.copy maxSet
             Tree.traverseRes Tree.insert unSet minSet
 
         let intersection set1 set2 =
