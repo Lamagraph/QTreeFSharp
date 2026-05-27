@@ -7,7 +7,9 @@ let main argv =
             [| typeof<QuadTree.Benchmarks.BFS.Benchmark>
                typeof<QuadTree.Benchmarks.SSSP.Benchmark>
                typeof<QuadTree.Benchmarks.Triangles.Benchmark>
-               typeof<QuadTree.Benchmarks.AVLSet.Benchmark> |]
+               typeof<QuadTree.Benchmarks.AVLSet.SingleOpsBenchmark>
+               typeof<QuadTree.Benchmarks.AVLSet.SequentialSetsBenchmark>
+               typeof<QuadTree.Benchmarks.AVLSet.ParallelSetsBenchmark> |]
 
     benchmarks.Run argv |> ignore
     0
