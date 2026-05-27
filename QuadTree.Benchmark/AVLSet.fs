@@ -26,8 +26,7 @@ type SingleOpsBenchmark() =
     member self.Setup() =
         self.rndInt <- rnd.Next(self.A + 1, self.A + 1000)
 
-        let dataA =
-            Array.init self.A (fun _ -> rnd.Next())
+        let dataA = Array.init self.A (fun _ -> rnd.Next())
 
         self.setA <-
             dataA
@@ -70,8 +69,7 @@ type SequentialSetsBenchmark() =
 
     [<GlobalSetup>]
     member self.Setup() =
-        let dataA =
-            Array.init self.A (fun _ -> rnd.Next())
+        let dataA = Array.init self.A (fun _ -> rnd.Next())
 
         let dataB = Array.init self.B (fun _ -> rnd.Next())
 
@@ -136,7 +134,7 @@ type SequentialSetsBenchmark() =
 [<CategoriesColumn>]
 [<HtmlExporter>]
 [<MemoryDiagnoser>]
-[<ThreadingDiagnoser>] 
+[<ThreadingDiagnoser>]
 type ParallelSetsBenchmark() =
     let rnd = System.Random(1234561)
 
@@ -160,24 +158,37 @@ type ParallelSetsBenchmark() =
 
     [<GlobalSetup>]
     member self.Setup() =
-        let dataA =
-            Array.init self.A (fun _ -> rnd.Next())
+        let dataA = Array.init self.A (fun _ -> rnd.Next())
 
         let dataB = Array.init self.B (fun _ -> rnd.Next())
 
         self.setA <-
-            dataA |> Array.fold (fun set v -> match AVLSet.add v set with | Ok s -> s | Error e -> failwithf "%A" e) AVLSet.empty
-        self.setB <-
-            dataB |> Array.fold (fun set v -> match AVLSet.add v set with | Ok s -> s | Error e -> failwithf "%A" e) AVLSet.empty
+            dataA
+            |> Array.fold
+                (fun set v ->
+                    match AVLSet.add v set with
+                    | Ok s -> s
+                    | Error e -> failwithf "%A" e)
+                AVLSet.empty
 
-    
+        self.setB <-
+            dataB
+            |> Array.fold
+                (fun set v ->
+                    match AVLSet.add v set with
+                    | Ok s -> s
+                    | Error e -> failwithf "%A" e)
+                AVLSet.empty
+
+
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Union")>]
     member self.SequentialUnion() = AVLSet.union self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Union")>]
-    member self.ParallelUnionWithThreads() = ParallelAVLSet.union (Some self.threads) self.setA self.setB
+    member self.ParallelUnionWithThreads() =
+        ParallelAVLSet.union (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Intersection")>]
@@ -185,7 +196,8 @@ type ParallelSetsBenchmark() =
 
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
-    member self.ParallelIntersectionWithThreads() = ParallelAVLSet.intersection (Some self.threads) self.setA self.setB
+    member self.ParallelIntersectionWithThreads() =
+        ParallelAVLSet.intersection (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Difference")>]
@@ -193,12 +205,15 @@ type ParallelSetsBenchmark() =
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
-    member self.ParallelDifferenceWithThreads() = ParallelAVLSet.difference (Some self.threads) self.setA self.setB
+    member self.ParallelDifferenceWithThreads() =
+        ParallelAVLSet.difference (Some self.threads) self.setA self.setB
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Symmetrical Difference")>]
-    member self.SequentialSymmetricalDifference() = AVLSet.symmDifference self.setA self.setB
+    member self.SequentialSymmetricalDifference() =
+        AVLSet.symmDifference self.setA self.setB
 
     [<Benchmark>]
     [<BenchmarkCategory("Symmetrical Difference")>]
-    member self.ParallelSymmetricalDifferenceWithThreads() = ParallelAVLSet.symmDifference (Some self.threads) self.setA self.setB
+    member self.ParallelSymmetricalDifferenceWithThreads() =
+        ParallelAVLSet.symmDifference (Some self.threads) self.setA self.setB
