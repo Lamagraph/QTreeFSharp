@@ -13,7 +13,9 @@ let main argv =
                typeof<QuadTree.Benchmarks.Kronecker.Benchmark>
                typeof<QuadTree.Benchmarks.MatrixSliceAlign.Benchmark>
                typeof<QuadTree.Benchmarks.VectorSliceAlign.Benchmark>
-               typeof<QuadTree.Benchmarks.AVLSet.Benchmark> |]
+               typeof<QuadTree.Benchmarks.AVLSet.SingleOpsBenchmark>
+               typeof<QuadTree.Benchmarks.AVLSet.SequentialSetsBenchmark>
+               typeof<QuadTree.Benchmarks.AVLSet.ParallelSetsBenchmark> |]
 
     benchmarks.Run argv |> ignore
     0
