@@ -40,3 +40,22 @@ For set operations, three implementations are compared:
 **How to run AVLSet benchmarks:**
 To run only the AVLSet benchmarks, use the following command:
 `dotnet run -c Release --filter '*AVLSet*'`
+
+---
+
+#### Benchmark Results Summary
+
+Based on the benchmarking data, we can draw the following architectural conclusions:
+
+**1. Single Element Operations (`Adding`, `Deleting`)**
+Perform predictably well, showing characteristic logarithmic $O(\log N)$ scaling. Increasing the set size by a factor of 1,000 (from 100 to 100,000) only increases execution time by roughly 2.3x (from ~580 ns to ~1.3 μs). Memory allocations per operation are minimal and stable.
+
+**2. Tree Traversal vs. Sequential Operations**
+The `Traversal` optimization is highly situational and depends heavily on the ratio between set sizes:
+* **Best Case ($A \gg B$):** When the primary set is large and the secondary set is small (e.g., $A=100,000, B=100$), `Traversal` is significantly faster. For instance, `Intersection` via traversal is ~4x faster (Ratio 0.26) than the sequential baseline.
+* **Worst Case ($A \le B$):** When sets are of equal size or $B$ is larger, the traversal overhead drastically degrades performance, making it up to 40x slower than standard sequential operations.
+
+**3. Parallel Execution (Parallel Slowdown)**
+Currently, the multi-threaded implementation across all operations (`Union`, `Intersection`, `Difference`, `Symmetrical Difference`) suffers from a severe **parallel slowdown**. 
+* Parallel execution is consistently **2x to 24x slower** than the single-threaded baseline.
+* **Task Explosion & GC Pressure:** The recursive nature of the tasks generates tens of thousands of work items for larger trees (e.g., 71,300+ completed work items for $A=100k, B=10k$). The overhead of task scheduling, context switching, and massive memory allocations (up to 100MB+ causing heavy Garbage Collection) entirely negates the benefits of concurrent execution.
