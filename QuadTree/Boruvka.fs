@@ -82,6 +82,31 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     Vector.scatter (Vector.empty length) edges parent op_min
                     |> Result.mapError CEdgesCalculationProblem
 
+                // Suppress mutual 2-cycles between components (LAGraph approach).
+                // When components p and q select each other, keep only the larger root's edge.
+                let! cedges_dst =
+                    Vector.map2i cedges cedges (fun _ cv _ ->
+                        match cv with
+                        | Some(w, dst) -> Some(uint64 dst * 1UL<Vector.index>)
+                        | None -> None)
+                    |> Result.mapError IndexInnerCalculationProblem
+
+                let dst_comp = Vector.gather parent cedges_dst
+                let back_check = Vector.gather dst_comp dst_comp
+
+                let! cedges =
+                    Vector.map2i cedges back_check (fun i cv bc ->
+                        match cv with
+                        | Some(w, dst) ->
+                            match bc with
+                            | Some bc_val ->
+                                match Vector.unsafeGet parent i, Vector.unsafeGet dst_comp i with
+                                | Some p, Some cd when cd <> p && bc_val = p && p < cd -> None
+                                | _ -> Some(w, dst)
+                            | None -> Some(w, dst)
+                        | None -> None)
+                    |> Result.mapError IndexInnerCalculationProblem
+
                 // Propagate component's cheapest edge to all its vertices
                 // Each vertex gets its component's edge
                 let t = Vector.gather cedges parent

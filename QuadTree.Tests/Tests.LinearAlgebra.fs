@@ -347,6 +347,55 @@ let ``Simple vxmi_values. 4 * (4x3).`` () =
 
 
 [<Fact>]
+let ``vxmi_values 3x3 line graph start 0. BFS semantics`` () =
+    // 3-node line graph (3x3 stored as 4x4):
+    //   N 1 N D
+    //   1 N 1 D
+    //   N 1 N D
+    //   D D D D
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1UL, leaf_v 1UL, leaf_n ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_v 1UL, leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_v 1UL, leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 4UL<nvals>, store)
+
+    // frontier = start 0 mapped to level 0:
+    //   [0, N, N, D]  =  Node(Node(0, N), Node(N, D))
+    let f =
+        let tree =
+            Vector.btree.Node(Vector.btree.Node(vleaf_v 0UL, vleaf_n ()), Vector.btree.Node(vleaf_n (), vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(3UL<dataLength>, 1UL<nvals>, store)
+
+    let op_add x y =
+        match (x, y) with
+        | Some(v), _
+        | _, Some(v) -> Some(v)
+        | _ -> None
+
+    let op_mult (_, vp) (_, _, _) = Some(vp + 1UL)
+
+    let expected =
+        // result = [N, 1, N, D] = Node(Node(N, 1), Node(N, D))
+        let tree =
+            Vector.btree.Node(Vector.btree.Node(vleaf_n (), vleaf_v 1UL), Vector.btree.Node(vleaf_n (), vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Ok(SparseVector(3UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmi_values op_add op_mult f m
+
+    Assert.Equal(expected, actual)
+
+
+[<Fact>]
 let ``Simple mxm`` () =
     // 222D
     // 222D
