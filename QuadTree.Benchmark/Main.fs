@@ -4,7 +4,10 @@ open BenchmarkDotNet.Running
 let main argv =
     let benchmarks =
         BenchmarkSwitcher
-            [| typeof<QuadTree.Benchmarks.BFS.Benchmark>
+            [| typeof<QuadTree.Benchmarks.Filters.Benchmark>
+               typeof<QuadTree.Benchmarks.Exists.Benchmark>
+               typeof<QuadTree.Benchmarks.Forall.Benchmark>
+               typeof<QuadTree.Benchmarks.BFS.Benchmark>
                typeof<QuadTree.Benchmarks.SSSP.Benchmark>
                typeof<QuadTree.Benchmarks.Triangles.Benchmark> |]
 
