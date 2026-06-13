@@ -907,382 +907,472 @@ let ``Init vector`` () =
 
 [<Fact>]
 let ``Vector.filter all pass, none changed`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
     let actual = Vector.filter v (fun x -> x > 0)
     Assert.Equal(v, actual)
 
 [<Fact>]
 let ``Vector.filter none pass, all reset to zero`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    let expected =
-        Vector.empty 8UL<dataLength>
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    let expected = Vector.empty 8UL<dataLength>
     let actual = Vector.filter v (fun x -> x < 0)
-    
+
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.filter length is not a power of 2, all reset to zero`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    let expected =
-        Vector.empty 6UL<dataLength>
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    let expected = Vector.empty 6UL<dataLength>
     let actual = Vector.filter v (fun x -> x < 0)
 
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.filter some pass, odd set to zero`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
     let expected =
         Vector.fromCoordinateList (
-            CoordinateList(8UL<dataLength>,
-                [ (1UL<index>, 2)
-                  (3UL<index>, 4)
-                  (5UL<index>, 6)
-                  (7UL<index>, 8) ]))
+            CoordinateList(8UL<dataLength>, [ (1UL<index>, 2); (3UL<index>, 4); (5UL<index>, 6); (7UL<index>, 8) ])
+        )
+
     let actual = Vector.filter v (fun x -> ((x % 2) = 0))
-    
+
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.filter length is not a power of 2, not all reset to zero`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
     let expected =
         Vector.fromCoordinateList (
-            CoordinateList(6UL<dataLength>,
-                [ (1UL<index>, 2)
-                  (3UL<index>, 4)
-                  (5UL<index>, 6) ]))
+            CoordinateList(6UL<dataLength>, [ (1UL<index>, 2); (3UL<index>, 4); (5UL<index>, 6) ])
+        )
+
     let actual = Vector.filter v (fun x -> ((x % 2) = 0))
-    
+
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.filter none pass, length is not a power of 2, none changed`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            []))
+    let v = Vector.fromCoordinateList (CoordinateList(6UL<dataLength>, []))
     let actual = Vector.filter v (fun x -> x > 0)
     Assert.Equal(v, actual)
-    
+
 [<Fact>]
 let ``Vector.filter none pass, length is a power of 2, none changed`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            []))
+    let v = Vector.fromCoordinateList (CoordinateList(8UL<dataLength>, []))
     let actual = Vector.filter v (fun x -> x > 0)
     Assert.Equal(v, actual)
-    
+
 [<Fact>]
 let ``Vector.filter single element, passes`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
     let expected =
-        Vector.fromCoordinateList (
-            CoordinateList(1UL<dataLength>,
-                [ (0UL<index>, 1) ]))
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
     let actual = Vector.filter v (fun x -> x > 0)
-    
+
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.filter single element, fails`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
-    let expected =
-        Vector.empty 1UL<dataLength>
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
+    let expected = Vector.empty 1UL<dataLength>
     let actual = Vector.filter v (fun x -> x < 0)
 
     Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``Vector.exists the first element fits, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.True (Vector.exists v (fun x -> x > 0))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 0))
 
 [<Fact>]
 let ``Vector.exists the first element fits, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.True (Vector.exists v (fun x -> x > 0))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 0))
 
 [<Fact>]
 let ``Vector.exists the last item fits, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.True (Vector.exists v (fun x -> x > 7))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 7))
 
 [<Fact>]
 let ``Vector.exists the last item fits, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.True (Vector.exists v (fun x -> x > 5))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 5))
 
 [<Fact>]
 let ``Vector.exists empty list`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            []))
-    Assert.False (Vector.exists v (fun x -> x > 0))
+    let v = Vector.fromCoordinateList (CoordinateList(8UL<dataLength>, []))
+    Assert.False(Vector.exists v (fun x -> x > 0))
 
 [<Fact>]
 let ``Vector.exists no matching elements, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.False (Vector.exists v (fun x -> x > 8))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.False(Vector.exists v (fun x -> x > 8))
 
 [<Fact>]
 let ``Vector.exists no matching elements, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.False (Vector.exists v (fun x -> x > 6))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.False(Vector.exists v (fun x -> x > 6))
 
 [<Fact>]
 let ``Vector.exists single element matches`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
-    Assert.True (Vector.exists v (fun x -> x = 1))
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
+    Assert.True(Vector.exists v (fun x -> x = 1))
 
 [<Fact>]
 let ``Vector.exists single element does not match`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
-    Assert.False (Vector.exists v (fun x -> x = 2))
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
+    Assert.False(Vector.exists v (fun x -> x = 2))
 
 [<Fact>]
 let ``Vector.exists all elements match, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.True (Vector.exists v (fun x -> x > 0))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 0))
 
 [<Fact>]
-let ``Vector.exists all elements match, length is not a power of 2`` () =    
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.True (Vector.exists v (fun x -> x > 0))
+let ``Vector.exists all elements match, length is not a power of 2`` () =
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.True(Vector.exists v (fun x -> x > 0))
 
 [<Fact>]
 let ``Vector.forall the first element not fits, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.False (Vector.forall v (fun x -> x > 1))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x > 1))
 
 [<Fact>]
 let ``Vector.forall the first element not fits, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.False (Vector.forall v (fun x -> x > 1))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x > 1))
 
 [<Fact>]
 let ``Vector.forall the last item not fits, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.False (Vector.forall v (fun x -> x < 8))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x < 8))
 
 [<Fact>]
 let ``Vector.forall the last item not fits, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.False (Vector.forall v (fun x -> x < 6))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x < 6))
 
 [<Fact>]
 let ``Vector.forall empty list`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            []))
-    Assert.True (Vector.forall v (fun x -> x > 0))
+    let v = Vector.fromCoordinateList (CoordinateList(8UL<dataLength>, []))
+    Assert.True(Vector.forall v (fun x -> x > 0))
 
 [<Fact>]
 let ``Vector.forall no matching elements, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.False (Vector.forall v (fun x -> x > 8))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x > 8))
 
 [<Fact>]
 let ``Vector.forall no matching elements, length is not a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.False (Vector.forall v (fun x -> x > 6))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.False(Vector.forall v (fun x -> x > 6))
 
 [<Fact>]
 let ``Vector.forall single element matches`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
-    Assert.True (Vector.forall v (fun x -> x = 1))
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
+    Assert.True(Vector.forall v (fun x -> x = 1))
 
 [<Fact>]
 let ``Vector.forall single element does not match`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(1UL<dataLength>,
-            [ (0UL<index>, 1) ]))
-    Assert.False (Vector.forall v (fun x -> x = 2))
+    let v =
+        Vector.fromCoordinateList (CoordinateList(1UL<dataLength>, [ (0UL<index>, 1) ]))
+
+    Assert.False(Vector.forall v (fun x -> x = 2))
 
 [<Fact>]
 let ``Vector.forall all elements match, length is a power of 2`` () =
-    let v = Vector.fromCoordinateList (
-        CoordinateList(8UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6)
-              (6UL<index>, 7)
-              (7UL<index>, 8) ]))
-    Assert.True (Vector.forall v (fun x -> x > 0))
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                8UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6)
+                  (6UL<index>, 7)
+                  (7UL<index>, 8) ]
+            )
+        )
+
+    Assert.True(Vector.forall v (fun x -> x > 0))
 
 [<Fact>]
-let ``Vector.forall all elements match, length is not a power of 2`` () =    
-    let v = Vector.fromCoordinateList (
-        CoordinateList(6UL<dataLength>,
-            [ (0UL<index>, 1)
-              (1UL<index>, 2)
-              (2UL<index>, 3)
-              (3UL<index>, 4)
-              (4UL<index>, 5)
-              (5UL<index>, 6) ]))
-    Assert.True (Vector.forall v (fun x -> x > 0))
+let ``Vector.forall all elements match, length is not a power of 2`` () =
+    let v =
+        Vector.fromCoordinateList (
+            CoordinateList(
+                6UL<dataLength>,
+                [ (0UL<index>, 1)
+                  (1UL<index>, 2)
+                  (2UL<index>, 3)
+                  (3UL<index>, 4)
+                  (4UL<index>, 5)
+                  (5UL<index>, 6) ]
+            )
+        )
+
+    Assert.True(Vector.forall v (fun x -> x > 0))
