@@ -642,3 +642,495 @@ let ``Fold sum`` () =
     let actual = foldAssociative op_add None m1 |> Option.get
 
     Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter all pass, none changed`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    let actual = Matrix.filter m (fun x -> x > 0)
+    Assert.Equal(m, actual)
+
+[<Fact>]
+let ``Matrix.filter none pass, all reset to zero`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    let expected =
+        Matrix.fromCoordinateList (CoordinateList(4UL<nrows>, 4UL<ncols>, []))
+
+    let actual = Matrix.filter m (fun x -> x < 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter length is not a power of 2, all reset to zero`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6)
+                  (2UL<rowindex>, 0UL<colindex>, 7)
+                  (2UL<rowindex>, 1UL<colindex>, 8)
+                  (2UL<rowindex>, 2UL<colindex>, 9) ]
+            )
+        )
+
+    let expected =
+        Matrix.fromCoordinateList (CoordinateList(3UL<nrows>, 3UL<ncols>, []))
+
+    let actual = Matrix.filter m (fun x -> x < 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter some pass, odd set to zero`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (0UL<rowindex>, 3UL<colindex>, 4)
+                  (1UL<rowindex>, 0UL<colindex>, 5)
+                  (1UL<rowindex>, 1UL<colindex>, 6)
+                  (1UL<rowindex>, 2UL<colindex>, 7)
+                  (1UL<rowindex>, 3UL<colindex>, 8)
+                  (2UL<rowindex>, 0UL<colindex>, 9)
+                  (2UL<rowindex>, 1UL<colindex>, 10)
+                  (2UL<rowindex>, 2UL<colindex>, 11)
+                  (2UL<rowindex>, 3UL<colindex>, 12)
+                  (3UL<rowindex>, 0UL<colindex>, 13)
+                  (3UL<rowindex>, 1UL<colindex>, 14)
+                  (3UL<rowindex>, 2UL<colindex>, 15)
+                  (3UL<rowindex>, 3UL<colindex>, 16) ]
+            )
+        )
+
+    let expected =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 3UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 6)
+                  (1UL<rowindex>, 3UL<colindex>, 8)
+                  (2UL<rowindex>, 1UL<colindex>, 10)
+                  (2UL<rowindex>, 3UL<colindex>, 12)
+                  (3UL<rowindex>, 1UL<colindex>, 14)
+                  (3UL<rowindex>, 3UL<colindex>, 16) ]
+            )
+        )
+
+    let actual = Matrix.filter m (fun x -> x % 2 = 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter length is not a power of 2, not all reset to zero`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6)
+                  (2UL<rowindex>, 0UL<colindex>, 7)
+                  (2UL<rowindex>, 1UL<colindex>, 8)
+                  (2UL<rowindex>, 2UL<colindex>, 9) ]
+            )
+        )
+
+    let expected =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 2UL<colindex>, 6)
+                  (2UL<rowindex>, 1UL<colindex>, 8) ]
+            )
+        )
+
+    let actual = Matrix.filter m (fun x -> x % 2 = 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter none pass, length is not a power of 2, none changed`` () =
+    let m = Matrix.fromCoordinateList (CoordinateList(3UL<nrows>, 3UL<ncols>, []))
+    let actual = Matrix.filter m (fun x -> x > 0)
+    Assert.Equal(m, actual)
+
+[<Fact>]
+let ``Matrix.filter none pass, length is a power of 2, none changed`` () =
+    let m = Matrix.fromCoordinateList (CoordinateList(4UL<nrows>, 4UL<ncols>, []))
+    let actual = Matrix.filter m (fun x -> x > 0)
+    Assert.Equal(m, actual)
+
+[<Fact>]
+let ``Matrix.filter single element, passes`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    let expected =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    let actual = Matrix.filter m (fun x -> x > 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.filter single element, fails`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    let expected =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, []))
+
+    let actual = Matrix.filter m (fun x -> x < 0)
+
+    Assert.Equal(expected, actual)
+
+[<Fact>]
+let ``Matrix.exists the first element fits, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x = 1))
+    Assert.False(Matrix.exists m (fun x -> x = 10))
+
+[<Fact>]
+let ``Matrix.exists the first element fits, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x = 1))
+
+[<Fact>]
+let ``Matrix.exists no element fits, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.False(Matrix.exists m (fun x -> x = 10))
+
+[<Fact>]
+let ``Matrix.exists no element fits, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.False(Matrix.exists m (fun x -> x = 10))
+
+[<Fact>]
+let ``Matrix.exists empty matrix`` () =
+    let m = Matrix.fromCoordinateList (CoordinateList(3UL<nrows>, 3UL<ncols>, []))
+    Assert.False(Matrix.exists m (fun x -> x = 1))
+
+[<Fact>]
+let ``Matrix.exists single element, fits`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    Assert.True(Matrix.exists m (fun x -> x = 1))
+
+[<Fact>]
+let ``Matrix.exists single element, does not fit`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    Assert.False(Matrix.exists m (fun x -> x = 10))
+
+[<Fact>]
+let ``Matrix.exists all elements fit,length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.exists all elements fit,length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.exists some elements fit, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x = 2 || x = 10))
+
+[<Fact>]
+let ``Matrix.exists some elements fit, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.True(Matrix.exists m (fun x -> x = 2 || x = 10))
+
+[<Fact>]
+let ``Matrix.forall the first element fits, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.True(Matrix.forall m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.forall the first element fits, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.True(Matrix.forall m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.forall no element fits, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.False(Matrix.forall m (fun x -> x > 10))
+
+[<Fact>]
+let ``Matrix.forall no element fits, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.False(Matrix.forall m (fun x -> x > 10))
+
+[<Fact>]
+let ``Matrix.forall all elements fit,length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.True(Matrix.forall m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.forall all elements fit,length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.True(Matrix.forall m (fun x -> x > 0))
+
+[<Fact>]
+let ``Matrix.forall some elements fit, length is a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (1UL<rowindex>, 0UL<colindex>, 3)
+                  (1UL<rowindex>, 1UL<colindex>, 4) ]
+            )
+        )
+
+    Assert.False(Matrix.forall m (fun x -> x = 2 || x = 10))
+
+[<Fact>]
+let ``Matrix.forall some elements fit, length is not a power of 2`` () =
+    let m =
+        Matrix.fromCoordinateList (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1)
+                  (0UL<rowindex>, 1UL<colindex>, 2)
+                  (0UL<rowindex>, 2UL<colindex>, 3)
+                  (1UL<rowindex>, 0UL<colindex>, 4)
+                  (1UL<rowindex>, 1UL<colindex>, 5)
+                  (1UL<rowindex>, 2UL<colindex>, 6) ]
+            )
+        )
+
+    Assert.False(Matrix.forall m (fun x -> x = 2 || x = 10))
+
+[<Fact>]
+let ``Matrix.forall empty matrix`` () =
+    let m = Matrix.fromCoordinateList (CoordinateList(3UL<nrows>, 3UL<ncols>, []))
+    Assert.True(Matrix.forall m (fun x -> x = 1))
+
+[<Fact>]
+let ``Matrix.forall single element, fits`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    Assert.True(Matrix.forall m (fun x -> x = 1))
+
+[<Fact>]
+let ``Matrix.forall single element, does not fit`` () =
+    let m =
+        Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    Assert.False(Matrix.forall m (fun x -> x = 10))

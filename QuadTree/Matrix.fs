@@ -394,3 +394,51 @@ let transpose (matrix: SparseMatrix<_>) =
 
 let mask (m1: SparseMatrix<'a>) (m2: SparseMatrix<'b>) f =
     map2 m1 m2 (fun m1 m2 -> if f m2 then m1 else None)
+
+
+let filter (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : SparseMatrix<'a> =
+    let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix =
+        match matrix with
+        | Node(x1, x2, x3, x4) ->
+            let halfSize = size / 2UL
+
+            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+            let t1, nvals1 = inner nwR nwC halfSize x1
+            let t2, nvals2 = inner neR neC halfSize x2
+            let t3, nvals3 = inner swR swC halfSize x3
+            let t4, nvals4 = inner seR seC halfSize x4
+            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
+        | Leaf(UserValue(None)) -> Leaf(UserValue(None)), 0UL<nvals>
+        | Leaf(UserValue(Some(v))) ->
+            if predicate v then
+                Leaf(UserValue(Some v)), (uint64 size) * (uint64 size) * 1UL<nvals>
+            else
+                Leaf(UserValue(None)), 0UL<nvals>
+
+    let storage, nvals =
+        inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
+
+    SparseMatrix(matrix.nrows, matrix.ncols, nvals, (Storage(matrix.storage.size, storage)))
+
+let exists (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : bool =
+    let rec inner tree =
+        match tree with
+        | Leaf(Dummy) -> false
+        | Leaf(UserValue(None)) -> false
+        | Leaf(UserValue(Some(v))) -> predicate v
+        | Node(nw, ne, sw, se) -> inner nw || inner ne || inner sw || inner se
+
+    inner matrix.storage.data
+
+let forall (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : bool =
+    let rec inner tree =
+        match tree with
+        | Leaf(Dummy) -> true
+        | Leaf(UserValue(None)) -> true
+        | Leaf(UserValue(Some(v))) -> predicate v
+        | Node(nw, ne, sw, se) -> inner nw && inner ne && inner sw && inner se
+
+    inner matrix.storage.data
