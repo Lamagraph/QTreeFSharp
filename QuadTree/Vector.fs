@@ -589,7 +589,7 @@ let exists (vector: SparseVector<'a>) (predicate: 'a -> bool) : bool =
         | Node(x1, x2) -> inner x1 || inner x2
 
     inner vector.storage.data
-    
+
 let forall (vector: SparseVector<'a>) (predicate: 'a -> bool) : bool =
     let rec inner vector =
         match vector with

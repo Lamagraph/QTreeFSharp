@@ -417,7 +417,7 @@ let filter (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : SparseMatrix<'a>
                 Leaf(UserValue(Some v)), (uint64 size) * (uint64 size) * 1UL<nvals>
             else
                 Leaf(UserValue(None)), 0UL<nvals>
-            
+
     let storage, nvals =
         inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
 
@@ -429,8 +429,7 @@ let exists (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : bool =
         | Leaf(Dummy) -> false
         | Leaf(UserValue(None)) -> false
         | Leaf(UserValue(Some(v))) -> predicate v
-        | Node(nw, ne, sw, se) ->
-            inner nw || inner ne || inner sw || inner se
+        | Node(nw, ne, sw, se) -> inner nw || inner ne || inner sw || inner se
 
     inner matrix.storage.data
 
@@ -440,7 +439,6 @@ let forall (matrix: SparseMatrix<'a>) (predicate: 'a -> bool) : bool =
         | Leaf(Dummy) -> true
         | Leaf(UserValue(None)) -> true
         | Leaf(UserValue(Some(v))) -> predicate v
-        | Node(nw, ne, sw, se) ->
-            inner nw && inner ne && inner sw && inner se
+        | Node(nw, ne, sw, se) -> inner nw && inner ne && inner sw && inner se
 
     inner matrix.storage.data
