@@ -57,7 +57,7 @@ type SequentialSetsBenchmark() =
     [<DefaultValue>]
     val mutable public A: int
 
-    [<Params(100, 10000)>]
+    [<Params(100, 10000, 100000)>]
     [<DefaultValue>]
     val mutable public B: int
 
@@ -142,7 +142,7 @@ type ParallelSetsBenchmark() =
     [<DefaultValue>]
     val mutable public A: int
 
-    [<Params(100, 10000)>]
+    [<Params(100, 10000, 100000)>]
     [<DefaultValue>]
     val mutable public B: int
 
