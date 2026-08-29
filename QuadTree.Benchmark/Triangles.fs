@@ -13,7 +13,10 @@ type Benchmark() =
 
     [<GlobalSetup>]
     member this.LoadMatrix() =
-        matrix <- readMtx (System.IO.Path.Combine(DIR_WITH_MATRICES, this.MatrixName)) false
+        matrix <-
+            match readMtx (System.IO.Path.Combine(DIR_WITH_MATRICES, this.MatrixName)) false with
+            | Ok m -> m
+            | Error msg -> failwith $"Failed to load matrix {this.MatrixName}: {msg}"
 
     [<Benchmark>]
     member this.TriangleCount() =

@@ -6,6 +6,7 @@ open Xunit
 open Matrix
 open Vector
 open Common
+open Result
 
 (*
 2,2,2,2
@@ -345,6 +346,54 @@ let ``Simple vxmi_values. 4 * (4x3).`` () =
 
     Assert.Equal(expected, actual)
 
+[<Fact>]
+let ``vxmi_values 3x3 line graph start 0. BFS semantics`` () =
+    // 3-node line graph (3x3 stored as 4x4):
+    //   N 1 N D
+    //   1 N 1 D
+    //   N 1 N D
+    //   D D D D
+    let m =
+        let tree =
+            Matrix.qtree.Node(
+                Matrix.qtree.Node(leaf_n (), leaf_v 1UL, leaf_v 1UL, leaf_n ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_v 1UL, leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_v 1UL, leaf_d (), leaf_d ()),
+                Matrix.qtree.Node(leaf_n (), leaf_d (), leaf_d (), leaf_d ())
+            )
+
+        let store = Matrix.Storage(4UL<storageSize>, tree)
+        SparseMatrix(3UL<nrows>, 3UL<ncols>, 4UL<nvals>, store)
+
+    // frontier = start 0 mapped to level 0:
+    //   [0, N, N, D]  =  Node(Node(0, N), Node(N, D))
+    let f =
+        let tree =
+            Vector.btree.Node(Vector.btree.Node(vleaf_v 0UL, vleaf_n ()), Vector.btree.Node(vleaf_n (), vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        SparseVector(3UL<dataLength>, 1UL<nvals>, store)
+
+    let op_add x y =
+        match (x, y) with
+        | Some(v), _
+        | _, Some(v) -> Some(v)
+        | _ -> None
+
+    let op_mult (_, vp) (_, _, _) = Some(vp + 1UL)
+
+    let expected =
+        // result = [N, 1, N, D] = Node(Node(N, 1), Node(N, D))
+        let tree =
+            Vector.btree.Node(Vector.btree.Node(vleaf_n (), vleaf_v 1UL), Vector.btree.Node(vleaf_n (), vleaf_d ()))
+
+        let store = Vector.Storage(4UL<storageSize>, tree)
+        Ok(SparseVector(3UL<dataLength>, 1UL<nvals>, store))
+
+    let actual = LinearAlgebra.vxmi_values op_add op_mult f m
+
+    Assert.Equal(expected, actual)
+
 
 [<Fact>]
 let ``Simple mxm`` () =
@@ -376,94 +425,98 @@ let ``Simple mxm`` () =
     let expected =
         SparseMatrix(3UL<nrows>, 3UL<ncols>, 9UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
 
-    let actual =
-        match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Ok m -> m
-        | _ -> failwith "Unreachable"
-
-    Assert.Equal(expected.storage.data, actual.storage.data)
+    match LinearAlgebra.mxm op_add op_mult m1 m2 with
+    | Ok actual -> Assert.Equal(expected.storage.data, actual.storage.data)
+    | Error msg -> Assert.Fail "mxm failed"
 
 [<Fact>]
 let ``Sparse mxm`` () =
-    let m1 =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 1
-              1UL<rowindex>, 1UL<colindex>, 2
-              2UL<rowindex>, 2UL<colindex>, 3 ]
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+        Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let d1 =
+        [ (0UL<rowindex>, 0UL<colindex>, 1)
+          (1UL<rowindex>, 1UL<colindex>, 2)
+          (2UL<rowindex>, 2UL<colindex>, 3) ]
 
-    let m2 =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 3
-              1UL<rowindex>, 1UL<colindex>, 2
-              2UL<rowindex>, 2UL<colindex>, 1 ]
+    let d2 =
+        [ (0UL<rowindex>, 0UL<colindex>, 3)
+          (1UL<rowindex>, 1UL<colindex>, 2)
+          (2UL<rowindex>, 2UL<colindex>, 1) ]
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let dExpected =
+        [ (0UL<rowindex>, 0UL<colindex>, 3)
+          (1UL<rowindex>, 1UL<colindex>, 4)
+          (2UL<rowindex>, 2UL<colindex>, 3) ]
 
-    let expected =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 3
-              1UL<rowindex>, 1UL<colindex>, 4
-              2UL<rowindex>, 2UL<colindex>, 3 ]
+    resultM {
+        let! m1 = mkMatrix 3UL<nrows> 3UL<ncols> d1
+        let! m2 = mkMatrix 3UL<nrows> 3UL<ncols> d2
+        let! expected = mkMatrix 3UL<nrows> 3UL<ncols> dExpected
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+        let! actual =
+            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            | Ok x -> Ok x
+            | Error _ -> Error "mxm failed"
 
-    let actual =
-        match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Ok m -> m
-        | Error e -> failwith (e.ToString())
-
-    Assert.Equal(expected, actual)
+        Assert.Equal(Matrix.toCoordinateList expected, Matrix.toCoordinateList actual)
+        return ()
+    }
+    |> ignore
 
 [<Fact>]
 let ``Shrinking mxm`` () =
     // 2 x 3
     // 1 0 2
     // 0 3 0
-    let m1 =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 1
-              0UL<rowindex>, 2UL<colindex>, 2
-              1UL<rowindex>, 1UL<colindex>, 3 ]
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+        Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
-        let clist = Matrix.CoordinateList(2UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let d1 =
+        [ (0UL<rowindex>, 0UL<colindex>, 1)
+          (0UL<rowindex>, 2UL<colindex>, 2)
+          (1UL<rowindex>, 1UL<colindex>, 3) ]
 
     // 3 x 2
     // 0 4
     // 5 0
     // 6 0
-    let m2 =
-        let d =
-            [ 0UL<rowindex>, 1UL<colindex>, 4
-              1UL<rowindex>, 0UL<colindex>, 5
-              2UL<rowindex>, 0UL<colindex>, 6 ]
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 2UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let d2 =
+        [ (0UL<rowindex>, 1UL<colindex>, 4)
+          (1UL<rowindex>, 0UL<colindex>, 5)
+          (2UL<rowindex>, 0UL<colindex>, 6) ]
 
     // 2 x 2
     // 12 4
     // 15 0
-    let expected =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 12
-              0UL<rowindex>, 1UL<colindex>, 4
-              1UL<rowindex>, 0UL<colindex>, 15 ]
 
-        let clist = Matrix.CoordinateList(2UL<nrows>, 2UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let dExpected =
+        [ (0UL<rowindex>, 0UL<colindex>, 12)
+          (0UL<rowindex>, 1UL<colindex>, 4)
+          (1UL<rowindex>, 0UL<colindex>, 15) ]
 
-    let actual =
-        match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Ok m -> m
-        | Error e -> failwith (e.ToString())
+    resultM {
+        let! m1 = mkMatrix 2UL<nrows> 3UL<ncols> d1
+        let! m2 = mkMatrix 3UL<nrows> 2UL<ncols> d2
+        let! expected = mkMatrix 2UL<nrows> 2UL<ncols> dExpected
 
-    Assert.Equal(expected, actual)
+        let! actual =
+            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            | Ok x -> Ok x
+            | Error msg -> Error "mxm failed"
+
+        let expectedList = Matrix.toCoordinateList expected
+        let actualList = Matrix.toCoordinateList actual
+
+        Assert.Equal<(uint64<rowindex> * uint64<colindex> * int) list>(
+            expectedList.list |> List.sortBy (fun (r, c, _) -> (r, c)),
+            actualList.list |> List.sortBy (fun (r, c, _) -> (r, c))
+        )
+
+        return ()
+    }
+    |> ignore
 
 [<Fact>]
 let ``Expanding mxm`` () =
@@ -471,45 +524,54 @@ let ``Expanding mxm`` () =
     // 1 0
     // 0 2
     // 3 0
-    let m1 =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 1
-              1UL<rowindex>, 1UL<colindex>, 2
-              2UL<rowindex>, 0UL<colindex>, 3 ]
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+        Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 2UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let d1 =
+        [ (0UL<rowindex>, 0UL<colindex>, 1)
+          (1UL<rowindex>, 1UL<colindex>, 2)
+          (2UL<rowindex>, 0UL<colindex>, 3) ]
+
     // 2 x 3
     // 4 5 6
     // 0 0 0
-    let m2 =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 4
-              0UL<rowindex>, 1UL<colindex>, 5
-              0UL<rowindex>, 2UL<colindex>, 6 ]
 
-        let clist = Matrix.CoordinateList(2UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let d2 =
+        [ (0UL<rowindex>, 0UL<colindex>, 4)
+          (0UL<rowindex>, 1UL<colindex>, 5)
+          (0UL<rowindex>, 2UL<colindex>, 6) ]
 
     // 3 x 3
     // 4 5 6
     // 0 0 0
     // 12 15 18
-    let expected =
-        let d =
-            [ 0UL<rowindex>, 0UL<colindex>, 4
-              0UL<rowindex>, 1UL<colindex>, 5
-              0UL<rowindex>, 2UL<colindex>, 6
-              2UL<rowindex>, 0UL<colindex>, 12
-              2UL<rowindex>, 1UL<colindex>, 15
-              2UL<rowindex>, 2UL<colindex>, 18 ]
 
-        let clist = Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, d)
-        Matrix.fromCoordinateList clist
+    let dExpected =
+        [ (0UL<rowindex>, 0UL<colindex>, 4)
+          (0UL<rowindex>, 1UL<colindex>, 5)
+          (0UL<rowindex>, 2UL<colindex>, 6)
+          (2UL<rowindex>, 0UL<colindex>, 12)
+          (2UL<rowindex>, 1UL<colindex>, 15)
+          (2UL<rowindex>, 2UL<colindex>, 18) ]
 
-    let actual =
-        match LinearAlgebra.mxm op_add op_mult m1 m2 with
-        | Ok m -> m
-        | Error e -> failwith (e.ToString())
+    resultM {
+        let! m1 = mkMatrix 3UL<nrows> 2UL<ncols> d1
+        let! m2 = mkMatrix 2UL<nrows> 3UL<ncols> d2
+        let! expected = mkMatrix 3UL<nrows> 3UL<ncols> dExpected
 
-    Assert.Equal(expected, actual)
+        let! actual =
+            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            | Ok x -> Ok x
+            | Error _ -> Error "mxm failed"
+
+        let sortList (coo: Matrix.CoordinateList<int>) =
+            coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
+
+        Assert.Equal<(uint64<rowindex> * uint64<colindex> * int) list>(
+            sortList (Matrix.toCoordinateList expected),
+            sortList (Matrix.toCoordinateList actual)
+        )
+
+        return ()
+    }
+    |> ignore

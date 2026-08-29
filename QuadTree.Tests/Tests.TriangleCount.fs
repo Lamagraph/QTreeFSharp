@@ -52,12 +52,12 @@ let ``7V Triangle count`` () =
 
     let expected = 5UL
 
-    let actual =
-        match triangle_count g with
-        | Ok(Some x) -> x
-        | _ -> failwith "Unreachable"
-
-    Assert.Equal(expected, actual)
+    match g with
+    | Ok graph ->
+        match triangle_count graph with
+        | Ok(Some actual) -> Assert.Equal(expected, actual)
+        | _ -> Assert.Fail "Triangle count failed"
+    | Error _ -> Assert.Fail "fromCoordinateList failed"
 
 [<Fact>]
 let ``5V Triangle count`` () =
@@ -86,9 +86,9 @@ let ``5V Triangle count`` () =
 
     let expected = 2UL
 
-    let actual =
-        match triangle_count g with
-        | Ok(Some x) -> x
-        | _ -> failwith "Unreachable"
-
-    Assert.Equal(expected, actual)
+    match g with
+    | Ok graph ->
+        match triangle_count graph with
+        | Ok(Some actual) -> Assert.Equal(expected, actual)
+        | _ -> Assert.Fail "Triangle count failed"
+    | Error _ -> Assert.Fail "fromCoordinateList failed"

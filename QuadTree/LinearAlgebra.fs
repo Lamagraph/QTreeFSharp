@@ -36,9 +36,9 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
                 let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
                 let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
 
-                let vAdd v1 (v2: Vector.SparseVector<_>) =
-                    match v2.storage.data with
-                    | Vector.Leaf(Dummy) -> Ok(v1)
+                let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
+                    match v1.storage.data, v2.storage.data with
+                    | _, Vector.Leaf(Dummy) -> Ok(v1)
                     | _ -> Vector.map2 v1 v2 op_add
 
                 let z1 = vAdd v1 v3
@@ -144,9 +144,9 @@ let vxmi_values
                 let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
                 let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
 
-                let vAdd v1 (v2: Vector.SparseVector<_>) =
-                    match v2.storage.data with
-                    | Vector.Leaf(Dummy) -> Ok(v1)
+                let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
+                    match v1.storage.data, v2.storage.data with
+                    | _, Vector.Leaf(Dummy) -> Ok(v1)
                     | _ -> Vector.map2 v1 v2 op_add
 
                 let z1 = vAdd v1 v3
@@ -183,13 +183,15 @@ let vxmi_values
                     colIdx
 
         | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
+        | Vector.btree.Leaf(UserValue(None)), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
         | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> _do x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(None)) -> _do x1 x2 matrix matrix matrix matrix
         | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
-        | Vector.btree.Leaf(UserValue(None)), _
-        | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
-
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
+
+        | Vector.btree.Leaf(UserValue(None)), _
+        | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
 
     if uint64 vector.length = uint64 matrix.nrows then
         let vector_storage =
