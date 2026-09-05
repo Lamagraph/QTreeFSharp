@@ -13,6 +13,7 @@ For performance testing details and instructions on how to run them, see the [Be
 * Single-source shortest path (SSSP)
 * Triangles counting
 * Boruvka MSF
+* AVLSet
 
 ## TODO
 * [ ] Single-source parent BFS

@@ -72,5 +72,5 @@ Performance is strictly bound to the $|A| / |B|$ size ratio.
 | **Difference** (100 × 10k) | Sequential | 168.15 μs | 230.23 KB | 1.00 (Base) | Standard recursive difference. |
 | **Difference** (100 × 10k) | Tree Traversal | 6,958.68 μs | 8.86 MB | **41.39x Slowdown** | Tree traversal slowdown. |
 | --- | --- | --- | --- | --- | --- |
-| **Union** (100k × 100k) | Sequential | 96.89 ms | 80.72 MB | 1.00 (Base) | Standard recursive union. |
+| **Union** (100k figure× 100k) | Sequential | 96.89 ms | 80.72 MB | 1.00 (Base) | Standard recursive union. |
 | **Union** (100k × 100k) | Parallel (2 Threads) | **69.63 ms** | **81.61 MB** | **~1.39x Speedup** | Optimized parallel algorithm. |
