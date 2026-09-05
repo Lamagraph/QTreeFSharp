@@ -11,12 +11,13 @@ open Result
 /// - None: Auto-detect (uses all available CPU cores via System.Environment.ProcessorCount).
 /// - Some(x): Hard limit to x threads (useful for benchmarking and resource control).
 /// </param>
+/// /// <param name="heightThreshold">
+/// The maximum subset height at which the algorithm switches to sequential to save memory and speed up execution time
+/// </param>
 
 module ParallelAVLSet =
-    [<Literal>]
-    let HeightThreshold = 10
 
-    let rec unionAsync threads set1 set2 =
+    let rec unionAsync threads heightThreshold set1 set2 =
         async {
             let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
@@ -25,7 +26,7 @@ module ParallelAVLSet =
             | _, Empty -> return Ok maxSet
             | Node(h, v, ln, rn), _ ->
 
-                if h < HeightThreshold then
+                if h < heightThreshold then
                     return AVLSet.union maxSet minSet
                 else
                     match Tree.split v minSet with
@@ -34,8 +35,8 @@ module ParallelAVLSet =
 
                         let limit = defaultArg threads System.Environment.ProcessorCount
 
-                        let left = unionAsync threads ln lesser
-                        let right = unionAsync threads rn greater
+                        let left = unionAsync threads heightThreshold ln lesser
+                        let right = unionAsync threads heightThreshold rn greater
 
                         let! results = Async.Parallel([| left; right |], limit)
 
@@ -50,7 +51,7 @@ module ParallelAVLSet =
                         return finalResult
         }
 
-    let rec intersectionAsync threads set1 set2 =
+    let rec intersectionAsync threads heightThreshold set1 set2 =
         async {
             let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
@@ -59,7 +60,7 @@ module ParallelAVLSet =
             | _, Empty -> return Ok Empty
             | Node(h, v, ln, rn), _ ->
 
-                if h < HeightThreshold then
+                if h < heightThreshold then
                     return AVLSet.intersection maxSet minSet
                 else
                     match Tree.split v minSet with
@@ -68,8 +69,8 @@ module ParallelAVLSet =
 
                         let limit = defaultArg threads System.Environment.ProcessorCount
 
-                        let left = intersectionAsync threads ln lesser
-                        let right = intersectionAsync threads rn greater
+                        let left = intersectionAsync threads heightThreshold ln lesser
+                        let right = intersectionAsync threads heightThreshold rn greater
 
                         let! results = Async.Parallel([| left; right |], limit)
 
@@ -88,14 +89,14 @@ module ParallelAVLSet =
                         return finalResult
         }
 
-    let rec differenceAsync threads minuendSet subtrahendSet =
+    let rec differenceAsync threads heightThreshold minuendSet subtrahendSet =
         async {
             match minuendSet, subtrahendSet with
             | Empty, _ -> return Ok Empty
             | _, Empty -> return Ok minuendSet
             | Node(h, v, ln, rn), _ ->
 
-                if h < HeightThreshold then
+                if h < heightThreshold then
                     return AVLSet.difference minuendSet subtrahendSet
                 else
                     match Tree.split v subtrahendSet with
@@ -104,8 +105,8 @@ module ParallelAVLSet =
 
                         let limit = defaultArg threads System.Environment.ProcessorCount
 
-                        let left = differenceAsync threads ln lesser
-                        let right = differenceAsync threads rn greater
+                        let left = differenceAsync threads heightThreshold ln lesser
+                        let right = differenceAsync threads heightThreshold rn greater
 
                         let! results = Async.Parallel([| left; right |], limit)
 
@@ -124,7 +125,7 @@ module ParallelAVLSet =
                         return finalResult
         }
 
-    let rec symmDifferenceAsync threads set1 set2 =
+    let rec symmDifferenceAsync threads heightThreshold set1 set2 =
         async {
             let maxSet, minSet = Tree.maxMinNodesByHeights set1 set2
 
@@ -133,7 +134,7 @@ module ParallelAVLSet =
             | _, Empty -> return Ok maxSet
             | Node(h, v, ln, rn), _ ->
 
-                if h < HeightThreshold then
+                if h < heightThreshold then
                     return AVLSet.symmDifference maxSet minSet
                 else
                     match Tree.split v minSet with
@@ -142,8 +143,8 @@ module ParallelAVLSet =
 
                         let limit = defaultArg threads System.Environment.ProcessorCount
 
-                        let left = symmDifferenceAsync threads ln lesser
-                        let right = symmDifferenceAsync threads rn greater
+                        let left = symmDifferenceAsync threads heightThreshold ln lesser
+                        let right = symmDifferenceAsync threads heightThreshold rn greater
 
                         let! results = Async.Parallel([| left; right |], limit)
 
@@ -162,14 +163,14 @@ module ParallelAVLSet =
                         return finalResult
         }
 
-    let union threads t1 t2 =
-        unionAsync threads t1 t2 |> Async.RunSynchronously
+    let union threads heightThreshold t1 t2 =
+        unionAsync threads heightThreshold t1 t2 |> Async.RunSynchronously
 
-    let intersection threads t1 t2 =
-        intersectionAsync threads t1 t2 |> Async.RunSynchronously
+    let intersection threads heightThreshold t1 t2 =
+        intersectionAsync threads heightThreshold t1 t2 |> Async.RunSynchronously
 
-    let difference threads t1 t2 =
-        differenceAsync threads t1 t2 |> Async.RunSynchronously
+    let difference threads heightThreshold t1 t2 =
+        differenceAsync threads heightThreshold t1 t2 |> Async.RunSynchronously
 
-    let symmDifference threads t1 t2 =
-        symmDifferenceAsync threads t1 t2 |> Async.RunSynchronously
+    let symmDifference threads heightThreshold t1 t2 =
+        symmDifferenceAsync threads heightThreshold t1 t2 |> Async.RunSynchronously

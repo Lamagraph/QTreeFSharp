@@ -15,6 +15,7 @@ For performance testing details and instructions on how to run them, see the [Be
 * Triangles counting
 * Boruvka MSF
 * Maggs-Plotkin MSF
+* AVLSet
 
 ## TODO
 * [ ] Multiple-source level BFS
