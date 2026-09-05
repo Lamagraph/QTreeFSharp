@@ -223,7 +223,7 @@ type ParallelSetsBenchmark() =
 [<HtmlExporter>]
 [<MemoryDiagnoser>]
 [<ThreadingDiagnoser>]
-type FSSetsBenchmark() = 
+type FSSetsBenchmark() =
     let rnd = System.Random(1234561)
 
     [<Params(1000, 10000, 100000)>]
@@ -279,32 +279,16 @@ type FSSetsBenchmark() =
                     | Ok s -> s
                     | Error e -> failwithf "%A" e)
                 AVLSet.empty
-        
-        self.SetA <-
-            dataA
-            |> Array.fold
-                (fun set v ->
-                    Set.add v set)
-                Set.empty
 
-        self.SetB <-
-            dataB
-            |> Array.fold
-                (fun set v ->
-                    Set.add v set)
-                Set.empty
-        
+        self.SetA <- dataA |> Array.fold (fun set v -> Set.add v set) Set.empty
+
+        self.SetB <- dataB |> Array.fold (fun set v -> Set.add v set) Set.empty
+
         self.HashSetA <- HashSet<int>()
-        dataA
-        |> Array.iter
-            (fun v ->
-                self.HashSetA.Add(v) |> ignore)
+        dataA |> Array.iter (fun v -> self.HashSetA.Add(v) |> ignore)
 
         self.HashSetB <- HashSet<int>()
-        dataB
-        |> Array.iter
-            (fun v ->
-                self.HashSetA.Add(v) |> ignore)
+        dataB |> Array.iter (fun v -> self.HashSetA.Add(v) |> ignore)
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Union")>]
@@ -322,17 +306,16 @@ type FSSetsBenchmark() =
 
     [<Benchmark>]
     [<BenchmarkCategory("Union")>]
-    member self.UnionFS() =
-        Set.union self.SetA self.SetB
+    member self.UnionFS() = Set.union self.SetA self.SetB
 
     [<Benchmark>]
     [<BenchmarkCategory("Union")>]
-    member self.UnionHashFS() =
-        self.HashSetA.UnionWith(self.HashSetB)
+    member self.UnionHashFS() = self.HashSetA.UnionWith(self.HashSetB)
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Intersection")>]
-    member self.SequentialIntersectionAVL() = AVLSet.intersection self.AVLSetA self.AVLSetB
+    member self.SequentialIntersectionAVL() =
+        AVLSet.intersection self.AVLSetA self.AVLSetB
 
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
@@ -346,8 +329,7 @@ type FSSetsBenchmark() =
 
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
-    member self.IntersectionFS() =
-        Set.intersect self.SetA self.SetB
+    member self.IntersectionFS() = Set.intersect self.SetA self.SetB
 
     [<Benchmark>]
     [<BenchmarkCategory("Intersection")>]
@@ -356,7 +338,8 @@ type FSSetsBenchmark() =
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Difference")>]
-    member self.SequentialDifferenceAVL() = AVLSet.difference self.AVLSetA self.AVLSetB
+    member self.SequentialDifferenceAVL() =
+        AVLSet.difference self.AVLSetA self.AVLSetB
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
@@ -370,10 +353,8 @@ type FSSetsBenchmark() =
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
-    member self.DifferenceFS() =
-        Set.difference self.SetA self.SetB
+    member self.DifferenceFS() = Set.difference self.SetA self.SetB
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
-    member self.DifferenceHashFS() =
-        self.HashSetA.ExceptWith(self.HashSetB)
+    member self.DifferenceHashFS() = self.HashSetA.ExceptWith(self.HashSetB)
