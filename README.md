@@ -5,6 +5,7 @@ Quad‑tree based linear algebra in F# for GraphBLAS‑style graph analysis. Thi
 
 ## Benchmarks
 Infrastructure for benchmarking the implemented algorithms is available in the [respective project](QuadTree.Benchmark/).
+For performance testing details and instructions on how to run them, see the [Benchmarks README](QuadTree.Benchmark/README.md).
 
 ## Implemented Algorithms
 
@@ -12,6 +13,7 @@ Infrastructure for benchmarking the implemented algorithms is available in the [
 * Single-source shortest path (SSSP)
 * Triangles counting
 * Boruvka MSF
+* AVLSet
 
 ## TODO
 * [ ] Single-source parent BFS
