@@ -288,7 +288,7 @@ type FSSetsBenchmark() =
         dataA |> Array.iter (fun v -> self.HashSetA.Add(v) |> ignore)
 
         self.HashSetB <- HashSet<int>()
-        dataB |> Array.iter (fun v -> self.HashSetA.Add(v) |> ignore)
+        dataB |> Array.iter (fun v -> self.HashSetB.Add(v) |> ignore)
 
     [<Benchmark(Baseline = true)>]
     [<BenchmarkCategory("Union")>]
@@ -354,6 +354,53 @@ type FSSetsBenchmark() =
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
     member self.DifferenceFS() = Set.difference self.SetA self.SetB
+
+    [<Benchmark>]
+    [<BenchmarkCategory("Difference")>]
+    member self.DifferenceHashFS() = self.HashSetA.ExceptWith(self.HashSetB)
+
+[<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
+[<CategoriesColumn>]
+[<HtmlExporter>]
+[<MemoryDiagnoser>]
+[<ThreadingDiagnoser>]
+type HashSetBenchmark() =
+    let rnd = System.Random(1234561)
+
+    [<Params(1000, 10000, 100000)>]
+    [<DefaultValue>]
+    val mutable public A: int
+
+    [<Params(100, 10000, 100000)>]
+    [<DefaultValue>]
+    val mutable public B: int
+
+    [<DefaultValue>]
+    val mutable public HashSetA: HashSet<int>
+
+    [<DefaultValue>]
+    val mutable public HashSetB: HashSet<int>
+
+    [<GlobalSetup>]
+    member self.Setup() =
+        let dataA = Array.init self.A (fun _ -> rnd.Next())
+
+        let dataB = Array.init self.B (fun _ -> rnd.Next())
+
+        self.HashSetA <- HashSet<int>()
+        dataA |> Array.iter (fun v -> self.HashSetA.Add(v) |> ignore)
+
+        self.HashSetB <- HashSet<int>()
+        dataB |> Array.iter (fun v -> self.HashSetB.Add(v) |> ignore)
+
+    [<Benchmark>]
+    [<BenchmarkCategory("Union")>]
+    member self.UnionHashFS() = self.HashSetA.UnionWith(self.HashSetB)
+
+    [<Benchmark>]
+    [<BenchmarkCategory("Intersection")>]
+    member self.IntersectionHashFS() =
+        self.HashSetA.IntersectWith(self.HashSetB)
 
     [<Benchmark>]
     [<BenchmarkCategory("Difference")>]
