@@ -6,7 +6,7 @@ open FsCheck
 open FsCheck.FSharp
 open FsCheck.Xunit
 open Matrix
-open COO
+open COOArray
 
 type Input =
     { Rows: int
@@ -55,7 +55,7 @@ type InputArbs =
     static member Input() = arbInput
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
-let ``get at every cell agrees between QuadTree and COO`` (inp: Input) =
+let ``get at every cell agrees between QuadTree and COOArray`` (inp: Input) =
     let coo = toCoo inp
     let qt = fromCoordinateList coo
     let nrows = int (uint64 coo.nrows)
@@ -155,3 +155,88 @@ let ``out-of-bounds access raises ArgumentOutOfRangeException`` (inp: Input) =
             true
 
     cooGetThrows && cooUpdateThrows && matrixGetThrows && matrixSetThrows
+
+let private cooWithDims (nrows: uint64) (ncols: uint64) (inp: Input) : CoordinateList<int> =
+    let entries =
+        inp.Cells
+        |> List.map (fun (r, c, v) -> (abs r, abs c, v))
+        |> List.filter (fun (r, c, _) -> r < int nrows && c < int ncols)
+        |> List.distinctBy (fun (r, c, _) -> (r, c))
+        |> List.map (fun (r, c, v) -> (uint64 r * 1UL<rowindex>, uint64 c * 1UL<colindex>, v))
+        |> List.sortBy (fun (r, c, _) -> (r, c))
+
+    CoordinateList(nrows * 1UL<nrows>, ncols * 1UL<ncols>, entries)
+
+let private opAdd x y =
+    match (x, y) with
+    | Some(a), Some(b) -> Some(a + b)
+    | Some a, None
+    | None, Some a -> Some a
+    | _ -> None
+
+let private opMul x y =
+    match (x, y) with
+    | Some(a), Some(b) -> Some(a * b)
+    | _ -> None
+
+let private naiveMxm (nrowsA: uint64) (k: uint64) (ncolsB: uint64) (m1: COOEntry<int> list) (m2: COOEntry<int> list) =
+    let m1Map = m1 |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
+    let m2Map = m2 |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
+
+    [ for i in 0UL .. nrowsA - 1UL do
+          for j in 0UL .. ncolsB - 1UL do
+              let products =
+                  [ for t in 0UL .. k - 1UL do
+                        let a = m1Map |> Map.tryFind (i * 1UL<rowindex>, t * 1UL<colindex>)
+                        let b = m2Map |> Map.tryFind (t * 1UL<rowindex>, j * 1UL<colindex>)
+                        yield opMul a b ]
+
+              match products |> List.fold (fun acc p -> opAdd acc p) None with
+              | Some v -> yield (i * 1UL<rowindex>, j * 1UL<colindex>, v)
+              | None -> () ]
+    |> List.sortBy (fun (i, j, _) -> (i, j))
+
+let private arbInputPair: Arbitrary<Input * Input> =
+    let gen =
+        gen {
+            let! a = Arb.toGen arbInput
+            let! b = Arb.toGen arbInput
+            return (a, b)
+        }
+
+    Arb.fromGen gen
+
+type InputPairArbs =
+    static member InputPair() = arbInputPair
+
+[<Property(Arbitrary = [| typeof<InputPairArbs> |])>]
+let ``mxmcoo agrees with naive multiplication, array matches list, keys are sorted and unique``
+    ((a, b): Input * Input)
+    =
+    let nrowsA = uint64 (max 1 a.Rows)
+    let k = uint64 (max 1 a.Cols)
+    let ncolsB = uint64 (max 1 b.Cols)
+    let m1 = cooWithDims nrowsA k a
+    let m2 = cooWithDims k ncolsB b
+
+    let expected =
+        naiveMxm nrowsA k ncolsB (Array.toList m1.list) (Array.toList m2.list)
+
+    let sortedUnique entries =
+        entries
+        |> List.map (fun (i, j, _) -> (i, j))
+        |> List.pairwise
+        |> List.forall (fun ((i1, j1), (i2, j2)) -> i1 < i2 || (i1 = i2 && j1 < j2))
+
+    match
+        COOArray.mxmcoo opAdd opMul m1 m2, COOList.mxmcoo opAdd opMul (COOList.fromArray m1) (COOList.fromArray m2)
+    with
+    | Ok arr, Ok lst ->
+        let arrEntries = Array.toList arr.list
+
+        List.indexed expected = List.indexed arrEntries
+        && List.indexed expected = List.indexed lst.entries
+        && (arrEntries = lst.entries)
+        && sortedUnique arrEntries
+        && sortedUnique lst.entries
+    | _ -> false

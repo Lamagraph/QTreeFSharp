@@ -84,7 +84,7 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                 coo.entries
                 |> List.choose (fun (i, j, v) -> f (Some v) |> Option.map (fun r -> (i, j, r)))
             | Some fnone ->
-                let lookup = coo.entries |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
+                let mutable rest = coo.entries
 
                 [ for i in range (uint64 coo.nrows) do
                       let ri = i * 1UL<rowindex>
@@ -92,9 +92,16 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                       for j in range (uint64 coo.ncols) do
                           let cj = j * 1UL<colindex>
 
+                          let value =
+                              match rest with
+                              | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                  rest <- tail
+                                  Some ev
+                              | _ -> None
+
                           let res =
-                              match Map.tryFind (ri, cj) lookup with
-                              | Some value -> f (Some value)
+                              match value with
+                              | Some v -> f (Some v)
                               | None -> Some fnone
 
                           match res with
@@ -172,9 +179,8 @@ let private cooMap2Inner
                 match f None None with
                 | None -> mergeBinary coo1.entries coo2.entries op
                 | Some _ ->
-                    let lookup1 = coo1.entries |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
-
-                    let lookup2 = coo2.entries |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
+                    let mutable rest1 = coo1.entries
+                    let mutable rest2 = coo2.entries
 
                     [ for i in range (uint64 nrows) do
                           let ri = i * 1UL<rowindex>
@@ -182,7 +188,21 @@ let private cooMap2Inner
                           for j in range (uint64 ncols) do
                               let cj = j * 1UL<colindex>
 
-                              match f (Map.tryFind (ri, cj) lookup1) (Map.tryFind (ri, cj) lookup2) with
+                              let v1 =
+                                  match rest1 with
+                                  | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                      rest1 <- tail
+                                      Some ev
+                                  | _ -> None
+
+                              let v2 =
+                                  match rest2 with
+                                  | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                      rest2 <- tail
+                                      Some ev
+                                  | _ -> None
+
+                              match f v1 v2 with
                               | Some value -> yield (ri, cj, value)
                               | None -> () ]
             | BinaryOp.AllCellsIndexed f ->
@@ -268,62 +288,21 @@ let mxmcoo
         let entries1 = m1.entries
         let entries2 = m2.entries
 
-        let firstA = entries1 |> List.tryHead |> Option.map (fun (_, _, v) -> v)
-        let firstB = entries2 |> List.tryHead |> Option.map (fun (_, _, v) -> v)
+        let valuesOf (entries: (uint64<rowindex> * uint64<colindex> * 'v) list) =
+            entries |> List.map (fun (_, _, v) -> v) |> List.distinct
 
         let canOptimize =
             let noneNone = op_mult None None = None
 
             let multSomeNone =
-                match firstA with
-                | Some v -> op_mult (Some v) None = None
-                | None -> noneNone
+                valuesOf entries1 |> List.forall (fun v -> op_mult (Some v) None = None)
 
             let multNoneSome =
-                match firstB with
-                | Some v -> op_mult None (Some v) = None
-                | None -> noneNone
+                valuesOf entries2 |> List.forall (fun v -> op_mult None (Some v) = None)
 
-            let addNoneSome =
-                match firstA with
-                | Some v -> op_add (Some v) None = Some v
-                | None -> noneNone
+            noneNone && multSomeNone && multNoneSome
 
-            let addSomeNone =
-                match firstB with
-                | Some v -> op_add None (Some v) = Some v
-                | None -> noneNone
-
-            noneNone && multSomeNone && multNoneSome && addNoneSome && addSomeNone
-
-        if canOptimize then
-            let m1ByRow = entries1 |> List.groupBy (fun (i, _, _) -> i) |> Map.ofList
-            let m2ByRow = entries2 |> List.groupBy (fun (k, _, _) -> k) |> Map.ofList
-
-            let result =
-                [ for KeyValue(i, m1Entries) in m1ByRow do
-                      for (_, k, v1) in m1Entries do
-                          let kAsRow = uint64 k * 1UL<rowindex>
-
-                          match m2ByRow |> Map.tryFind kAsRow with
-                          | Some m2Entries ->
-                              for (_, j, v2) in m2Entries do
-                                  match op_mult (Some v1) (Some v2) with
-                                  | Some product -> yield (i, j, product)
-                                  | None -> ()
-                          | None -> () ]
-
-            let grouped =
-                result
-                |> List.groupBy (fun (i, j, _) -> (i, j))
-                |> List.map (fun ((i, j), entries) ->
-                    let sum = entries |> List.map (fun (_, _, v) -> Some v) |> List.reduce op_add
-                    (i, j, sum))
-                |> List.choose (fun (i, j, v) -> v |> Option.map (fun v -> (i, j, v)))
-                |> List.sortBy (fun (i, j, _) -> (i, j))
-
-            ListCOO<'c>(m1.nrows, m2.ncols, grouped) |> Ok
-        else
+        let generalResult () =
             let m1Map = entries1 |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
             let m2Map = entries2 |> List.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofList
             let kCount = uint64 m1.ncols
@@ -347,4 +326,43 @@ let mxmcoo
                           | Some value -> yield (ri, cj, value)
                           | None -> () ]
 
-            ListCOO<'c>(m1.nrows, m2.ncols, result) |> Ok
+            ListCOO<'c>(m1.nrows, m2.ncols, result)
+
+        if canOptimize then
+            let m1ByRow = entries1 |> List.groupBy (fun (i, _, _) -> i) |> Map.ofList
+            let m2ByRow = entries2 |> List.groupBy (fun (k, _, _) -> k) |> Map.ofList
+
+            let result =
+                [ for KeyValue(i, m1Entries) in m1ByRow do
+                      for (_, k, v1) in m1Entries do
+                          let kAsRow = uint64 k * 1UL<rowindex>
+
+                          match m2ByRow |> Map.tryFind kAsRow with
+                          | Some m2Entries ->
+                              for (_, j, v2) in m2Entries do
+                                  match op_mult (Some v1) (Some v2) with
+                                  | Some product -> yield (i, j, product)
+                                  | None -> ()
+                          | None -> () ]
+
+            let canMerge =
+                let productValues = result |> List.map (fun (_, _, v) -> v) |> List.distinct
+
+                productValues
+                |> List.forall (fun v -> op_add (Some v) None = Some v && op_add None (Some v) = Some v)
+
+            if canMerge then
+                let grouped =
+                    result
+                    |> List.groupBy (fun (i, j, _) -> (i, j))
+                    |> List.map (fun ((i, j), entries) ->
+                        let sum = entries |> List.map (fun (_, _, v) -> Some v) |> List.reduce op_add
+                        (i, j, sum))
+                    |> List.choose (fun (i, j, v) -> v |> Option.map (fun v -> (i, j, v)))
+                    |> List.sortBy (fun (i, j, _) -> (i, j))
+
+                ListCOO<'c>(m1.nrows, m2.ncols, grouped) |> Ok
+            else
+                generalResult () |> Ok
+        else
+            generalResult () |> Ok

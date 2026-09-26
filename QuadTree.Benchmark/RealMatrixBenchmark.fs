@@ -4,7 +4,7 @@ open System
 open System.IO
 open BenchmarkDotNet.Attributes
 open Matrix
-open COO
+open COOArray
 
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 [<MemoryDiagnoser>]
@@ -12,11 +12,14 @@ type RealMatrixBenchmark() =
 
     let mutable cooMatrix = Unchecked.defaultof<CoordinateList<double>>
     let mutable qtMatrix = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable listMatrix = Unchecked.defaultof<COOList.ListCOO<double>>
 
     let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
     let mutable resultCooVal = 0.0
     let mutable resultQtVal = 0.0
+    let mutable resultListVal = 0.0
 
     let mutable lookupCoords: (uint64<rowindex> * uint64<colindex>) array = [||]
     let mutable lookupValues: double array = [||]
@@ -55,6 +58,7 @@ type RealMatrixBenchmark() =
 
             cooMatrix <- coo
             qtMatrix <- qt
+            listMatrix <- COOList.fromArray coo
 
             let nnz = coo.list.Length
             let dim = max (uint64 coo.nrows) (uint64 coo.ncols)
@@ -97,6 +101,65 @@ type RealMatrixBenchmark() =
     member this.QtMapi() =
         if not skip then
             resultQt <- mapi qtMatrix (fun i j v -> v |> Option.map (fun x -> x + float (uint64 i) + float (uint64 j)))
+
+    [<Benchmark(Description = "Real_COOLIST_map")>]
+    member this.CooListMap() =
+        if not skip then
+            resultList <- COOList.cooMap listMatrix (fun v -> v |> Option.map (fun x -> x * 2.0))
+
+    [<Benchmark(Description = "Real_COOLIST_mapi")>]
+    member this.CooListMapi() =
+        if not skip then
+            resultList <-
+                COOList.cooMapi listMatrix (fun i j v ->
+                    v |> Option.map (fun x -> x + float (uint64 i) + float (uint64 j)))
+
+    [<Benchmark(Description = "Real_COOLIST_mxm")>]
+    member this.CooListMxm() =
+        if not skip && doMxm then
+            let op_add x y =
+                match x, y with
+                | Some a, Some b -> Some(a + b)
+                | Some a, None
+                | None, Some a -> Some a
+                | None, None -> None
+
+            let op_mult x y =
+                match x, y with
+                | Some a, Some b -> Some(a * b)
+                | _ -> None
+
+            match COOList.mxmcoo op_add op_mult listMatrix listMatrix with
+            | Ok result -> resultList <- result
+            | Error _ -> failwith "COOList mxmcoo failed"
+
+    [<Benchmark(Description = "Real_COOLIST_get")>]
+    member this.CooListGet() =
+        if not skip then
+            let mutable acc = 0.0
+
+            for k = 0 to lookupCoords.Length - 1 do
+                let (i, j) = lookupCoords.[k]
+
+                match COOList.cooGet (listMatrix, i, j) with
+                | Ok(Some v) -> acc <- acc + v
+                | _ -> ()
+
+            resultListVal <- acc
+
+    [<Benchmark(Description = "Real_COOLIST_set")>]
+    member this.CooListSet() =
+        if not skip then
+            let mutable m = listMatrix
+
+            for k = 0 to lookupCoords.Length - 1 do
+                let (i, j) = lookupCoords.[k]
+
+                match COOList.cooUpdate (m, i, j, lookupValues.[k] * 2.0) with
+                | Ok updated -> m <- updated
+                | _ -> ()
+
+            resultList <- m
 
     [<Benchmark(Description = "Real_COO_get")>]
     member this.CooGet() =

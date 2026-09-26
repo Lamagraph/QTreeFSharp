@@ -95,7 +95,7 @@ type CoordinateList<'value> =
           list = sorted }
 
     // Fast factory: does NOT re-sort, expects an already sorted array.
-    // Used by COO operations whose results are built in (row, col) order and
+    // Used by COOArray operations whose results are built in (row, col) order and
     // by cooUpdate, which maintains the sorted invariant itself.
     static member Create
         (nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value>[])

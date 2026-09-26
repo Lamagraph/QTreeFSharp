@@ -4,7 +4,7 @@ open System
 open Xunit
 
 open Matrix
-open COO
+open COOArray
 open Common
 
 let printMatrix (matrix: SparseMatrix<_>) =

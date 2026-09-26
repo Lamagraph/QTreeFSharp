@@ -1,10 +1,10 @@
-module COO.Tests
+﻿module COOArray.Tests
 
 open System
 open Xunit
 
 open Matrix
-open COO
+open COOArray
 open Common
 
 let op_add x y =
@@ -18,6 +18,12 @@ let op_mult x y =
     match (x, y) with
     | Some(a), Some(b) -> Some(a * b)
     | _ -> None
+
+let private keysAscending (entries: COOEntry<'v> list) =
+    entries
+    |> List.map (fun (i, j, _) -> (i, j))
+    |> List.pairwise
+    |> List.forall (fun ((a1, b1), (a2, b2)) -> a1 < a2 || (a1 = a2 && b1 < b2))
 
 // === cooGet tests ===
 
@@ -557,7 +563,7 @@ let ``Sparse mxmcoo`` () =
 
         CoordinateList(3UL<nrows>, 3UL<ncols>, d)
 
-    match COO.mxmcoo op_add op_mult m1 m2 with
+    match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
         Assert.Equal(expected.nrows, actual.nrows)
         Assert.Equal(expected.ncols, actual.ncols)
@@ -590,7 +596,7 @@ let ``Shrinking mxmcoo`` () =
 
         CoordinateList(2UL<nrows>, 2UL<ncols>, d)
 
-    match COO.mxmcoo op_add op_mult m1 m2 with
+    match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
         Assert.Equal(expected.nrows, actual.nrows)
         Assert.Equal(expected.ncols, actual.ncols)
@@ -624,13 +630,173 @@ let ``mxmcoo with non-absorbing op_mult`` () =
 
         CoordinateList(2UL<nrows>, 1UL<ncols>, d)
 
-    match COO.mxmcoo op_add op_mult m1 m2 with
+    match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
         Assert.Equal(1UL<nrows>, actual.nrows)
         Assert.Equal(1UL<ncols>, actual.ncols)
         Assert.Equal(1, actual.list.Length)
         Assert.Equal(Some 5, actual.list |> Array.tryHead |> Option.map (fun (_, _, v) -> v))
     | Error e -> failwith (e.ToString())
+
+// === mxmcoo list tests ===
+
+let private listCoo nrows ncols entries = COOList.ListCOO(nrows, ncols, entries)
+
+[<Fact>]
+let ``Sparse mxmcoo list`` () =
+    let m1 =
+        listCoo
+            3UL<nrows>
+            3UL<ncols>
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (1UL<rowindex>, 1UL<colindex>, 2)
+              (2UL<rowindex>, 2UL<colindex>, 3) ]
+
+    let m2 =
+        listCoo
+            3UL<nrows>
+            3UL<ncols>
+            [ (0UL<rowindex>, 0UL<colindex>, 3)
+              (1UL<rowindex>, 1UL<colindex>, 2)
+              (2UL<rowindex>, 2UL<colindex>, 1) ]
+
+    let expected =
+        [ (0UL<rowindex>, 0UL<colindex>, 3)
+          (1UL<rowindex>, 1UL<colindex>, 4)
+          (2UL<rowindex>, 2UL<colindex>, 3) ]
+
+    match COOList.mxmcoo op_add op_mult m1 m2 with
+    | Ok actual ->
+        Assert.True((expected = actual.entries), "Sparse mxmcoo list: entries differ")
+        Assert.True(keysAscending actual.entries)
+    | Error e -> failwith (e.ToString())
+
+[<Fact>]
+let ``Shrinking mxmcoo list`` () =
+    let m1 =
+        listCoo
+            2UL<nrows>
+            3UL<ncols>
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 2UL<colindex>, 2)
+              (1UL<rowindex>, 1UL<colindex>, 3) ]
+
+    let m2 =
+        listCoo
+            3UL<nrows>
+            2UL<ncols>
+            [ (0UL<rowindex>, 1UL<colindex>, 4)
+              (1UL<rowindex>, 0UL<colindex>, 5)
+              (2UL<rowindex>, 0UL<colindex>, 6) ]
+
+    match COOList.mxmcoo op_add op_mult m1 m2 with
+    | Ok actual ->
+        Assert.Equal(2UL<nrows>, actual.nrows)
+        Assert.Equal(2UL<ncols>, actual.ncols)
+
+        Assert.True(
+            [ (0UL<rowindex>, 0UL<colindex>, 12)
+              (0UL<rowindex>, 1UL<colindex>, 4)
+              (1UL<rowindex>, 0UL<colindex>, 15) ] =
+                actual.entries
+        )
+
+        Assert.True(keysAscending actual.entries)
+    | Error e -> failwith (e.ToString())
+
+[<Fact>]
+let ``mxmcoo with non-absorbing op_mult list`` () =
+    let op_add x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a + b)
+        | Some a, _
+        | _, Some a -> Some a
+        | _ -> None
+
+    let op_mult x y =
+        match (x, y) with
+        | Some(a), Some(b) -> Some(a * b)
+        | Some a, _
+        | _, Some a -> Some a
+        | _ -> None
+
+    let m1 =
+        listCoo 1UL<nrows> 2UL<ncols> [ (0UL<rowindex>, 0UL<colindex>, 1); (0UL<rowindex>, 1UL<colindex>, 2) ]
+
+    let m2 = listCoo 2UL<nrows> 1UL<ncols> [ (0UL<rowindex>, 0UL<colindex>, 3) ]
+
+    match COOList.mxmcoo op_add op_mult m1 m2 with
+    | Ok actual ->
+        Assert.Equal(1UL<nrows>, actual.nrows)
+        Assert.Equal(1UL<ncols>, actual.ncols)
+        Assert.Equal(1, actual.entries.Length)
+        Assert.Equal(Some 5, actual.entries |> List.tryHead |> Option.map (fun (_, _, v) -> v))
+        Assert.True(keysAscending actual.entries)
+    | Error e -> failwith (e.ToString())
+
+[<Fact>]
+let ``mxmcoo collapses products of one cell (array and list)`` () =
+    let m1 =
+        CoordinateList(
+            2UL<nrows>,
+            2UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (1UL<rowindex>, 1UL<colindex>, 3) ]
+        )
+
+    let m2 =
+        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 0UL<colindex>, 5) ])
+
+    let expected =
+        [ (0UL<rowindex>, 0UL<colindex>, 14); (1UL<rowindex>, 0UL<colindex>, 15) ]
+
+    match
+        COOArray.mxmcoo op_add op_mult m1 m2,
+        COOList.mxmcoo op_add op_mult (COOList.fromArray m1) (COOList.fromArray m2)
+    with
+    | Ok arr, Ok lst ->
+        let arrEntries = Array.toList arr.list
+        Assert.True((expected = arrEntries), "collapses: array result differs")
+        Assert.True((expected = lst.entries), "collapses: list result differs")
+        Assert.True(keysAscending arrEntries)
+        Assert.True(keysAscending lst.entries)
+    | _ -> failwith "mxmcoo failed"
+
+[<Fact>]
+let ``mxmcoo result stays sorted when k has multiple hits`` () =
+    let m1 =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 1)
+              (0UL<rowindex>, 1UL<colindex>, 2)
+              (0UL<rowindex>, 2UL<colindex>, 3)
+              (2UL<rowindex>, 0UL<colindex>, 7)
+              (2UL<rowindex>, 2UL<colindex>, 9) ]
+        )
+
+    let m2 =
+        CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 4)
+              (0UL<rowindex>, 1UL<colindex>, 5)
+              (1UL<rowindex>, 0UL<colindex>, 6)
+              (1UL<rowindex>, 2UL<colindex>, 7)
+              (2UL<rowindex>, 0UL<colindex>, 8) ]
+        )
+
+    match
+        COOArray.mxmcoo op_add op_mult m1 m2,
+        COOList.mxmcoo op_add op_mult (COOList.fromArray m1) (COOList.fromArray m2)
+    with
+    | Ok arr, Ok lst ->
+        let arrEntries = Array.toList arr.list
+        Assert.True((arrEntries = lst.entries), "array and list results differ")
+        Assert.True(keysAscending arrEntries)
+        Assert.True(keysAscending lst.entries)
+    | _ -> failwith "mxmcoo failed"
 
 // === cooMapValues / cooMapiValues tests ===
 

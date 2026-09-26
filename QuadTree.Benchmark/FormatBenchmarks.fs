@@ -3,7 +3,7 @@ namespace QuadTree.Benchmarks.Formats
 open System
 open BenchmarkDotNet.Attributes
 open Matrix
-open COO
+open COOArray
 
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 type FormatBenchmark() =
@@ -12,14 +12,18 @@ type FormatBenchmark() =
     let mutable cooMatrix2 = Unchecked.defaultof<CoordinateList<double>>
     let mutable qtMatrix1 = Unchecked.defaultof<SparseMatrix<double>>
     let mutable qtMatrix2 = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable listMatrix1 = Unchecked.defaultof<COOList.ListCOO<double>>
+    let mutable listMatrix2 = Unchecked.defaultof<COOList.ListCOO<double>>
 
     let mutable lookupCoords: (uint64<rowindex> * uint64<colindex>) array = [||]
     let mutable lookupValues: double array = [||]
 
     let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
     let mutable resultCooVal = 0.0
     let mutable resultQtVal = 0.0
+    let mutable resultListVal = 0.0
 
     [<Params(256, 512, 1024)>]
     member val Size = 0 with get, set
@@ -57,6 +61,8 @@ type FormatBenchmark() =
         cooMatrix2 <- CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
         qtMatrix1 <- fromCoordinateList cooMatrix1
         qtMatrix2 <- fromCoordinateList cooMatrix2
+        listMatrix1 <- COOList.fromArray cooMatrix1
+        listMatrix2 <- COOList.fromArray cooMatrix2
 
         lookupCoords <- entries1 |> List.map (fun (i, j, _) -> (i, j)) |> Array.ofList
         lookupValues <- entries1 |> List.map (fun (_, _, v) -> v) |> Array.ofList
@@ -129,6 +135,88 @@ type FormatBenchmark() =
         with
         | Ok r -> resultQt <- r
         | Error _ -> ()
+
+    [<Benchmark(Description = "COOLIST_map")>]
+    member this.CooListMap() =
+        resultList <- COOList.cooMap listMatrix1 (fun v -> v |> Option.map (fun x -> x * 2.0))
+
+    [<Benchmark(Description = "COOLIST_mapi")>]
+    member this.CooListMapi() =
+        resultList <-
+            COOList.cooMapi listMatrix1 (fun i j v ->
+                v |> Option.map (fun x -> x + float (uint64 i) + float (uint64 j)))
+
+    [<Benchmark(Description = "COOLIST_map2")>]
+    member this.CooListMap2() =
+        match
+            COOList.cooMap2 listMatrix1 listMatrix2 (fun a b ->
+                match a, b with
+                | Some x, Some y -> Some(x + y)
+                | Some x, None -> Some x
+                | None, Some y -> Some y
+                | None, None -> None)
+        with
+        | Ok r -> resultList <- r
+        | Error _ -> ()
+
+    [<Benchmark(Description = "COOLIST_map2i")>]
+    member this.CooListMap2i() =
+        match
+            COOList.cooMap2i listMatrix1 listMatrix2 (fun i j a b ->
+                match a, b with
+                | Some x, Some y -> Some(x + y + float (uint64 i))
+                | Some x, None -> Some x
+                | None, Some y -> Some y
+                | None, None -> None)
+        with
+        | Ok r -> resultList <- r
+        | Error _ -> ()
+
+    [<Benchmark(Description = "COOLIST_mxm")>]
+    member this.CooListMxm() =
+        let op_add x y =
+            match x, y with
+            | Some a, Some b -> Some(a + b)
+            | Some a, None
+            | None, Some a -> Some a
+            | None, None -> None
+
+        let op_mult x y =
+            match x, y with
+            | Some a, Some b -> Some(a * b)
+            | _ -> None
+
+        match COOList.mxmcoo op_add op_mult listMatrix1 listMatrix1 with
+        | Ok result -> resultList <- result
+        | Error _ -> failwith "COOList mxmcoo failed"
+
+    [<Benchmark(Description = "COOLIST_get")>]
+    member this.CooListGet() =
+        let n = min lookupCoords.Length 1000
+        let mutable acc = 0.0
+
+        for k = 0 to n - 1 do
+            let (i, j) = lookupCoords.[k]
+
+            match COOList.cooGet (listMatrix1, i, j) with
+            | Ok(Some v) -> acc <- acc + v
+            | _ -> ()
+
+        resultListVal <- acc
+
+    [<Benchmark(Description = "COOLIST_set")>]
+    member this.CooListSet() =
+        let mutable m = listMatrix1
+        let n = min lookupCoords.Length 1000
+
+        for k = 0 to n - 1 do
+            let (i, j) = lookupCoords.[k]
+
+            match COOList.cooUpdate (m, i, j, lookupValues.[k] * 2.0) with
+            | Ok updated -> m <- updated
+            | _ -> ()
+
+        resultList <- m
 
     [<Benchmark(Description = "COO_get")>]
     member this.CooGet() =
@@ -228,9 +316,14 @@ type DenseFormatBenchmark() =
 
     let mutable cooMatrix = Unchecked.defaultof<CoordinateList<double>>
     let mutable qtMatrix = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable listMatrix = Unchecked.defaultof<COOList.ListCOO<double>>
 
     let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
+    let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
+    let mutable resultCooVal = 0.0
+    let mutable resultQtVal = 0.0
+    let mutable resultListVal = 0.0
 
     [<Params(64, 128, 256)>]
     member val Size = 0 with get, set
@@ -247,6 +340,7 @@ type DenseFormatBenchmark() =
 
         cooMatrix <- CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries)
         qtMatrix <- fromCoordinateList cooMatrix
+        listMatrix <- COOList.fromArray cooMatrix
 
     [<Benchmark(Baseline = true, Description = "Dense_COO_map")>]
     member this.DenseCooMap() =
@@ -263,6 +357,58 @@ type DenseFormatBenchmark() =
     [<Benchmark(Description = "Dense_QT_mapi")>]
     member this.DenseQtMapi() =
         resultQt <- mapi qtMatrix (fun i j v -> v |> Option.map (fun x -> x + float (uint64 i) + float (uint64 j)))
+
+    [<Benchmark(Description = "Dense_COOLIST_map")>]
+    member this.DenseCooListMap() =
+        resultList <- COOList.cooMap listMatrix (fun v -> v |> Option.map (fun x -> x * 2.0))
+
+    [<Benchmark(Description = "Dense_COOLIST_mapi")>]
+    member this.DenseCooListMapi() =
+        resultList <-
+            COOList.cooMapi listMatrix (fun i j v -> v |> Option.map (fun x -> x + float (uint64 i) + float (uint64 j)))
+
+    [<Benchmark(Description = "Dense_COOLIST_mxm")>]
+    member this.DenseCooListMxm() =
+        let op_add x y =
+            match x, y with
+            | Some a, Some b -> Some(a + b)
+            | Some a, None
+            | None, Some a -> Some a
+            | None, None -> None
+
+        let op_mult x y =
+            match x, y with
+            | Some a, Some b -> Some(a * b)
+            | _ -> None
+
+        match COOList.mxmcoo op_add op_mult listMatrix listMatrix with
+        | Ok result -> resultList <- result
+        | Error _ -> failwith "COOList mxmcoo failed"
+
+    [<Benchmark(Description = "Dense_COOLIST_get")>]
+    member this.DenseCooListGet() =
+        let mutable acc = 0.0
+
+        for i in 0UL .. uint64 this.Size - 1UL do
+            for j in 0UL .. uint64 this.Size - 1UL do
+                match COOList.cooGet (listMatrix, i * 1UL<rowindex>, j * 1UL<colindex>) with
+                | Ok(Some v) -> acc <- acc + v
+                | _ -> ()
+
+        resultListVal <- acc
+
+    [<Benchmark(Description = "Dense_COOLIST_set")>]
+    member this.DenseCooListSet() =
+        let mutable m = listMatrix
+        let size = uint64 this.Size
+
+        for i in 0UL .. size - 1UL do
+            for j in 0UL .. size - 1UL do
+                match COOList.cooUpdate (m, i * 1UL<rowindex>, j * 1UL<colindex>, 42.0) with
+                | Ok updated -> m <- updated
+                | _ -> ()
+
+        resultList <- m
 
     [<Benchmark(Description = "Dense_COO_get")>]
     member this.DenseCooGet() =
