@@ -19,58 +19,48 @@ Benchmarking infrastructure for
 5. Raw benchmarking results are saved in ```BenchmarkDotNet.Artifacts/results/*.csv```.
 
 ### AVLSet
-
+ 
 Benchmarking the `AVLSet` data structure operations.
-
+ 
 **Tested operations:**
 - `Adding` and `Deleting` single elements.
 - Set operations: `Union`, `Intersection`, `Difference`, `Symmetrical Difference`.
-
 For set operations, three implementations are compared:
-- **Sequential:** Standard sequential operations (used as the Baseline).
-- **Tree Traversal:** Optimized operations using tree traversal.
-- **Parallel:** Multi-threaded operations.
-
-**Parameters evaluated:**
-- `A`: Size of the primary set (100; 10,000; 1,000,000).
-- `B`: Size of the secondary set (100; 1,000; 100,000).
-- `DataTypeA`: Data distribution for the primary set (`Random` or `Sorted`).
-- `threads`: Number of threads allocated for parallel operations (1, 2, 4, 8).
-
+- **Sequential:** split/join-based recursive implementation (baseline).
+- **Tree Traversal:** traverses one set and applies the operation element-by-element to the other.
+- **Parallel:** same split/join recursion as Sequential, but run on multiple threads.
+**Parameters:**
+- `A`: size of the primary set — 100, 10,000, 100,000 (1,000 instead of 100 for the parallel and standard-library-comparison benchmarks).
+- `B`: size of the secondary set — 100, 10,000, 100,000.
+- `threads`: thread limit for parallel operations — 1, 2, 4.
 **How to run AVLSet benchmarks:**
 To run only the AVLSet benchmarks, use the following command:
 `dotnet run -c Release --filter '*AVLSet*'`
-
+ 
 ---
-
+ 
 ### Benchmark results
+ 
+**1. Single-element operations.** Adding or deleting an element only touches the nodes on the path from the root, so cost tracks the tree's height rather than its size: increasing $A$ from 100 to 100,000 (1,000×) increases execution time by only ~2.3× (582 ns $\to$ 1,377 ns) and allocation by about the same factor (880 B $\to$ 2,080 B), consistent with the tree staying balanced.
+ 
+**2. Tree traversal vs. sequential.** The traversal-based implementations fold the corresponding tree operation into a copy of one set, once per element of the other (e.g. `Traversal.difference` copies $A$ and calls `remove` once per element of $B$), so cost is governed by the size of whichever set gets traversed, not by which one happens to be smaller.
+- Traversed set is small — e.g. intersection at $A=100\,000$, $B=100$: ~3.8× faster than sequential (84 μs vs 318 μs).
+- Traversed set is large — e.g. difference at $A=100$, $B=10\,000$: ~41× slower than sequential (6.96 ms vs 168 μs).
 
-#### 1. Single Element Operations
-* **Time Complexity:** $O(\log N)$. Scaling tree size by 1,000x (100 $\rightarrow$ 100,000 nodes) increases execution time by only ~2.3x.
-* **Memory Allocation:** Scales logarithmically due to standard path-copying overhead in immutable structures (880 B at 100 nodes $\rightarrow$ 2,080 B at 100,000 nodes).
-
-#### 2. Traversal vs. Sequential Set Operations
-Performance is strictly bound to the $|A| / |B|$ size ratio.
-* **$|A| \gg |B|$:** `Traversal` is optimal. Yields ~3.8x speedup (e.g., Intersection, 100k $\times$ 100).
-* **$|A| \ll |B|$:** `Traversal` is slow. Yields ~41x slowdown (e.g., Difference, 100 $\times$ 10k).
-
-#### 3. Parallel Set Operations
-* **Tasks:** Balanced recursive partitioning prevents the generation of excessive micro-tasks, significantly reducing thread pool scheduling overhead.
-* **Thread Contention:** Improved cache locality and minimized context switching allow execution time to scale effectively with the thread count.
-* **GC Thrashing:** Memory allocation rates are now strictly controlled (nearly matching the sequential baseline, e.g., ~81.6 MB vs ~80.7 MB for a $100k \times 100k$ operation), completely preventing Gen0 garbage collection thrashing.
-
+**3. Parallel.** The parallel implementation forks new tasks only while the current subtree's height is above a fixed threshold (10 in these benchmarks); below that it falls back to the sequential algorithm, which keeps the number of spawned tasks bounded regardless of set size. With 2 threads, union at $A=B=100\,000$ is ~1.39× faster than sequential (69.6 ms vs 96.9 ms), with essentially the same memory footprint (81.6 MB vs 80.7 MB), since parallel and sequential use the same split/join calls and no extra per-task buffers.
+ 
 #### Table
-
-| Operation Scenario (A × B) | Implementation Type | Execution Time | Memory Allocated | Ratio | Algorithmic Insight |
+ 
+| Operation (A × B) | Implementation | Time | Memory | Ratio | Note |
 | --- | --- | --- | --- | --- | --- |
-| **Single Add** (100) | Sequential | 582.1 ns | 880 B | 1.00 (Base) | Logarithmic $O(\log N)$ algorithm. |
-| **Single Add** (100,000) | Sequential | 1,376.7 ns | 2,080 B | ~2.3x scales | Expected path-copying cost. |
+| **Single Add** (100) | Sequential | 582.1 ns | 880 B | 1.00 (base) | |
+| **Single Add** (100,000) | Sequential | 1,376.7 ns | 2,080 B | ~2.3× | |
 | --- | --- | --- | --- | --- | --- |
-| **Intersection** (100k × 100) | Sequential | 318.25 μs | 447.82 KB | 1.00 (Base) | Standard recursive intersection. |
-| **Intersection** (100k × 100) | Tree Traversal | **83.99 μs** | **86.54 KB** | **~3.8x Speedup** | Huge $A \gg B$ asymmetry. |
+| **Intersection** (100k × 100) | Sequential | 318.25 μs | 447.82 KB | 1.00 (base) | |
+| **Intersection** (100k × 100) | Tree Traversal | **83.99 μs** | **86.54 KB** | **~3.8× speedup** | $A \gg B$ |
 | --- | --- | --- | --- | --- | --- |
-| **Difference** (100 × 10k) | Sequential | 168.15 μs | 230.23 KB | 1.00 (Base) | Standard recursive difference. |
-| **Difference** (100 × 10k) | Tree Traversal | 6,958.68 μs | 8.86 MB | **41.39x Slowdown** | Tree traversal slowdown. |
+| **Difference** (100 × 10k) | Sequential | 168.15 μs | 230.23 KB | 1.00 (base) | |
+| **Difference** (100 × 10k) | Tree Traversal | 6,958.68 μs | 8.86 MB | **41.39× slower** | $A \ll B$ |
 | --- | --- | --- | --- | --- | --- |
-| **Union** (100k figure× 100k) | Sequential | 96.89 ms | 80.72 MB | 1.00 (Base) | Standard recursive union. |
-| **Union** (100k × 100k) | Parallel (2 Threads) | **69.63 ms** | **81.61 MB** | **~1.39x Speedup** | Optimized parallel algorithm. |
+| **Union** (100k × 100k) | Sequential | 96.89 ms | 80.72 MB | 1.00 (base) | |
+| **Union** (100k × 100k) | Parallel (2 threads) | **69.63 ms** | **81.61 MB** | **~1.39× speedup** | |
