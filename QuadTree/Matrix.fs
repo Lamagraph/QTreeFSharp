@@ -66,6 +66,17 @@ type COOEntry<'value> = uint64<rowindex> * uint64<colindex> * 'value
 type CoordinateList<'value> =
     val nrows: uint64<nrows>
     val ncols: uint64<ncols>
+    val list: COOEntry<'value> list
+
+    new(_nrows, _ncols, _list) =
+        { nrows = _nrows
+          ncols = _ncols
+          list = _list }
+
+[<Struct>]
+type ArrayCOO<'value> =
+    val nrows: uint64<nrows>
+    val ncols: uint64<ncols>
     val list: COOEntry<'value>[]
 
     new(_nrows, _ncols, _list: COOEntry<'value> seq) =
@@ -97,20 +108,11 @@ type CoordinateList<'value> =
     // Fast factory: does NOT re-sort, expects an already sorted array.
     // Used by COOArray operations whose results are built in (row, col) order and
     // by cooUpdate, which maintains the sorted invariant itself.
-    static member Create
-        (nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value>[])
-        : CoordinateList<'value> =
-        CoordinateList<'value>(nrows, ncols, entries, true)
-
-let internal createCOO
-    (nrows: uint64<nrows>)
-    (ncols: uint64<ncols>)
-    (entries: COOEntry<'value>[])
-    : CoordinateList<'value> =
-    CoordinateList<'value>.Create(nrows, ncols, entries)
+    static member Create(nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value>[]) : ArrayCOO<'value> =
+        ArrayCOO<'value>(nrows, ncols, entries, true)
 
 let fromCoordinateList (coo: CoordinateList<'a>) =
-    let nvals = (uint64 <| Array.length coo.list) * 1UL<nvals>
+    let nvals = (uint64 <| List.length coo.list) * 1UL<nvals>
     let nrows = coo.nrows
     let ncols = coo.ncols
 
@@ -143,8 +145,7 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
                 (traverse swCoo swp halfSize)
                 (traverse seCoo sep halfSize)
 
-    let tree =
-        traverse (Array.toList coo.list) (0UL<rowindex>, 0UL<colindex>) storageSize
+    let tree = traverse coo.list (0UL<rowindex>, 0UL<colindex>) storageSize
 
     SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageSize>, tree))
 
@@ -171,10 +172,10 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     let coo =
         traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size)
 
-    CoordinateList(nrows, ncols, Array.ofList coo)
+    CoordinateList(nrows, ncols, coo)
 
 let empty nrows ncols =
-    fromCoordinateList (CoordinateList(nrows, ncols, Array.empty))
+    fromCoordinateList (CoordinateList(nrows, ncols, []))
 
 let get (matrix: SparseMatrix<'a>) (row: uint64<rowindex>) (col: uint64<colindex>) : Result<option<'a>, Error> =
     if uint64 row >= uint64 matrix.nrows then

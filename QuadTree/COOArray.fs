@@ -31,9 +31,7 @@ let private iterCells
 
         i <- i + 1UL
 
-let cooGet
-    (coo: CoordinateList<'a>, rowindex: uint64<rowindex>, colindex: uint64<colindex>)
-    : Result<option<'a>, Error> =
+let cooGet (coo: ArrayCOO<'a>, rowindex: uint64<rowindex>, colindex: uint64<colindex>) : Result<option<'a>, Error> =
     if uint64 rowindex >= uint64 coo.nrows then
         raise (System.ArgumentOutOfRangeException("rowindex", "Row index is outside the matrix bounds."))
     elif uint64 colindex >= uint64 coo.ncols then
@@ -49,8 +47,8 @@ let cooGet
             Ok None
 
 let cooUpdate
-    (coo: CoordinateList<'a>, rowindex: uint64<rowindex>, colindex: uint64<colindex>, value: 'a)
-    : Result<CoordinateList<'a>, Error> =
+    (coo: ArrayCOO<'a>, rowindex: uint64<rowindex>, colindex: uint64<colindex>, value: 'a)
+    : Result<ArrayCOO<'a>, Error> =
     if uint64 rowindex >= uint64 coo.nrows then
         raise (System.ArgumentOutOfRangeException("rowindex", "Row index is outside the matrix bounds."))
     elif uint64 colindex >= uint64 coo.ncols then
@@ -62,7 +60,7 @@ let cooUpdate
         if idx >= 0 then
             let arr = Array.copy coo.list
             arr.[idx] <- (rowindex, colindex, value)
-            Ok(Matrix.createCOO coo.nrows coo.ncols arr)
+            Ok(ArrayCOO.Create(coo.nrows, coo.ncols, arr))
         else
             let insertAt = ~~~idx
             let arr = Array.zeroCreate (coo.list.Length + 1)
@@ -71,9 +69,9 @@ let cooUpdate
             arr.[insertAt] <- (rowindex, colindex, value)
             Array.blit coo.list insertAt arr (insertAt + 1) (coo.list.Length - insertAt)
 
-            Ok(Matrix.createCOO coo.nrows coo.ncols arr)
+            Ok(ArrayCOO.Create(coo.nrows, coo.ncols, arr))
 
-let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : CoordinateList<'b> =
+let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b> =
     match op with
     | UnaryOp.ValuesOnly f ->
         let buf = ResizeArray<COOEntry<'b>>(coo.list.Length)
@@ -83,7 +81,7 @@ let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : Coordi
             | Some r -> buf.Add((i, j, r))
             | None -> ()
 
-        Matrix.createCOO coo.nrows coo.ncols (buf.ToArray())
+        ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
     | UnaryOp.ValuesOnlyIndexed f ->
         let buf = ResizeArray<COOEntry<'b>>(coo.list.Length)
 
@@ -92,7 +90,7 @@ let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : Coordi
             | Some r -> buf.Add((i, j, r))
             | None -> ()
 
-        Matrix.createCOO coo.nrows coo.ncols (buf.ToArray())
+        ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
     | UnaryOp.AllCells f ->
         match f None with
         | None ->
@@ -103,7 +101,7 @@ let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : Coordi
                 | Some r -> buf.Add((i, j, r))
                 | None -> ()
 
-            Matrix.createCOO coo.nrows coo.ncols (buf.ToArray())
+            ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
         | Some fnone ->
             let buf = ResizeArray<COOEntry<'b>>()
             let mutable ptr = 0
@@ -126,7 +124,7 @@ let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : Coordi
                 | None -> Some fnone
                 |> Option.iter (fun value -> buf.Add((ri, cj, value))))
 
-            Matrix.createCOO coo.nrows coo.ncols (buf.ToArray())
+            ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
     | UnaryOp.AllCellsIndexed f ->
         let buf = ResizeArray<COOEntry<'b>>()
         let mutable ptr = 0
@@ -146,7 +144,7 @@ let private cooMapInner (coo: CoordinateList<'a>) (op: UnaryOp<'a, 'b>) : Coordi
 
             f ri cj v |> Option.iter (fun value -> buf.Add((ri, cj, value))))
 
-        Matrix.createCOO coo.nrows coo.ncols (buf.ToArray())
+        ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
 
 let private mergeBinary (a1: COOEntry<'a>[]) (a2: COOEntry<'b>[]) (op: BinaryOp<'a, 'b, 'c>) : COOEntry<'c>[] =
     let buf = ResizeArray<COOEntry<'c>>(a1.Length + a2.Length)
@@ -185,10 +183,10 @@ let private mergeBinary (a1: COOEntry<'a>[]) (a2: COOEntry<'b>[]) (op: BinaryOp<
     buf.ToArray()
 
 let private cooMap2Inner
-    (coo1: CoordinateList<'a>)
-    (coo2: CoordinateList<'b>)
+    (coo1: ArrayCOO<'a>)
+    (coo2: ArrayCOO<'b>)
     (op: BinaryOp<'a, 'b, 'c>)
-    : Result<CoordinateList<'c>, Error> =
+    : Result<ArrayCOO<'c>, Error> =
     if uint64 coo1.nrows <> uint64 coo2.nrows || uint64 coo1.ncols <> uint64 coo2.ncols then
         Error Error.InconsistentSizeOfArguments
     else
@@ -270,53 +268,53 @@ let private cooMap2Inner
                 buf.ToArray()
             | _ -> mergeBinary coo1.list coo2.list op
 
-        Matrix.createCOO nrows ncols result |> Ok
+        ArrayCOO.Create(nrows, ncols, result) |> Ok
 
-let cooMap (coo: CoordinateList<'a>) f = cooMapInner coo (UnaryOp.AllCells f)
+let cooMap (coo: ArrayCOO<'a>) f = cooMapInner coo (UnaryOp.AllCells f)
 
-let cooMapValues (coo: CoordinateList<'a>) f = cooMapInner coo (UnaryOp.ValuesOnly f)
+let cooMapValues (coo: ArrayCOO<'a>) f = cooMapInner coo (UnaryOp.ValuesOnly f)
 
-let cooMapi (coo: CoordinateList<'a>) f =
+let cooMapi (coo: ArrayCOO<'a>) f =
     cooMapInner coo (UnaryOp.AllCellsIndexed f)
 
-let cooMapiValues (coo: CoordinateList<'a>) f =
+let cooMapiValues (coo: ArrayCOO<'a>) f =
     cooMapInner coo (UnaryOp.ValuesOnlyIndexed f)
 
-let cooMap2 (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2 (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AllCells f)
 
-let cooMap2Values (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2Values (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.ValuesOnly f)
 
-let cooMap2AllCells (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2AllCells (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AllCells f)
 
-let cooMap2AtLeastOne (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2AtLeastOne (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AtLeastOneValue f)
 
-let cooMap2LeftValues (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2LeftValues (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.LeftValuesOnly f)
 
-let cooMap2i (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2i (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AllCellsIndexed f)
 
-let cooMap2iValues (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2iValues (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.ValuesOnlyIndexed f)
 
-let cooMap2iAllCells (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2iAllCells (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AllCellsIndexed f)
 
-let cooMap2iAtLeastOne (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2iAtLeastOne (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.AtLeastOneValueIndexed f)
 
-let cooMap2iLeftValues (coo1: CoordinateList<'a>) (coo2: CoordinateList<'b>) f =
+let cooMap2iLeftValues (coo1: ArrayCOO<'a>) (coo2: ArrayCOO<'b>) f =
     cooMap2Inner coo1 coo2 (BinaryOp.LeftValuesOnlyIndexed f)
 
 let mxmcoo
     (op_add: 'c option -> 'c option -> 'c option)
     (op_mult: 'a option -> 'b option -> 'c option)
-    (m1: CoordinateList<'a>)
-    (m2: CoordinateList<'b>)
+    (m1: ArrayCOO<'a>)
+    (m2: ArrayCOO<'b>)
     =
     if uint64 m1.ncols <> uint64 m2.nrows then
         Error Error.InconsistentSizeOfArguments
@@ -369,7 +367,7 @@ let mxmcoo
                 | Some value -> result.Add((ri, cj, value))
                 | None -> ())
 
-            Matrix.createCOO m1.nrows m2.ncols (result.ToArray())
+            ArrayCOO.Create(m1.nrows, m2.ncols, result.ToArray())
 
         if canOptimize then
             let rowStarts2 = ResizeArray<uint64<rowindex>>()
@@ -479,7 +477,7 @@ let mxmcoo
 
                     q <- qq
 
-                Matrix.createCOO m1.nrows m2.ncols (result.ToArray()) |> Ok
+                ArrayCOO.Create(m1.nrows, m2.ncols, result.ToArray()) |> Ok
             else
                 generalResult () |> Ok
         else

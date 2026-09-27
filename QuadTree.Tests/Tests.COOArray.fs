@@ -30,7 +30,7 @@ let private keysAscending (entries: COOEntry<'v> list) =
 [<Fact>]
 let ``cooGet existing value`` () =
     let coo =
-        CoordinateList(
+        ArrayCOO(
             4UL<nrows>,
             4UL<ncols>,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -45,7 +45,7 @@ let ``cooGet existing value`` () =
 [<Fact>]
 let ``cooGet missing value`` () =
     let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let actual = cooGet (coo, 2UL<rowindex>, 2UL<colindex>)
 
@@ -53,8 +53,7 @@ let ``cooGet missing value`` () =
 
 [<Fact>]
 let ``cooGet out of bounds`` () =
-    let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+    let coo = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
 
     Assert.Throws<System.ArgumentOutOfRangeException>(fun () -> cooGet (coo, 5UL<rowindex>, 5UL<colindex>) |> ignore)
 
@@ -63,14 +62,10 @@ let ``cooGet out of bounds`` () =
 [<Fact>]
 let ``cooUpdate replaces existing`` () =
     let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let expected =
-        CoordinateList(
-            4UL<nrows>,
-            4UL<ncols>,
-            [ (0UL<rowindex>, 0UL<colindex>, 99); (1UL<rowindex>, 1UL<colindex>, 2) ]
-        )
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 99); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let actual = cooUpdate (coo, 0UL<rowindex>, 0UL<colindex>, 99)
 
@@ -79,10 +74,10 @@ let ``cooUpdate replaces existing`` () =
 [<Fact>]
 let ``cooUpdate inserts new in middle`` () =
     let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 2) ])
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             4UL<nrows>,
             4UL<ncols>,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -96,15 +91,10 @@ let ``cooUpdate inserts new in middle`` () =
 
 [<Fact>]
 let ``cooUpdate inserts at end`` () =
-    let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+    let coo = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
 
     let expected =
-        CoordinateList(
-            4UL<nrows>,
-            4UL<ncols>,
-            [ (0UL<rowindex>, 0UL<colindex>, 1); (3UL<rowindex>, 3UL<colindex>, 20) ]
-        )
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (3UL<rowindex>, 3UL<colindex>, 20) ])
 
     let actual = cooUpdate (coo, 3UL<rowindex>, 3UL<colindex>, 20)
 
@@ -112,8 +102,7 @@ let ``cooUpdate inserts at end`` () =
 
 [<Fact>]
 let ``cooUpdate out of bounds`` () =
-    let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+    let coo = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
 
     Assert.Throws<System.ArgumentOutOfRangeException>(fun () ->
         cooUpdate (coo, 5UL<rowindex>, 5UL<colindex>, 99) |> ignore)
@@ -132,12 +121,12 @@ let ``cooMap doubles values`` () =
           (1UL<rowindex>, 1UL<colindex>, 4) ]
         |> List.sort
 
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f v = v |> Option.map (fun v -> v * 2)
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 0UL<colindex>, 2)
@@ -161,7 +150,7 @@ let ``cooMap filters None results`` () =
           (1UL<rowindex>, 0UL<colindex>, 3)
           (1UL<rowindex>, 1UL<colindex>, 4) ]
 
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f v =
         v
@@ -171,7 +160,7 @@ let ``cooMap filters None results`` () =
             | _ -> Some(v * 10))
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 1UL<colindex>, 20)
@@ -190,7 +179,7 @@ let ``cooMap fills missing cells (general form)`` () =
 
     let data = [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 5) ]
 
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f v = Some(defaultArg v 0)
 
@@ -207,10 +196,10 @@ let ``cooMap fills missing cells (general form)`` () =
 
 [<Fact>]
 let ``cooMap zero-size matrix`` () =
-    let coo = CoordinateList(0UL<nrows>, 0UL<ncols>, [])
+    let coo = ArrayCOO(0UL<nrows>, 0UL<ncols>, [])
     let f v = v |> Option.map (fun v -> v * 2)
     let actual = cooMap coo f
-    let expected = CoordinateList(0UL<nrows>, 0UL<ncols>, [])
+    let expected = ArrayCOO(0UL<nrows>, 0UL<ncols>, [])
     Assert.Equal(expected, actual)
 
 // === cooMap2 tests ===
@@ -240,7 +229,7 @@ let ``cooMap2 addition`` () =
         | _ -> None
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 3UL<colindex>, 10)
@@ -250,8 +239,8 @@ let ``cooMap2 addition`` () =
             |> List.sort
         )
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
 
     let actual = cooMap2 c1 c2 f
 
@@ -274,7 +263,7 @@ let ``cooMap2 with mismatched positions`` () =
         | _ -> None
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 0UL<colindex>, 101)
@@ -283,8 +272,8 @@ let ``cooMap2 with mismatched positions`` () =
               (3UL<rowindex>, 3UL<colindex>, 230) ]
         )
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
 
     let actual = cooMap2 c1 c2 f
 
@@ -307,7 +296,7 @@ let ``cooMap2 dense filters None from existing entries`` () =
         | None, None -> Some 0
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 1UL<colindex>, 0)
@@ -327,8 +316,8 @@ let ``cooMap2 dense filters None from existing entries`` () =
               (3UL<rowindex>, 3UL<colindex>, 0) ]
         )
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
 
     let actual = cooMap2 c1 c2 f
 
@@ -347,13 +336,13 @@ let ``cooMapi position-dependent values`` () =
           (2UL<rowindex>, 3UL<colindex>, 3) ]
         |> List.sort
 
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f i j v =
         v |> Option.map (fun v -> v + (int (uint64 i)))
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -375,13 +364,13 @@ let ``cooMapi filters None results`` () =
           (0UL<rowindex>, 1UL<colindex>, 5)
           (1UL<rowindex>, 0UL<colindex>, 3) ]
 
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f _i _j v =
         v |> Option.bind (fun v -> if v > 2 then Some(v * 10) else None)
 
     let expected =
-        CoordinateList(nrows, ncols, [ (0UL<rowindex>, 1UL<colindex>, 50); (1UL<rowindex>, 0UL<colindex>, 30) ])
+        ArrayCOO(nrows, ncols, [ (0UL<rowindex>, 1UL<colindex>, 50); (1UL<rowindex>, 0UL<colindex>, 30) ])
 
     let actual = cooMapi coo f
 
@@ -389,10 +378,10 @@ let ``cooMapi filters None results`` () =
 
 [<Fact>]
 let ``cooMapi empty input`` () =
-    let coo = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+    let coo = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
     let f _i _j v = v |> Option.map (fun v -> v * 2)
     let actual = cooMapi coo f
-    let expected = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+    let expected = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
     Assert.Equal(expected, actual)
 
 [<Fact>]
@@ -401,7 +390,7 @@ let ``cooMapi fills missing cells (general form)`` () =
     let ncols = 3UL<ncols>
 
     let data = [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 5) ]
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f _i _j v = Some(defaultArg v 0)
 
@@ -422,7 +411,7 @@ let ``cooMapi position-dependent fill of missing cells`` () =
     let ncols = 2UL<ncols>
 
     let data = [ (0UL<rowindex>, 0UL<colindex>, 7) ]
-    let coo = CoordinateList(nrows, ncols, data)
+    let coo = ArrayCOO(nrows, ncols, data)
 
     let f i j v =
         match v with
@@ -441,10 +430,10 @@ let ``cooMapi position-dependent fill of missing cells`` () =
 
 [<Fact>]
 let ``cooMapi zero-size matrix`` () =
-    let coo = CoordinateList(0UL<nrows>, 0UL<ncols>, [])
+    let coo = ArrayCOO(0UL<nrows>, 0UL<ncols>, [])
     let f _i _j v = v |> Option.map (fun v -> v * 2)
     let actual = cooMapi coo f
-    let expected = CoordinateList(0UL<nrows>, 0UL<ncols>, [])
+    let expected = ArrayCOO(0UL<nrows>, 0UL<ncols>, [])
     Assert.Equal(expected, actual)
 
 // === cooMap2i tests ===
@@ -465,10 +454,10 @@ let ``cooMap2i position-dependent addition`` () =
         | _ -> None
 
     let expected =
-        CoordinateList(nrows, ncols, [ (0UL<rowindex>, 0UL<colindex>, 11); (2UL<rowindex>, 2UL<colindex>, 35) ])
+        ArrayCOO(nrows, ncols, [ (0UL<rowindex>, 0UL<colindex>, 11); (2UL<rowindex>, 2UL<colindex>, 35) ])
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
     let actual = cooMap2i c1 c2 f
 
     Assert.Equal(Ok expected, actual)
@@ -489,7 +478,7 @@ let ``cooMap2i mismatched positions with index`` () =
         | _ -> None
 
     let expected =
-        CoordinateList(
+        ArrayCOO(
             nrows,
             ncols,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -498,8 +487,8 @@ let ``cooMap2i mismatched positions with index`` () =
               (3UL<rowindex>, 3UL<colindex>, 33) ]
         )
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
     let actual = cooMap2i c1 c2 f
 
     Assert.Equal(Ok expected, actual)
@@ -518,21 +507,21 @@ let ``cooMap2i filters None results`` () =
         | Some a, Some b -> Some(a + b)
         | _ -> None
 
-    let expected = CoordinateList(nrows, ncols, [ (0UL<rowindex>, 0UL<colindex>, 3) ])
+    let expected = ArrayCOO(nrows, ncols, [ (0UL<rowindex>, 0UL<colindex>, 3) ])
 
-    let c1 = CoordinateList(nrows, ncols, d1)
-    let c2 = CoordinateList(nrows, ncols, d2)
+    let c1 = ArrayCOO(nrows, ncols, d1)
+    let c2 = ArrayCOO(nrows, ncols, d2)
     let actual = cooMap2i c1 c2 f
 
     Assert.Equal(Ok expected, actual)
 
 [<Fact>]
 let ``cooMap2i empty inputs`` () =
-    let c1 = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
-    let c2 = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+    let c1 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
+    let c2 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
     let f _i _j x y = None
     let actual = cooMap2i c1 c2 f
-    let expected = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
+    let expected = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
     Assert.Equal(Ok expected, actual)
 
 // === mxmcoo tests ===
@@ -545,7 +534,7 @@ let ``Sparse mxmcoo`` () =
               1UL<rowindex>, 1UL<colindex>, 2
               2UL<rowindex>, 2UL<colindex>, 3 ]
 
-        CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        ArrayCOO(3UL<nrows>, 3UL<ncols>, d)
 
     let m2 =
         let d =
@@ -553,7 +542,7 @@ let ``Sparse mxmcoo`` () =
               1UL<rowindex>, 1UL<colindex>, 2
               2UL<rowindex>, 2UL<colindex>, 1 ]
 
-        CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        ArrayCOO(3UL<nrows>, 3UL<ncols>, d)
 
     let expected =
         let d =
@@ -561,7 +550,7 @@ let ``Sparse mxmcoo`` () =
               1UL<rowindex>, 1UL<colindex>, 4
               2UL<rowindex>, 2UL<colindex>, 3 ]
 
-        CoordinateList(3UL<nrows>, 3UL<ncols>, d)
+        ArrayCOO(3UL<nrows>, 3UL<ncols>, d)
 
     match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
@@ -578,7 +567,7 @@ let ``Shrinking mxmcoo`` () =
               0UL<rowindex>, 2UL<colindex>, 2
               1UL<rowindex>, 1UL<colindex>, 3 ]
 
-        CoordinateList(2UL<nrows>, 3UL<ncols>, d)
+        ArrayCOO(2UL<nrows>, 3UL<ncols>, d)
 
     let m2 =
         let d =
@@ -586,7 +575,7 @@ let ``Shrinking mxmcoo`` () =
               1UL<rowindex>, 0UL<colindex>, 5
               2UL<rowindex>, 0UL<colindex>, 6 ]
 
-        CoordinateList(3UL<nrows>, 2UL<ncols>, d)
+        ArrayCOO(3UL<nrows>, 2UL<ncols>, d)
 
     let expected =
         let d =
@@ -594,7 +583,7 @@ let ``Shrinking mxmcoo`` () =
               0UL<rowindex>, 1UL<colindex>, 4
               1UL<rowindex>, 0UL<colindex>, 15 ]
 
-        CoordinateList(2UL<nrows>, 2UL<ncols>, d)
+        ArrayCOO(2UL<nrows>, 2UL<ncols>, d)
 
     match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
@@ -623,12 +612,12 @@ let ``mxmcoo with non-absorbing op_mult`` () =
     let m1 =
         let d = [ 0UL<rowindex>, 0UL<colindex>, 1; 0UL<rowindex>, 1UL<colindex>, 2 ]
 
-        CoordinateList(1UL<nrows>, 2UL<ncols>, d)
+        ArrayCOO(1UL<nrows>, 2UL<ncols>, d)
 
     let m2 =
         let d = [ 0UL<rowindex>, 0UL<colindex>, 3 ]
 
-        CoordinateList(2UL<nrows>, 1UL<ncols>, d)
+        ArrayCOO(2UL<nrows>, 1UL<ncols>, d)
 
     match COOArray.mxmcoo op_add op_mult m1 m2 with
     | Ok actual ->
@@ -737,7 +726,7 @@ let ``mxmcoo with non-absorbing op_mult list`` () =
 [<Fact>]
 let ``mxmcoo collapses products of one cell (array and list)`` () =
     let m1 =
-        CoordinateList(
+        ArrayCOO(
             2UL<nrows>,
             2UL<ncols>,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -746,7 +735,7 @@ let ``mxmcoo collapses products of one cell (array and list)`` () =
         )
 
     let m2 =
-        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 0UL<colindex>, 5) ])
+        ArrayCOO(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 4); (1UL<rowindex>, 0UL<colindex>, 5) ])
 
     let expected =
         [ (0UL<rowindex>, 0UL<colindex>, 14); (1UL<rowindex>, 0UL<colindex>, 15) ]
@@ -766,7 +755,7 @@ let ``mxmcoo collapses products of one cell (array and list)`` () =
 [<Fact>]
 let ``mxmcoo result stays sorted when k has multiple hits`` () =
     let m1 =
-        CoordinateList(
+        ArrayCOO(
             3UL<nrows>,
             3UL<ncols>,
             [ (0UL<rowindex>, 0UL<colindex>, 1)
@@ -777,7 +766,7 @@ let ``mxmcoo result stays sorted when k has multiple hits`` () =
         )
 
     let m2 =
-        CoordinateList(
+        ArrayCOO(
             3UL<nrows>,
             3UL<ncols>,
             [ (0UL<rowindex>, 0UL<colindex>, 4)
@@ -803,7 +792,7 @@ let ``mxmcoo result stays sorted when k has multiple hits`` () =
 [<Fact>]
 let ``cooMapValues applies only to stored values`` () =
     let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let actual = cooMapValues coo (fun v -> Some(v * 10))
 
@@ -816,8 +805,7 @@ let ``cooMapValues applies only to stored values`` () =
 
 [<Fact>]
 let ``cooMapiValues applies indexed only to stored values`` () =
-    let coo =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 5) ])
+    let coo = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 5) ])
 
     let actual =
         cooMapiValues coo (fun i j v -> Some(v + int (uint64 i) + int (uint64 j)))
@@ -834,10 +822,9 @@ let ``cooMapiValues applies indexed only to stored values`` () =
 [<Fact>]
 let ``cooMap2Values applies only where both present`` () =
     let c1 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
-    let c2 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+    let c2 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
 
     match cooMap2Values c1 c2 (fun a b -> Some(a + b)) with
     | Ok actual ->
@@ -852,10 +839,9 @@ let ``cooMap2Values applies only where both present`` () =
 [<Fact>]
 let ``cooMap2AllCells equals cooMap2`` () =
     let c1 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
-    let c2 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+    let c2 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
 
     let f a b =
         match a, b with
@@ -867,14 +853,10 @@ let ``cooMap2AllCells equals cooMap2`` () =
 [<Fact>]
 let ``cooMap2AtLeastOne distinguishes both left right`` () =
     let c1 =
-        CoordinateList(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let c2 =
-        CoordinateList(
-            3UL<nrows>,
-            3UL<ncols>,
-            [ (0UL<rowindex>, 0UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 30) ]
-        )
+        ArrayCOO(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 30) ])
 
     let f =
         function
@@ -905,10 +887,9 @@ let ``cooMap2AtLeastOne distinguishes both left right`` () =
 [<Fact>]
 let ``cooMap2LeftValues applies where left present`` () =
     let c1 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
-    let c2 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+    let c2 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
 
     match cooMap2LeftValues c1 c2 (fun a b -> Some(a + (defaultArg b 0))) with
     | Ok actual ->
@@ -927,8 +908,8 @@ let ``cooMap2LeftValues applies where left present`` () =
 
 [<Fact>]
 let ``cooMap2 sizes mismatch`` () =
-    let c1 = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
-    let c2 = CoordinateList(2UL<nrows>, 2UL<ncols>, [])
+    let c1 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
+    let c2 = ArrayCOO(2UL<nrows>, 2UL<ncols>, [])
     let f a b = None
 
     Assert.Equal(Error Error.InconsistentSizeOfArguments, cooMap2 c1 c2 f)
@@ -937,15 +918,10 @@ let ``cooMap2 sizes mismatch`` () =
 
 [<Fact>]
 let ``cooMap2iValues applies indexed where both present`` () =
-    let c1 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
+    let c1 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
 
     let c2 =
-        CoordinateList(
-            4UL<nrows>,
-            4UL<ncols>,
-            [ (1UL<rowindex>, 1UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 20) ]
-        )
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 20) ])
 
     let f i j a b =
         Some(a + b + int (uint64 i) + int (uint64 j))
@@ -963,10 +939,9 @@ let ``cooMap2iValues applies indexed where both present`` () =
 [<Fact>]
 let ``cooMap2iAllCells equals cooMap2i`` () =
     let c1 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+        ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
 
-    let c2 =
-        CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+    let c2 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
 
     let f i j a b =
         match a, b with
@@ -977,15 +952,10 @@ let ``cooMap2iAllCells equals cooMap2i`` () =
 
 [<Fact>]
 let ``cooMap2iAtLeastOne passes indices and side`` () =
-    let c1 =
-        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+    let c1 = ArrayCOO(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
 
     let c2 =
-        CoordinateList(
-            2UL<nrows>,
-            2UL<ncols>,
-            [ (0UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 20) ]
-        )
+        ArrayCOO(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 20) ])
 
     let f i j =
         function
@@ -1010,11 +980,9 @@ let ``cooMap2iAtLeastOne passes indices and side`` () =
 
 [<Fact>]
 let ``cooMap2iLeftValues applies indexed where left present`` () =
-    let c1 =
-        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
+    let c1 = ArrayCOO(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
 
-    let c2 =
-        CoordinateList(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10) ])
+    let c2 = ArrayCOO(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10) ])
 
     let f i j a b =
         Some(a + (defaultArg b 0) + int (uint64 i) * 10 + int (uint64 j))
@@ -1031,8 +999,8 @@ let ``cooMap2iLeftValues applies indexed where left present`` () =
 
 [<Fact>]
 let ``cooMap2i sizes mismatch`` () =
-    let c1 = CoordinateList(4UL<nrows>, 4UL<ncols>, [])
-    let c2 = CoordinateList(2UL<nrows>, 2UL<ncols>, [])
+    let c1 = ArrayCOO(4UL<nrows>, 4UL<ncols>, [])
+    let c2 = ArrayCOO(2UL<nrows>, 2UL<ncols>, [])
     let f _i _j a b = None
 
     Assert.Equal(Error Error.InconsistentSizeOfArguments, cooMap2i c1 c2 f)

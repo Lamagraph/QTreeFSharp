@@ -17,11 +17,11 @@ type ListCOO<'value> =
           ncols = _ncols
           entries = _entries }
 
-let fromArray (coo: CoordinateList<'a>) : ListCOO<'a> =
+let fromArray (coo: ArrayCOO<'a>) : ListCOO<'a> =
     ListCOO<'a>(coo.nrows, coo.ncols, Array.toList coo.list)
 
-let toArray (coo: ListCOO<'a>) : CoordinateList<'a> =
-    Matrix.createCOO coo.nrows coo.ncols (Array.ofList coo.entries)
+let toArray (coo: ListCOO<'a>) : ArrayCOO<'a> =
+    ArrayCOO.Create(coo.nrows, coo.ncols, Array.ofList coo.entries)
 
 let cooGet (coo: ListCOO<'a>, rowindex: uint64<rowindex>, colindex: uint64<colindex>) : Result<option<'a>, Error> =
     if uint64 rowindex >= uint64 coo.nrows then

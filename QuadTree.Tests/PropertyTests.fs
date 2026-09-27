@@ -57,6 +57,7 @@ type InputArbs =
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``get at every cell agrees between QuadTree and COOArray`` (inp: Input) =
     let coo = toCoo inp
+    let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
     let qt = fromCoordinateList coo
     let nrows = int (uint64 coo.nrows)
     let ncols = int (uint64 coo.ncols)
@@ -66,38 +67,41 @@ let ``get at every cell agrees between QuadTree and COOArray`` (inp: Input) =
         let ri = uint64 r * 1UL<rowindex>
         let ci = uint64 c * 1UL<colindex>
 
-        Matrix.get qt ri ci = cooGet (coo, ri, ci))
+        Matrix.get qt ri ci = cooGet (cooA, ri, ci))
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``toCoordinateList (fromCoordinateList coo) preserves every value`` (inp: Input) =
     let coo = toCoo inp
     let back = toCoordinateList (fromCoordinateList coo)
+    let backA = ArrayCOO(back.nrows, back.ncols, back.list)
 
     back.nrows = coo.nrows
     && back.ncols = coo.ncols
-    && Array.length back.list = Array.length coo.list
-    && coo.list |> Array.forall (fun (r, c, v) -> cooGet (back, r, c) = Ok(Some v))
+    && List.length back.list = List.length coo.list
+    && coo.list |> List.forall (fun (r, c, v) -> cooGet (backA, r, c) = Ok(Some v))
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``cooUpdate writes a value and adjusts the length`` (inp: Input) =
     let coo = toCoo inp
+    let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
     let nrows = int (uint64 coo.nrows)
     let ncols = int (uint64 coo.ncols)
     let r = abs inp.Rows % nrows
     let c = abs inp.Cols % ncols
     let ri = uint64 r * 1UL<rowindex>
     let ci = uint64 c * 1UL<colindex>
-    let wasPresent = coo.list |> Array.exists (fun (i, j, _) -> i = ri && j = ci)
+    let wasPresent = cooA.list |> Array.exists (fun (i, j, _) -> i = ri && j = ci)
 
-    match cooUpdate (coo, ri, ci, 777) with
+    match cooUpdate (cooA, ri, ci, 777) with
     | Ok updated ->
         cooGet (updated, ri, ci) = Ok(Some 777)
-        && Array.length updated.list = Array.length coo.list + (if wasPresent then 0 else 1)
+        && Array.length updated.list = Array.length cooA.list + (if wasPresent then 0 else 1)
     | Error _ -> false
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``set and cooUpdate agree on the written cell`` (inp: Input) =
     let coo = toCoo inp
+    let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
     let qt = fromCoordinateList coo
     let nrows = int (uint64 coo.nrows)
     let ncols = int (uint64 coo.ncols)
@@ -106,36 +110,38 @@ let ``set and cooUpdate agree on the written cell`` (inp: Input) =
     let ri = uint64 r * 1UL<rowindex>
     let ci = uint64 c * 1UL<colindex>
 
-    match cooUpdate (coo, ri, ci, 42), Matrix.set qt ri ci 42 with
+    match cooUpdate (cooA, ri, ci, 42), Matrix.set qt ri ci 42 with
     | Ok updatedCoo, Ok updatedQt -> cooGet (updatedCoo, ri, ci) = Matrix.get updatedQt ri ci
     | _ -> false
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``cooMapValues maps every stored value once`` (inp: Input) =
     let coo = toCoo inp
-    let mapped = cooMapValues coo (fun v -> Some(v + 1))
+    let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
+    let mapped = cooMapValues cooA (fun v -> Some(v + 1))
 
-    Array.length mapped.list = Array.length coo.list
-    && coo.list
+    Array.length mapped.list = Array.length cooA.list
+    && cooA.list
        |> Array.forall (fun (r, c, v) -> cooGet (mapped, r, c) = Ok(Some(v + 1)))
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
 let ``out-of-bounds access raises ArgumentOutOfRangeException`` (inp: Input) =
     let coo = toCoo inp
+    let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
     let qt = fromCoordinateList coo
     let nrows = uint64 coo.nrows * 1UL<rowindex>
     let ncols = uint64 coo.ncols * 1UL<colindex>
 
     let cooGetThrows =
         try
-            cooGet (coo, nrows, 0UL<colindex>) |> ignore
+            cooGet (cooA, nrows, 0UL<colindex>) |> ignore
             false
         with :? ArgumentOutOfRangeException ->
             true
 
     let cooUpdateThrows =
         try
-            cooUpdate (coo, nrows, 0UL<colindex>, 1) |> ignore
+            cooUpdate (cooA, nrows, 0UL<colindex>, 1) |> ignore
             false
         with :? ArgumentOutOfRangeException ->
             true
@@ -218,9 +224,10 @@ let ``mxmcoo agrees with naive multiplication, array matches list, keys are sort
     let ncolsB = uint64 (max 1 b.Cols)
     let m1 = cooWithDims nrowsA k a
     let m2 = cooWithDims k ncolsB b
+    let m1A = ArrayCOO(m1.nrows, m1.ncols, m1.list)
+    let m2A = ArrayCOO(m2.nrows, m2.ncols, m2.list)
 
-    let expected =
-        naiveMxm nrowsA k ncolsB (Array.toList m1.list) (Array.toList m2.list)
+    let expected = naiveMxm nrowsA k ncolsB m1.list m2.list
 
     let sortedUnique entries =
         entries
@@ -229,7 +236,7 @@ let ``mxmcoo agrees with naive multiplication, array matches list, keys are sort
         |> List.forall (fun ((i1, j1), (i2, j2)) -> i1 < i2 || (i1 = i2 && j1 < j2))
 
     match
-        COOArray.mxmcoo opAdd opMul m1 m2, COOList.mxmcoo opAdd opMul (COOList.fromArray m1) (COOList.fromArray m2)
+        COOArray.mxmcoo opAdd opMul m1A m2A, COOList.mxmcoo opAdd opMul (COOList.fromArray m1A) (COOList.fromArray m2A)
     with
     | Ok arr, Ok lst ->
         let arrEntries = Array.toList arr.list
