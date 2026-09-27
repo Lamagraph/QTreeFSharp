@@ -13,6 +13,11 @@ type Input =
       Cols: int
       Cells: (int * int * int) list }
 
+let private fromCoordinateListUnchecked (lst: CoordinateList<'a>) =
+    match Matrix.fromCoordinateList lst with
+    | Ok m -> m
+    | Error e -> failwith e
+
 let private toCoo (inp: Input) : CoordinateList<int> =
     let nrows = max 1 inp.Rows
     let ncols = max 1 inp.Cols
@@ -58,7 +63,7 @@ type InputArbs =
 let ``get at every cell agrees between QuadTree and COOArray`` (inp: Input) =
     let coo = toCoo inp
     let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
-    let qt = fromCoordinateList coo
+    let qt = fromCoordinateListUnchecked coo
     let nrows = int (uint64 coo.nrows)
     let ncols = int (uint64 coo.ncols)
 
@@ -70,9 +75,9 @@ let ``get at every cell agrees between QuadTree and COOArray`` (inp: Input) =
         Matrix.get qt ri ci = cooGet (cooA, ri, ci))
 
 [<Property(Arbitrary = [| typeof<InputArbs> |])>]
-let ``toCoordinateList (fromCoordinateList coo) preserves every value`` (inp: Input) =
+let ``toCoordinateList (fromCoordinateListUnchecked coo) preserves every value`` (inp: Input) =
     let coo = toCoo inp
-    let back = toCoordinateList (fromCoordinateList coo)
+    let back = toCoordinateList (fromCoordinateListUnchecked coo)
     let backA = ArrayCOO(back.nrows, back.ncols, back.list)
 
     back.nrows = coo.nrows
@@ -102,7 +107,7 @@ let ``cooUpdate writes a value and adjusts the length`` (inp: Input) =
 let ``set and cooUpdate agree on the written cell`` (inp: Input) =
     let coo = toCoo inp
     let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
-    let qt = fromCoordinateList coo
+    let qt = fromCoordinateListUnchecked coo
     let nrows = int (uint64 coo.nrows)
     let ncols = int (uint64 coo.ncols)
     let r = abs inp.Rows % nrows
@@ -128,7 +133,7 @@ let ``cooMapValues maps every stored value once`` (inp: Input) =
 let ``out-of-bounds access raises ArgumentOutOfRangeException`` (inp: Input) =
     let coo = toCoo inp
     let cooA = ArrayCOO(coo.nrows, coo.ncols, coo.list)
-    let qt = fromCoordinateList coo
+    let qt = fromCoordinateListUnchecked coo
     let nrows = uint64 coo.nrows * 1UL<rowindex>
     let ncols = uint64 coo.ncols * 1UL<colindex>
 

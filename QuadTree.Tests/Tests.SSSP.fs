@@ -71,34 +71,32 @@ let ``Simple SSSP.`` () =
 *)
 [<Fact>]
 let ``SSSP with recalculation`` () =
-    let graph =
-        let clist =
-            Matrix.CoordinateList(
-                5UL<nrows>,
-                5UL<ncols>,
-                [ 0UL<rowindex>, 1UL<colindex>, 1.0
-                  1UL<rowindex>, 2UL<colindex>, 1.0
-                  2UL<rowindex>, 3UL<colindex>, 1.0
-                  2UL<rowindex>, 4UL<colindex>, 4.0
-                  3UL<rowindex>, 4UL<colindex>, 2.0
-                  0UL<rowindex>, 3UL<colindex>, 6.0 ]
-            )
+    let clist =
+        Matrix.CoordinateList(
+            5UL<nrows>,
+            5UL<ncols>,
+            [ 0UL<rowindex>, 1UL<colindex>, 1.0
+              1UL<rowindex>, 2UL<colindex>, 1.0
+              2UL<rowindex>, 3UL<colindex>, 1.0
+              2UL<rowindex>, 4UL<colindex>, 4.0
+              3UL<rowindex>, 4UL<colindex>, 2.0
+              0UL<rowindex>, 3UL<colindex>, 6.0 ]
+        )
 
-        Matrix.fromCoordinateList clist
+    let expectedClist =
+        Vector.CoordinateList(
+            5UL<dataLength>,
+            [ (0UL<index>, 0.0)
+              (1UL<index>, 1.0)
+              (2UL<index>, 2.0)
+              (3UL<index>, 3.0)
+              (4UL<index>, 5.0) ]
+        )
 
-    let expected =
-        let clist =
-            Vector.CoordinateList(
-                5UL<dataLength>,
-                [ (0UL<index>, 0.0)
-                  (1UL<index>, 1.0)
-                  (2UL<index>, 2.0)
-                  (3UL<index>, 3.0)
-                  (4UL<index>, 5.0) ]
-            )
-
-        Ok(Vector.fromCoordinateList clist)
-
-    let actual = Graph.SSSP.sssp graph 0UL
-
-    Assert.Equal(expected, actual)
+    match Matrix.fromCoordinateList clist, Vector.fromCoordinateList expectedClist with
+    | Ok graph, Ok expected ->
+        match Graph.SSSP.sssp graph 0UL with
+        | Ok actual -> Assert.Equal(expected, actual)
+        | Error msg -> Assert.Fail $"SSSP failed: {msg}"
+    | Error msg, _ -> Assert.Fail $"Matrix creation failed: {msg}"
+    | _, Error msg -> Assert.Fail $"Vector creation failed: {msg}"

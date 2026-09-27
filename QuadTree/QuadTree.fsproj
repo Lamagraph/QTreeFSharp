@@ -16,6 +16,7 @@
         <Compile Include="TriangleCount.fs"/>
         <Compile Include="SSSP.fs"/>
         <Compile Include="Boruvka.fs"/>
+        <Compile Include="Maggs_Plotkin_MST.fs"/>
     </ItemGroup>
 
 </Project>

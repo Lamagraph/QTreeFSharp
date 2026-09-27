@@ -16,7 +16,13 @@ type Error =
 
 let mst (graph: Matrix.SparseMatrix<_>) =
 
-    let op_mult (i, x) (row, col, w) = Some(w, row)
+    // Canonical representation of an undirected edge:
+    // (weight, min endpoint, max endpoint).
+    // This is important for deterministic tie-breaking.
+    let op_mult (_i, _x) (row, col, w) =
+        let r = uint64 row
+        let c = uint64 col
+        Some(w, min r c, max r c)
 
     let op_min x y =
         match x, y with
@@ -35,17 +41,20 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
     let treeFilter edges index =
         fun i j g ->
-            let i = uint64 i * 1UL<Vector.index>
-            let j = uint64 j * 1UL<Vector.index>
+            let row = uint64 i
+            let col = uint64 j
+
+            let i = row * 1UL<Vector.index>
+
             let edge = Vector.unsafeGet edges i
             let idx = Vector.unsafeGet index i
 
-            let result =
-                match edge, idx with
-                | Some(w, dst), Some idxVal -> g = w && idxVal = i && uint64 dst = uint64 j
-                | _ -> false
+            let u = min row col
+            let v = max row col
 
-            result
+            match edge, idx with
+            | Some(w, edgeU, edgeV), Some idxVal -> g = w && idxVal = i && edgeU = u && edgeV = v
+            | _ -> false
 
     let graphFilter parent =
         fun i j ->
@@ -66,44 +75,39 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
         if graph.nvals > 0UL<nvals> then
 
-            // Cheapest outgoing edge for each vertex
-            // For each vertex j, find the smallest weight edge (i, j, w)
-            // such that i and j are in different components.
-            // Because graph contains only cross‑component edges,
-            // we simply take the min over all neighbors.
+            // Cheapest outgoing edge for each vertex.
+            // Edge is stored canonically as (weight, minEndpoint, maxEndpoint).
             resultM {
                 let! edges =
                     LinearAlgebra.vxmi_values op_min op_mult parent graph
                     |> Result.mapError EdgesCalculationProblem
 
-                // Per‑component cheapest edge
-                // For each component, keep the smallest edges among its vertices.
+                // Per-component cheapest edge.
                 let! cedges =
                     Vector.scatter (Vector.empty length) edges parent op_min
                     |> Result.mapError CEdgesCalculationProblem
 
-                // Propagate component's cheapest edge to all its vertices
-                // Each vertex gets its component's edge
+                // Propagate component's cheapest edge to all vertices.
                 let t = Vector.gather cedges parent
 
-                // Identify a representative vertex for each component
-                // For each vertex, if its own edge is the component's cheapest, mark it.
+                // Identify representative vertices whose own edge equals
+                // the cheapest edge of their component.
                 let! indexInner =
                     Vector.map2i t edges (fun i t e ->
                         match (t, e) with
                         | Some v1, Some v2 when v1 = v2 -> Some i
                         | _ -> None)
                     |> Result.mapError IndexInnerCalculationProblem
-                // Among the marked vertices in a component, keep the smallest index.
+
+                // Among marked vertices in a component, keep the smallest index.
                 let! index =
                     Vector.scatter (Vector.empty length) indexInner parent op_min
                     |> Result.mapError IndexCalculationProblem
-                // now each vertex knows its component's representative
+
+                // Now each vertex knows its component's representative.
                 let index = Vector.gather index parent
 
-                // Add selected edges to the MST tree
-                // An edge (i, j, w) is added if vertex i is the representative for its component
-                // and (i, j, w) is the cheapest edge of that component.
+                // Add selected edges to the MST tree.
                 let treeFilter = treeFilter edges index
 
                 let! tree =
@@ -114,24 +118,36 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                         | _ -> None)
                     |> Result.mapError TreeSelectionProblem
 
-                // Compute new parent assignments (merge components)
-                // For each component representative i with cheapest edge (w, j), we want to merge
-                // the component of i with the component of j. Choose the smaller root.
+                // Compute new parent assignments.
+                // For selected canonical edge (u, v), if current selected
+                // representative is one endpoint, merge it with the other endpoint.
                 let! data_for_update_parent =
                     Vector.map2i edges index (fun i e idx ->
                         match e, idx with
-                        | Some(v, j), Some(_i) when _i = i ->
-                            let j = uint64 j * 1UL<Vector.index>
-                            let parent_i = Vector.unsafeGet parent i
-                            let parent_j = Vector.unsafeGet parent j
+                        | Some(_w, u, v), Some selected when selected = i ->
+                            let current = uint64 i
 
-                            match parent_i, parent_j with
-                            | Some p_i, Some p_j -> if p_i < p_j then Some(j, p_i) else Some(i, p_j)
-                            | x -> failwithf "Unreachable: %A" x
+                            let other =
+                                if current = u then Some v
+                                elif current = v then Some u
+                                else None
+
+                            match other with
+                            | Some otherVertex ->
+                                let j = otherVertex * 1UL<Vector.index>
+                                let parent_i = Vector.unsafeGet parent i
+                                let parent_j = Vector.unsafeGet parent j
+
+                                match parent_i, parent_j with
+                                | Some p_i, Some p_j -> if p_i < p_j then Some(j, p_i) else Some(i, p_j)
+                                | _ -> None
+
+                            | None -> None
+
                         | _ -> None)
                     |> Result.mapError DataForUpgradeParentCalculationProblem
 
-                // Apply the updates
+                // Apply direct parent updates.
                 let! initial_parent_update =
                     Vector.foldValues
                         data_for_update_parent
@@ -151,11 +167,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     Vector.scatter parent initial_parent_update parent op_min
                     |> Result.mapError ScatterProblem
 
-                // Then ensure that all vertices in a merged component point to the same root.
-                // This is done by a fixpoint (path compression) that repeatedly gathers parents.
+                // Path compression.
                 let parent = fixPoint parent
 
-                // Filter the graph to keep only edges between different components
+                // Keep only edges between different components.
                 let graphFilter = graphFilter parent
                 let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 

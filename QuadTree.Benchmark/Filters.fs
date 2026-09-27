@@ -9,6 +9,17 @@ type Benchmark() =
     let mutable denseVec = Unchecked.defaultof<Vector.SparseVector<int>>
     let mutable sparseVec = Unchecked.defaultof<Vector.SparseVector<int>>
     let mutable denseMat = Unchecked.defaultof<Matrix.SparseMatrix<int>>
+
+    let cooVec (lst: Vector.CoordinateList<'a>) : Vector.SparseVector<'a> =
+        match Vector.fromCoordinateList lst with
+        | Ok v -> v
+        | Error e -> failwith e
+
+    let cooMat (lst: Matrix.CoordinateList<'a>) : Matrix.SparseMatrix<'a> =
+        match Matrix.fromCoordinateList lst with
+        | Ok m -> m
+        | Error e -> failwith e
+
     let mutable sparseMat = Unchecked.defaultof<Matrix.SparseMatrix<int>>
 
     [<Params(64, 256, 1024)>]
@@ -19,13 +30,12 @@ type Benchmark() =
         let denseData =
             [ for i in 0UL .. uint64 this.N - 1UL -> (i * 1UL<Vector.index>, int i % 100) ]
 
-        denseVec <- Vector.fromCoordinateList (Vector.CoordinateList(uint64 this.N * 1UL<Vector.dataLength>, denseData))
+        denseVec <- cooVec (Vector.CoordinateList(uint64 this.N * 1UL<Vector.dataLength>, denseData))
 
         let sparseData =
             [ for i in 0UL .. 10UL .. uint64 this.N - 1UL -> (i * 1UL<Vector.index>, int i % 100) ]
 
-        sparseVec <-
-            Vector.fromCoordinateList (Vector.CoordinateList(uint64 this.N * 1UL<Vector.dataLength>, sparseData))
+        sparseVec <- cooVec (Vector.CoordinateList(uint64 this.N * 1UL<Vector.dataLength>, sparseData))
 
         let denseMatData =
             [ for r in 0UL .. uint64 this.N - 1UL do
@@ -33,7 +43,7 @@ type Benchmark() =
                       (r * 1UL<Matrix.rowindex>, c * 1UL<Matrix.colindex>, int (r + c) % 100) ]
 
         denseMat <-
-            Matrix.fromCoordinateList (
+            cooMat (
                 Matrix.CoordinateList(
                     uint64 this.N * 1UL<Matrix.nrows>,
                     uint64 this.N * 1UL<Matrix.ncols>,
@@ -47,7 +57,7 @@ type Benchmark() =
                       (r * 1UL<Matrix.rowindex>, c * 1UL<Matrix.colindex>, int (r + c) % 100) ]
 
         sparseMat <-
-            Matrix.fromCoordinateList (
+            cooMat (
                 Matrix.CoordinateList(
                     uint64 this.N * 1UL<Matrix.nrows>,
                     uint64 this.N * 1UL<Matrix.ncols>,
