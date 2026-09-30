@@ -20,6 +20,8 @@
     <Compile Include="Kronecker.fs"/>
     <Compile Include="MatrixSliceAlign.fs"/>
     <Compile Include="VectorSliceAlign.fs"/>
+    <Compile Include="FormatBenchmarks.fs"/>
+    <Compile Include="RealMatrixBenchmark.fs"/>
     <Compile Include="Main.fs"/>
   </ItemGroup>
 

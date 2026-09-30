@@ -15,7 +15,10 @@ let main argv =
                typeof<QuadTree.Benchmarks.MatrixSlice.Benchmark>
                typeof<QuadTree.Benchmarks.Kronecker.Benchmark>
                typeof<QuadTree.Benchmarks.MatrixSliceAlign.Benchmark>
-               typeof<QuadTree.Benchmarks.VectorSliceAlign.Benchmark> |]
+               typeof<QuadTree.Benchmarks.VectorSliceAlign.Benchmark>
+               typeof<QuadTree.Benchmarks.Formats.FormatBenchmark>
+               typeof<QuadTree.Benchmarks.Formats.DenseFormatBenchmark>
+               typeof<QuadTree.Benchmarks.RealMatrices.RealMatrixBenchmark> |]
 
     benchmarks.Run argv |> ignore
     0

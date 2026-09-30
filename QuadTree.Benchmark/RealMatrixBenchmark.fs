@@ -10,11 +10,11 @@ open COOArray
 [<MemoryDiagnoser>]
 type RealMatrixBenchmark() =
 
-    let mutable cooMatrix = Unchecked.defaultof<CoordinateList<double>>
+    let mutable cooMatrix = Unchecked.defaultof<ArrayCOO<double>>
     let mutable qtMatrix = Unchecked.defaultof<SparseMatrix<double>>
     let mutable listMatrix = Unchecked.defaultof<COOList.ListCOO<double>>
 
-    let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
+    let mutable resultCoo = Unchecked.defaultof<ArrayCOO<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
     let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
     let mutable resultCooVal = 0.0
@@ -54,11 +54,14 @@ type RealMatrixBenchmark() =
                 File.ReadLines(mtxPath)
                 |> Seq.exists (fun s -> s.StartsWith "%%MatrixMarket" && s.Contains "symmetric")
 
-            let (coo, qt) = QuadTree.Benchmarks.Utils.readMtxRaw mtxPath (not isSymmetric)
+            let (coo, qtResult) = QuadTree.Benchmarks.Utils.readMtxRaw mtxPath (not isSymmetric)
 
-            cooMatrix <- coo
-            qtMatrix <- qt
-            listMatrix <- COOList.fromArray coo
+            cooMatrix <- new ArrayCOO<double>(coo.nrows, coo.ncols, coo.list)
+            qtMatrix <-
+                match qtResult with
+                | Ok m -> m
+                | Error e -> failwithf "fromCoordinateList failed: %s" e
+            listMatrix <- COOList.fromArray cooMatrix
 
             let nnz = coo.list.Length
             let dim = max (uint64 coo.nrows) (uint64 coo.ncols)

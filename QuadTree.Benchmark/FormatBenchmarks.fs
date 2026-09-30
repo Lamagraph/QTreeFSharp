@@ -8,8 +8,8 @@ open COOArray
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 type FormatBenchmark() =
 
-    let mutable cooMatrix1 = Unchecked.defaultof<CoordinateList<double>>
-    let mutable cooMatrix2 = Unchecked.defaultof<CoordinateList<double>>
+    let mutable cooMatrix1 = Unchecked.defaultof<ArrayCOO<double>>
+    let mutable cooMatrix2 = Unchecked.defaultof<ArrayCOO<double>>
     let mutable qtMatrix1 = Unchecked.defaultof<SparseMatrix<double>>
     let mutable qtMatrix2 = Unchecked.defaultof<SparseMatrix<double>>
     let mutable listMatrix1 = Unchecked.defaultof<COOList.ListCOO<double>>
@@ -18,7 +18,7 @@ type FormatBenchmark() =
     let mutable lookupCoords: (uint64<rowindex> * uint64<colindex>) array = [||]
     let mutable lookupValues: double array = [||]
 
-    let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
+    let mutable resultCoo = Unchecked.defaultof<ArrayCOO<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
     let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
     let mutable resultCooVal = 0.0
@@ -57,10 +57,18 @@ type FormatBenchmark() =
         let entries1 = generateEntries targetNnz
         let entries2 = generateEntries targetNnz
 
-        cooMatrix1 <- CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries1)
-        cooMatrix2 <- CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
-        qtMatrix1 <- fromCoordinateList cooMatrix1
-        qtMatrix2 <- fromCoordinateList cooMatrix2
+        let coo1 = CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries1)
+        let coo2 = CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
+        cooMatrix1 <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries1)
+        cooMatrix2 <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
+        qtMatrix1 <-
+            match fromCoordinateList coo1 with
+            | Ok m -> m
+            | Error e -> failwithf "fromCoordinateList: %s" e
+        qtMatrix2 <-
+            match fromCoordinateList coo2 with
+            | Ok m -> m
+            | Error e -> failwithf "fromCoordinateList: %s" e
         listMatrix1 <- COOList.fromArray cooMatrix1
         listMatrix2 <- COOList.fromArray cooMatrix2
 
@@ -314,11 +322,11 @@ type FormatBenchmark() =
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 type DenseFormatBenchmark() =
 
-    let mutable cooMatrix = Unchecked.defaultof<CoordinateList<double>>
+    let mutable cooMatrix = Unchecked.defaultof<ArrayCOO<double>>
     let mutable qtMatrix = Unchecked.defaultof<SparseMatrix<double>>
     let mutable listMatrix = Unchecked.defaultof<COOList.ListCOO<double>>
 
-    let mutable resultCoo = Unchecked.defaultof<CoordinateList<double>>
+    let mutable resultCoo = Unchecked.defaultof<ArrayCOO<double>>
     let mutable resultQt = Unchecked.defaultof<SparseMatrix<double>>
     let mutable resultList = Unchecked.defaultof<COOList.ListCOO<double>>
     let mutable resultCooVal = 0.0
@@ -338,8 +346,12 @@ type DenseFormatBenchmark() =
                   for j in 0UL .. size - 1UL do
                       (i * 1UL<rowindex>, j * 1UL<colindex>, rng.NextDouble() * 100.0) ]
 
-        cooMatrix <- CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries)
-        qtMatrix <- fromCoordinateList cooMatrix
+        let coo = CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries)
+        cooMatrix <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries)
+        qtMatrix <-
+            match fromCoordinateList coo with
+            | Ok m -> m
+            | Error e -> failwithf "fromCoordinateList: %s" e
         listMatrix <- COOList.fromArray cooMatrix
 
     [<Benchmark(Baseline = true, Description = "Dense_COO_map")>]

@@ -43,6 +43,7 @@ let readMtxRaw path directed =
         Matrix.CoordinateList(nrows * 1UL<Matrix.nrows>, ncols * 1UL<Matrix.ncols>, lst)
 
     let qt = Matrix.fromCoordinateList coo
+
     (coo, qt)
 
 let readMtx path directed = readMtxRaw path directed |> snd
