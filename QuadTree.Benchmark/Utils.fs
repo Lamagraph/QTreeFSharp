@@ -47,3 +47,15 @@ let readMtxRaw path directed =
     (coo, qt)
 
 let readMtx path directed = readMtxRaw path directed |> snd
+
+let op_add (x: double option) (y: double option) =
+    match x, y with
+    | Some a, Some b -> Some(a + b)
+    | Some a, None
+    | None, Some a -> Some a
+    | None, None -> None
+
+let op_mult (x: double option) (y: double option) =
+    match x, y with
+    | Some a, Some b -> Some(a * b)
+    | _ -> None

@@ -5,6 +5,7 @@ open System.IO
 open BenchmarkDotNet.Attributes
 open Matrix
 open COOArray
+open QuadTree.Benchmarks.Utils
 
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 [<MemoryDiagnoser>]
@@ -120,18 +121,6 @@ type RealMatrixBenchmark() =
     [<Benchmark(Description = "Real_COOLIST_mxm")>]
     member this.CooListMxm() =
         if not skip && doMxm then
-            let op_add x y =
-                match x, y with
-                | Some a, Some b -> Some(a + b)
-                | Some a, None
-                | None, Some a -> Some a
-                | None, None -> None
-
-            let op_mult x y =
-                match x, y with
-                | Some a, Some b -> Some(a * b)
-                | _ -> None
-
             match COOList.mxmcoo op_add op_mult listMatrix listMatrix with
             | Ok result -> resultList <- result
             | Error _ -> failwith "COOList mxmcoo failed"
@@ -223,18 +212,6 @@ type RealMatrixBenchmark() =
     [<Benchmark(Description = "Real_COO_mxm")>]
     member this.CooMxm() =
         if not skip && doMxm then
-            let op_add x y =
-                match x, y with
-                | Some a, Some b -> Some(a + b)
-                | Some a, None
-                | None, Some a -> Some a
-                | None, None -> None
-
-            let op_mult x y =
-                match x, y with
-                | Some a, Some b -> Some(a * b)
-                | _ -> None
-
             match mxmcoo op_add op_mult cooMatrix cooMatrix with
             | Ok result -> resultCoo <- result
             | Error _ -> failwith "mxmcoo failed"
@@ -242,18 +219,6 @@ type RealMatrixBenchmark() =
     [<Benchmark(Description = "Real_QT_mxm")>]
     member this.QtMxm() =
         if not skip && doMxm then
-            let op_add x y =
-                match x, y with
-                | Some a, Some b -> Some(a + b)
-                | Some a, None
-                | None, Some a -> Some a
-                | None, None -> None
-
-            let op_mult x y =
-                match x, y with
-                | Some a, Some b -> Some(a * b)
-                | _ -> None
-
             match LinearAlgebra.mxm op_add op_mult qtMatrix qtMatrix with
             | Ok result -> resultQt <- result
             | Error _ -> failwith "mxm failed"

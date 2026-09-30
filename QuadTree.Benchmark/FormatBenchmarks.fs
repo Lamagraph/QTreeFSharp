@@ -4,6 +4,7 @@ open System
 open BenchmarkDotNet.Attributes
 open Matrix
 open COOArray
+open QuadTree.Benchmarks.Utils
 
 [<Config(typeof<QuadTree.Benchmarks.Utils.MyConfig>)>]
 type FormatBenchmark() =
@@ -95,12 +96,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "COO_map2")>]
     member this.CooMap2() =
         match
-            cooMap2 cooMatrix1 cooMatrix2 (fun a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y)
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            cooMap2 cooMatrix1 cooMatrix2 op_add
         with
         | Ok r -> resultCoo <- r
         | Error _ -> ()
@@ -108,12 +104,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "QT_map2")>]
     member this.QtMap2() =
         match
-            map2 qtMatrix1 qtMatrix2 (fun a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y)
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            map2 qtMatrix1 qtMatrix2 op_add
         with
         | Ok r -> resultQt <- r
         | Error _ -> ()
@@ -157,12 +148,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "COOLIST_map2")>]
     member this.CooListMap2() =
         match
-            COOList.cooMap2 listMatrix1 listMatrix2 (fun a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y)
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            COOList.cooMap2 listMatrix1 listMatrix2 op_add
         with
         | Ok r -> resultList <- r
         | Error _ -> ()
@@ -182,18 +168,6 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COOLIST_mxm")>]
     member this.CooListMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match COOList.mxmcoo op_add op_mult listMatrix1 listMatrix1 with
         | Ok result -> resultList <- result
         | Error _ -> failwith "COOList mxmcoo failed"
@@ -284,36 +258,12 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COO_mxm")>]
     member this.CooMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match mxmcoo op_add op_mult cooMatrix1 cooMatrix1 with
         | Ok result -> resultCoo <- result
         | Error _ -> failwith "mxmcoo failed"
 
     [<Benchmark(Description = "QT_mxm")>]
     member this.QtMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match LinearAlgebra.mxm op_add op_mult qtMatrix1 qtMatrix1 with
         | Ok result -> resultQt <- result
         | Error _ -> failwith "mxm failed"
@@ -381,18 +331,6 @@ type DenseFormatBenchmark() =
 
     [<Benchmark(Description = "Dense_COOLIST_mxm")>]
     member this.DenseCooListMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match COOList.mxmcoo op_add op_mult listMatrix listMatrix with
         | Ok result -> resultList <- result
         | Error _ -> failwith "COOList mxmcoo failed"
@@ -474,36 +412,12 @@ type DenseFormatBenchmark() =
 
     [<Benchmark(Description = "Dense_COO_mxm")>]
     member this.DenseCooMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match mxmcoo op_add op_mult cooMatrix cooMatrix with
         | Ok result -> resultCoo <- result
         | Error _ -> failwith "mxmcoo failed"
 
     [<Benchmark(Description = "Dense_QT_mxm")>]
     member this.DenseQtMxm() =
-        let op_add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | None, None -> None
-
-        let op_mult x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | _ -> None
-
         match LinearAlgebra.mxm op_add op_mult qtMatrix qtMatrix with
         | Ok result -> resultQt <- result
         | Error _ -> failwith "mxm failed"
