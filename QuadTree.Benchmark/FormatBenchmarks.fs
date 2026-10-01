@@ -62,14 +62,17 @@ type FormatBenchmark() =
         let coo2 = CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
         cooMatrix1 <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries1)
         cooMatrix2 <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries2)
+
         qtMatrix1 <-
             match fromCoordinateList coo1 with
             | Ok m -> m
             | Error e -> failwithf "fromCoordinateList: %s" e
+
         qtMatrix2 <-
             match fromCoordinateList coo2 with
             | Ok m -> m
             | Error e -> failwithf "fromCoordinateList: %s" e
+
         listMatrix1 <- COOList.fromArray cooMatrix1
         listMatrix2 <- COOList.fromArray cooMatrix2
 
@@ -95,17 +98,13 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COO_map2")>]
     member this.CooMap2() =
-        match
-            cooMap2 cooMatrix1 cooMatrix2 op_add
-        with
+        match cooMap2 cooMatrix1 cooMatrix2 op_add with
         | Ok r -> resultCoo <- r
         | Error _ -> ()
 
     [<Benchmark(Description = "QT_map2")>]
     member this.QtMap2() =
-        match
-            map2 qtMatrix1 qtMatrix2 op_add
-        with
+        match map2 qtMatrix1 qtMatrix2 op_add with
         | Ok r -> resultQt <- r
         | Error _ -> ()
 
@@ -147,9 +146,7 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COOLIST_map2")>]
     member this.CooListMap2() =
-        match
-            COOList.cooMap2 listMatrix1 listMatrix2 op_add
-        with
+        match COOList.cooMap2 listMatrix1 listMatrix2 op_add with
         | Ok r -> resultList <- r
         | Error _ -> ()
 
@@ -298,10 +295,12 @@ type DenseFormatBenchmark() =
 
         let coo = CoordinateList(size * 1UL<nrows>, size * 1UL<ncols>, entries)
         cooMatrix <- new ArrayCOO<double>(size * 1UL<nrows>, size * 1UL<ncols>, entries)
+
         qtMatrix <-
             match fromCoordinateList coo with
             | Ok m -> m
             | Error e -> failwithf "fromCoordinateList: %s" e
+
         listMatrix <- COOList.fromArray cooMatrix
 
     [<Benchmark(Baseline = true, Description = "Dense_COO_map")>]

@@ -58,10 +58,12 @@ type RealMatrixBenchmark() =
             let (coo, qtResult) = QuadTree.Benchmarks.Utils.readMtxRaw mtxPath (not isSymmetric)
 
             cooMatrix <- new ArrayCOO<double>(coo.nrows, coo.ncols, coo.list)
+
             qtMatrix <-
                 match qtResult with
                 | Ok m -> m
                 | Error e -> failwithf "fromCoordinateList failed: %s" e
+
             listMatrix <- COOList.fromArray cooMatrix
 
             let nnz = coo.list.Length
