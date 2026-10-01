@@ -47,7 +47,7 @@ To run only the AVLSet benchmarks, use the following command:
 - Traversed set is small — e.g. intersection at $A=100\,000$, $B=100$: ~3.8× faster than sequential (84 μs vs 318 μs).
 - Traversed set is large — e.g. difference at $A=100$, $B=10\,000$: ~41× slower than sequential (6.96 ms vs 168 μs).
 
-**3. Parallel.** The parallel implementation forks new tasks only while the current subtree's height is above a fixed threshold (10 in these benchmarks); below that it falls back to the sequential algorithm, which keeps the number of spawned tasks bounded regardless of set size. With 2 threads, union at $A=B=100\,000$ is ~1.39× faster than sequential (69.6 ms vs 96.9 ms), with essentially the same memory footprint (81.6 MB vs 80.7 MB), since parallel and sequential use the same split/join calls and no extra per-task buffers.
+**3. Parallel.** The parallel implementation forks new tasks only while the current subtree's height is above a fixed threshold (10 in these benchmarks); below that it falls back to the sequential algorithm, which keeps the number of spawned tasks bounded regardless of set size. With 2 threads: union at $A=B=100\,000$ is ~1.39× faster than sequential (69.6 ms vs 96.9 ms), with essentially the same memory footprint (81.6 MB vs 80.7 MB); symmetrical difference at $A=B=100\,000$ is ~1.41× faster than sequential (70.2 ms vs 99 ms), also with essentially the same memory footprint (79.7 MB vs 78.8 MB), since parallel and sequential use the same split/join calls and no extra per-task buffers.
  
 #### Table
  
@@ -64,3 +64,6 @@ To run only the AVLSet benchmarks, use the following command:
 | --- | --- | --- | --- | --- | --- |
 | **Union** (100k × 100k) | Sequential | 96.89 ms | 80.72 MB | 1.00 (base) | |
 | **Union** (100k × 100k) | Parallel (2 threads) | **69.63 ms** | **81.61 MB** | **~1.39× speedup** | |
+| --- | --- | --- | --- | --- | --- |
+| **Symmetrical Difference** (100k × 100k) | Sequential | 99.04 ms | 78.83 MB | 1.00 (base) | |
+| **Symmetrical Difference** (100k × 100k) | Parallel (2 threads) | **70.16 ms** | **79.7 MB** | **~1.41× speedup** | |
