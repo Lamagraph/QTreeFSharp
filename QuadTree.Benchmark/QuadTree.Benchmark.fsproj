@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AVLSet.fs"/>
     <Compile Include="Utils.fs"/>
     <Compile Include="Filters.fs"/>
     <Compile Include="Exists.fs"/>
