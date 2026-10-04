@@ -59,3 +59,15 @@ let op_mult (x: double option) (y: double option) =
     match x, y with
     | Some a, Some b -> Some(a * b)
     | _ -> None
+
+let generateMatrix (size: int) (density: float) (rng: System.Random) =
+    let coords =
+        [ for i in 0 .. size - 1 do
+              for j in 0 .. size - 1 do
+                  if rng.NextDouble() < density then
+                      let value = double (rng.Next(1, 4))
+                      yield (uint64 i * 1UL<Matrix.rowindex>, uint64 j * 1UL<Matrix.colindex>, value) ]
+
+    match Matrix.fromCoordinateList (Matrix.CoordinateList(uint64 size * 1UL<Matrix.nrows>, uint64 size * 1UL<Matrix.ncols>, coords)) with
+    | Ok m -> m
+    | Error msg -> failwithf "Failed to create matrix: %s" msg
