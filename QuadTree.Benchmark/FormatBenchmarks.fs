@@ -269,5 +269,3 @@ type FormatBenchmark() =
         match LinearAlgebra.mxm op_add op_mult qtMatrix1 qtMatrix1 with
         | Ok result -> resultQt <- result
         | Error _ -> failwith "mxm failed"
-
-
