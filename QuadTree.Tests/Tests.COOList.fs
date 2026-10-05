@@ -497,3 +497,220 @@ let ``cooMap2i empty inputs`` () =
 
 // === mxmcoo tests ===
 
+// === cooMapValues / cooMapiValues tests ===
+
+[<Fact>]
+let ``cooMapValues applies only to stored values`` () =
+    let coo =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let actual = cooMapValues coo (fun v -> Some(v * 10))
+
+    Assert.Equal(2, actual.entries.Length)
+
+    Assert.Equal(
+        List.tryFind (fun (i, j, _) -> i = 0UL<rowindex> && j = 0UL<colindex>) actual.entries,
+        Some(0UL<rowindex>, 0UL<colindex>, 10)
+    )
+
+[<Fact>]
+let ``cooMapiValues applies indexed only to stored values`` () =
+    let coo = ListCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 5) ])
+
+    let actual =
+        cooMapiValues coo (fun i j v -> Some(v + int (uint64 i) + int (uint64 j)))
+
+    Assert.Equal(1, actual.entries.Length)
+
+    Assert.Equal(
+        List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 2UL<colindex>) actual.entries,
+        Some(1UL<rowindex>, 2UL<colindex>, 8)
+    )
+
+// === cooMap2 variants tests ===
+
+[<Fact>]
+let ``cooMap2Values applies only where both present`` () =
+    let c1 =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 = ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    match cooMap2Values c1 c2 (fun a b -> Some(a + b)) with
+    | Ok actual ->
+        Assert.Equal(1, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 0UL<rowindex> && j = 0UL<colindex>) actual.entries,
+            Some(0UL<rowindex>, 0UL<colindex>, 11)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2AllCells equals cooMap2`` () =
+    let c1 =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 = ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    let f a b =
+        match a, b with
+        | Some x, Some y -> Some(x + y)
+        | _ -> None
+
+    Assert.Equal(cooMap2 c1 c2 f, cooMap2AllCells c1 c2 f)
+
+[<Fact>]
+let ``cooMap2AtLeastOne distinguishes both left right`` () =
+    let c1 =
+        ListCOO(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 =
+        ListCOO(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 30) ])
+
+    let f =
+        function
+        | AtLeastOne.Both(a, b) -> Some(a + b)
+        | AtLeastOne.Left a -> Some(a * 100)
+        | AtLeastOne.Right b -> Some(b * -1)
+
+    match cooMap2AtLeastOne c1 c2 f with
+    | Ok actual ->
+        Assert.Equal(3, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 0UL<rowindex> && j = 0UL<colindex>) actual.entries,
+            Some(0UL<rowindex>, 0UL<colindex>, 11)
+        )
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 1UL<colindex>) actual.entries,
+            Some(1UL<rowindex>, 1UL<colindex>, 200)
+        )
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 2UL<rowindex> && j = 2UL<colindex>) actual.entries,
+            Some(2UL<rowindex>, 2UL<colindex>, -30)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2LeftValues applies where left present`` () =
+    let c1 =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 = ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    match cooMap2LeftValues c1 c2 (fun a b -> Some(a + (defaultArg b 0))) with
+    | Ok actual ->
+        Assert.Equal(2, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 0UL<rowindex> && j = 0UL<colindex>) actual.entries,
+            Some(0UL<rowindex>, 0UL<colindex>, 11)
+        )
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 1UL<colindex>) actual.entries,
+            Some(1UL<rowindex>, 1UL<colindex>, 2)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2 sizes mismatch`` () =
+    let c1 = ListCOO(4UL<nrows>, 4UL<ncols>, [])
+    let c2 = ListCOO(2UL<nrows>, 2UL<ncols>, [])
+    let f a b = None
+
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, cooMap2 c1 c2 f)
+
+// === cooMap2i variants tests ===
+
+[<Fact>]
+let ``cooMap2iValues applies indexed where both present`` () =
+    let c1 = ListCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 20) ])
+
+    let f i j a b =
+        Some(a + b + int (uint64 i) + int (uint64 j))
+
+    match cooMap2iValues c1 c2 f with
+    | Ok actual ->
+        Assert.Equal(1, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 1UL<colindex>) actual.entries,
+            Some(1UL<rowindex>, 1UL<colindex>, 14)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2iAllCells equals cooMap2i`` () =
+    let c1 =
+        ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 = ListCOO(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    let f i j a b =
+        match a, b with
+        | Some x, Some y -> Some(x + y + int (uint64 i))
+        | _ -> None
+
+    Assert.Equal(cooMap2i c1 c2 f, cooMap2iAllCells c1 c2 f)
+
+[<Fact>]
+let ``cooMap2iAtLeastOne passes indices and side`` () =
+    let c1 = ListCOO(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ])
+
+    let c2 =
+        ListCOO(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 20) ])
+
+    let f i j =
+        function
+        | AtLeastOne.Both(a, b) -> Some(a + b + int (uint64 i) + int (uint64 j))
+        | AtLeastOne.Left a -> Some(a)
+        | AtLeastOne.Right b -> Some(b + int (uint64 i) * 100 + int (uint64 j))
+
+    match cooMap2iAtLeastOne c1 c2 f with
+    | Ok actual ->
+        Assert.Equal(2, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 0UL<rowindex> && j = 0UL<colindex>) actual.entries,
+            Some(0UL<rowindex>, 0UL<colindex>, 11)
+        )
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 1UL<colindex>) actual.entries,
+            Some(1UL<rowindex>, 1UL<colindex>, 121)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2iLeftValues applies indexed where left present`` () =
+    let c1 = ListCOO(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ])
+
+    let c2 = ListCOO(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10) ])
+
+    let f i j a b =
+        Some(a + (defaultArg b 0) + int (uint64 i) * 10 + int (uint64 j))
+
+    match cooMap2iLeftValues c1 c2 f with
+    | Ok actual ->
+        Assert.Equal(1, actual.entries.Length)
+
+        Assert.Equal(
+            List.tryFind (fun (i, j, _) -> i = 1UL<rowindex> && j = 1UL<colindex>) actual.entries,
+            Some(1UL<rowindex>, 1UL<colindex>, 23)
+        )
+    | Error e -> failwithf "unexpected error %A" e
+
+[<Fact>]
+let ``cooMap2i sizes mismatch`` () =
+    let c1 = ListCOO(4UL<nrows>, 4UL<ncols>, [])
+    let c2 = ListCOO(2UL<nrows>, 2UL<ncols>, [])
+    let f _i _j a b = None
+
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, cooMap2i c1 c2 f)
