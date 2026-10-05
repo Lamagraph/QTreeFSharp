@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,6 +10,7 @@
     <Compile Include="Tests.fs" />
     <Compile Include="Tests.Vector.fs" />
     <Compile Include="Tests.COOArray.fs" />
+    <Compile Include="Tests.COOListOperations.fs" />
     <Compile Include="Tests.Matrix.fs" />
     <Compile Include="PropertyTests.fs" />
     <Compile Include="Tests.LinearAlgebra.fs" />
