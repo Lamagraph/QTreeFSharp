@@ -15,6 +15,7 @@
     <Compile Include="Tests.TriangleCount.fs" />
     <Compile Include="Tests.SSSP.fs" />
     <Compile Include="Tests.MST.fs" />
+    <Compile Include="Tests.RedBlackSet.fs" />
   </ItemGroup>
 
   <ItemGroup>
