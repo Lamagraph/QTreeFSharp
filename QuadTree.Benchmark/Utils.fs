@@ -1,5 +1,7 @@
 module QuadTree.Benchmarks.Utils
 
+open OptionMonoid
+
 open System.IO
 open BenchmarkDotNet.Configs
 
@@ -48,17 +50,7 @@ let readMtxRaw path directed =
 
 let readMtx path directed = readMtxRaw path directed |> snd
 
-let op_add (x: double option) (y: double option) =
-    match x, y with
-    | Some a, Some b -> Some(a + b)
-    | Some a, None
-    | None, Some a -> Some a
-    | None, None -> None
 
-let op_mult (x: double option) (y: double option) =
-    match x, y with
-    | Some a, Some b -> Some(a * b)
-    | _ -> None
 
 let generateMatrix (size: int) (density: float) (rng: System.Random) =
     let coords =

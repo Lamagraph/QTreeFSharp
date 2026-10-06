@@ -1,5 +1,7 @@
 module COOArray.Tests
 
+open OptionMonoid
+
 open System
 open Xunit
 
@@ -146,17 +148,7 @@ module Formats =
             Result.map box (COOList.cooUpdate (unbox m, i, j, v))
 
 
-let op_add x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a + b)
-    | Some a, None
-    | None, Some a -> Some a
-    | _ -> None
 
-let op_mult x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a * b)
-    | _ -> None
 
 let private keysAscending (entries: COOEntry<'v> list) =
     entries

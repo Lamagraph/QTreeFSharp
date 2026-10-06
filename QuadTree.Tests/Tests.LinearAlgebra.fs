@@ -1,5 +1,7 @@
 module LinearAlgebra.Tests
 
+open OptionMonoid
+
 open System
 open Xunit
 
@@ -20,17 +22,7 @@ N,N,3,N
 6,6,14,10
 *)
 
-let op_add x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a + b)
-    | Some(a), _
-    | _, Some(a) -> Some(a)
-    | _ -> None
 
-let op_mult x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a * b)
-    | _ -> None
 
 
 let op_add_i x y =

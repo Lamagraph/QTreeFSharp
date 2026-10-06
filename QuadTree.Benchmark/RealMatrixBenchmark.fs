@@ -1,5 +1,6 @@
 namespace QuadTree.Benchmarks.RealMatrices
 
+open OptionMonoid
 open System
 open System.IO
 open BenchmarkDotNet.Attributes

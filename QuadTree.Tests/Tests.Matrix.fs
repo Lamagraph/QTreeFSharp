@@ -1,5 +1,7 @@
 module Matrix.Tests
 
+open OptionMonoid
+
 open System
 open Xunit
 
@@ -35,17 +37,7 @@ let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
 let leaf_d () = qtree.Leaf Dummy
 
-let op_add x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a + b)
-    | Some(a), _
-    | _, Some(a) -> Some(a)
-    | _ -> None
 
-let op_mult x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a * b)
-    | _ -> None
 (*
 N,1,1,N
 3,2,2,3

@@ -1,5 +1,6 @@
 namespace QuadTree.Benchmarks.Formats
 
+open OptionMonoid
 open System
 open BenchmarkDotNet.Attributes
 open Matrix
