@@ -754,12 +754,6 @@ let private assertBothFormats
         Assert.True(keysAscending actual.entries, "entries are not sorted ascending")
     | Error e -> failwith (e.ToString())
 
-let private absorbingAdd (x: int option) (y: int option) =
-    match (x, y) with
-    | Some a, Some b -> Some(a + b)
-    | Some a, _
-    | _, Some a -> Some a
-    | _ -> None
 
 let private absorbingMult (x: int option) (y: int option) =
     match (x, y) with
@@ -817,7 +811,7 @@ let ``Formats.mxmcoo isArray with non-absorbing op_mult`` (isArray: bool) =
     let m1 = [ 0UL<rowindex>, 0UL<colindex>, 1; 0UL<rowindex>, 1UL<colindex>, 2 ]
     let m2 = [ 0UL<rowindex>, 0UL<colindex>, 3 ]
     let expected = [ 0UL<rowindex>, 0UL<colindex>, 5 ]
-    assertBothFormats isArray absorbingAdd absorbingMult 1UL<nrows> 2UL<ncols> 2UL<nrows> 1UL<ncols> m1 m2 expected
+    assertBothFormats isArray op_add absorbingMult 1UL<nrows> 2UL<ncols> 2UL<nrows> 1UL<ncols> m1 m2 expected
 
 [<Theory>]
 [<InlineData(true)>]
