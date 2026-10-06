@@ -75,3 +75,33 @@ let generateMatrix (size: int) (density: float) (rng: System.Random) =
     with
     | Ok m -> m
     | Error msg -> failwithf "Failed to create matrix: %s" msg
+
+let inline sumLookups n (lookupCoords: (uint64<Matrix.rowindex> * uint64<Matrix.colindex>) array) getFunc =
+    let mutable acc = 0.0
+
+    for k = 0 to n - 1 do
+        let (i, j) = lookupCoords.[k]
+
+        match getFunc i j with
+        | Ok(Some v) -> acc <- acc + v
+        | _ -> ()
+
+    acc
+
+let inline updateLookups
+    n
+    (lookupCoords: (uint64<Matrix.rowindex> * uint64<Matrix.colindex>) array)
+    (lookupValues: double array)
+    initial_m
+    updateFunc
+    =
+    let mutable m = initial_m
+
+    for k = 0 to n - 1 do
+        let (i, j) = lookupCoords.[k]
+
+        match updateFunc m i j (lookupValues.[k] * 2.0) with
+        | Ok updated -> m <- updated
+        | _ -> ()
+
+    m

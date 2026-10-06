@@ -177,86 +177,42 @@ type FormatBenchmark() =
     [<Benchmark(Description = "COOLIST_get")>]
     member this.CooListGet() =
         let n = min lookupCoords.Length 1000
-        let mutable acc = 0.0
 
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match COOList.cooGet (listMatrix1, i, j) with
-            | Ok(Some v) -> acc <- acc + v
-            | _ -> ()
-
-        resultListVal <- acc
+        resultListVal <-
+            QuadTree.Benchmarks.Utils.sumLookups n lookupCoords (fun i j -> COOList.cooGet (listMatrix1, i, j))
 
     [<Benchmark(Description = "COOLIST_set")>]
     member this.CooListSet() =
-        let mutable m = listMatrix1
         let n = min lookupCoords.Length 1000
 
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match COOList.cooUpdate (m, i, j, lookupValues.[k] * 2.0) with
-            | Ok updated -> m <- updated
-            | _ -> ()
-
-        resultList <- m
+        resultList <-
+            QuadTree.Benchmarks.Utils.updateLookups n lookupCoords lookupValues listMatrix1 (fun m i j v ->
+                COOList.cooUpdate (m, i, j, v))
 
     [<Benchmark(Description = "COO_get")>]
     member this.CooGet() =
         let n = min lookupCoords.Length 1000
-        let mutable acc = 0.0
-
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match cooGet (cooMatrix1, i, j) with
-            | Ok(Some v) -> acc <- acc + v
-            | _ -> ()
-
-        resultCooVal <- acc
+        resultCooVal <- QuadTree.Benchmarks.Utils.sumLookups n lookupCoords (fun i j -> cooGet (cooMatrix1, i, j))
 
     [<Benchmark(Description = "QT_get")>]
     member this.QtGet() =
         let n = min lookupCoords.Length 1000
-        let mutable acc = 0.0
-
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match get qtMatrix1 i j with
-            | Ok(Some v) -> acc <- acc + v
-            | _ -> ()
-
-        resultQtVal <- acc
+        resultQtVal <- QuadTree.Benchmarks.Utils.sumLookups n lookupCoords (fun i j -> get qtMatrix1 i j)
 
     [<Benchmark(Description = "COO_set")>]
     member this.CooSet() =
         let n = min lookupCoords.Length 1000
-        let mutable m = cooMatrix1
 
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match cooUpdate (m, i, j, lookupValues.[k] * 2.0) with
-            | Ok updated -> m <- updated
-            | _ -> ()
-
-        resultCoo <- m
+        resultCoo <-
+            QuadTree.Benchmarks.Utils.updateLookups n lookupCoords lookupValues cooMatrix1 (fun m i j v ->
+                cooUpdate (m, i, j, v))
 
     [<Benchmark(Description = "QT_set")>]
     member this.QtSet() =
         let n = min lookupCoords.Length 1000
-        let mutable m = qtMatrix1
 
-        for k = 0 to n - 1 do
-            let (i, j) = lookupCoords.[k]
-
-            match set m i j (lookupValues.[k] * 2.0) with
-            | Ok updated -> m <- updated
-            | _ -> ()
-
-        resultQt <- m
+        resultQt <-
+            QuadTree.Benchmarks.Utils.updateLookups n lookupCoords lookupValues qtMatrix1 (fun m i j v -> set m i j v)
 
     [<Benchmark(Description = "COO_mxm")>]
     member this.CooMxm() =

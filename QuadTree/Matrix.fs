@@ -296,14 +296,23 @@ type UnaryOp<'a, 'b> =
     | AllCellsIndexed of (uint64<rowindex> -> uint64<colindex> -> Option<'a> -> Option<'b>)
 
 let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMatrix<'b> =
+    let leafResult size res =
+        let nvals =
+            if Option.isSome res then
+                (uint64 size) * (uint64 size) * 1UL<nvals>
+            else
+                0UL<nvals>
+
+        Leaf(UserValue res), nvals
+
     let rec inner
         (prow: uint64<rowindex>)
         (pcol: uint64<colindex>)
         (size: uint64<storageSize>)
         (tree: qtree<Option<'a>>)
         : qtree<Option<'b>> * uint64<nvals> =
-        match tree with
-        | Node(nw, ne, sw, se) ->
+
+        let splitQuads nw ne sw se =
             let halfSize = size / 2UL
 
             let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
@@ -313,69 +322,31 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
             let t2, nvals2 = inner neR neC halfSize ne
             let t3, nvals3 = inner swR swC halfSize sw
             let t4, nvals4 = inner seR seC halfSize se
-
             mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
+
+        match tree with
+        | Node(nw, ne, sw, se) -> splitQuads nw ne sw se
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
             match op with
             | UnaryOp.ValuesOnly f ->
                 match v with
-                | None -> Leaf(UserValue(None)), 0UL<nvals>
-                | Some v' ->
-                    let res = f v'
-
-                    let nvals =
-                        if res.IsSome then
-                            (uint64 size) * (uint64 size) * 1UL<nvals>
-                        else
-                            0UL<nvals>
-
-                    Leaf(UserValue(res)), nvals
+                | None -> Leaf(UserValue None), 0UL<nvals>
+                | Some v' -> leafResult size (f v')
+            | UnaryOp.AllCells f -> leafResult size (f v)
             | UnaryOp.ValuesOnlyIndexed f ->
                 match v with
-                | None -> Leaf(UserValue(None)), 0UL<nvals>
+                | None -> Leaf(UserValue None), 0UL<nvals>
                 | Some v' ->
                     if size = 1UL<storageSize> then
-                        let res = f prow pcol v'
-                        let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
-                        Leaf(UserValue(res)), nvals
+                        leafResult size (f prow pcol v')
                     else
-                        let halfSize = size / 2UL
-
-                        let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                            getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-                        let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
-                        let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
-                        let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
-                        let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
-                        mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
-            | UnaryOp.AllCells f ->
-                let res = f v
-
-                let nvals =
-                    if res.IsSome then
-                        (uint64 size) * (uint64 size) * 1UL<nvals>
-                    else
-                        0UL<nvals>
-
-                Leaf(UserValue(res)), nvals
+                        splitQuads tree tree tree tree
             | UnaryOp.AllCellsIndexed f ->
                 if size = 1UL<storageSize> then
-                    let res = f prow pcol v
-                    let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
-                    Leaf(UserValue(res)), nvals
+                    leafResult size (f prow pcol v)
                 else
-                    let halfSize = size / 2UL
-
-                    let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                        getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-                    let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
-                    let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
-                    let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
-                    let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
-                    mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
+                    splitQuads tree tree tree tree
 
     let storage, nvals =
         inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data

@@ -71,6 +71,18 @@ let cooUpdate
 
             Ok(ArrayCOO.Create(coo.nrows, coo.ncols, arr))
 
+let inline private readAt (list: COOEntry<'a>[]) (p: int ref) ri cj =
+    if p.Value < list.Length then
+        let (ei, ej, ev) = list.[p.Value]
+
+        if ei = ri && ej = cj then
+            p.Value <- p.Value + 1
+            Some ev
+        else
+            None
+    else
+        None
+
 let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b> =
     match op with
     | UnaryOp.ValuesOnly f ->
@@ -104,20 +116,10 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
             ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
         | Some fnone ->
             let buf = ResizeArray<COOEntry<'b>>()
-            let mutable ptr = 0
+            let ptr = ref 0
 
             iterCells coo.nrows coo.ncols (fun ri cj ->
-                let v =
-                    if ptr < coo.list.Length then
-                        let (ei, ej, ev) = coo.list.[ptr]
-
-                        if ei = ri && ej = cj then
-                            ptr <- ptr + 1
-                            Some ev
-                        else
-                            None
-                    else
-                        None
+                let v = readAt coo.list ptr ri cj
 
                 match v with
                 | Some value -> f (Some value)
@@ -127,20 +129,10 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
             ArrayCOO.Create(coo.nrows, coo.ncols, buf.ToArray())
     | UnaryOp.AllCellsIndexed f ->
         let buf = ResizeArray<COOEntry<'b>>()
-        let mutable ptr = 0
+        let ptr = ref 0
 
         iterCells coo.nrows coo.ncols (fun ri cj ->
-            let v =
-                if ptr < coo.list.Length then
-                    let (ei, ej, ev) = coo.list.[ptr]
-
-                    if ei = ri && ej = cj then
-                        ptr <- ptr + 1
-                        Some ev
-                    else
-                        None
-                else
-                    None
+            let v = readAt coo.list ptr ri cj
 
             f ri cj v |> Option.iter (fun value -> buf.Add((ri, cj, value))))
 
@@ -200,33 +192,13 @@ let private cooMap2Inner
                 | None -> mergeBinary coo1.list coo2.list op
                 | Some _ ->
                     let buf = ResizeArray<COOEntry<'c>>()
-                    let mutable p1 = 0
-                    let mutable p2 = 0
+                    let p1 = ref 0
+                    let p2 = ref 0
 
                     iterCells nrows ncols (fun ri cj ->
-                        let v1 =
-                            if p1 < coo1.list.Length then
-                                let (ei, ej, ev) = coo1.list.[p1]
+                        let v1 = readAt coo1.list p1 ri cj
 
-                                if ei = ri && ej = cj then
-                                    p1 <- p1 + 1
-                                    Some ev
-                                else
-                                    None
-                            else
-                                None
-
-                        let v2 =
-                            if p2 < coo2.list.Length then
-                                let (ei, ej, ev) = coo2.list.[p2]
-
-                                if ei = ri && ej = cj then
-                                    p2 <- p2 + 1
-                                    Some ev
-                                else
-                                    None
-                            else
-                                None
+                        let v2 = readAt coo2.list p2 ri cj
 
                         match f v1 v2 with
                         | Some value -> buf.Add((ri, cj, value))
@@ -235,33 +207,13 @@ let private cooMap2Inner
                     buf.ToArray()
             | BinaryOp.AllCellsIndexed f ->
                 let buf = ResizeArray<COOEntry<'c>>()
-                let mutable p1 = 0
-                let mutable p2 = 0
+                let p1 = ref 0
+                let p2 = ref 0
 
                 iterCells nrows ncols (fun ri cj ->
-                    let v1 =
-                        if p1 < coo1.list.Length then
-                            let (ei, ej, ev) = coo1.list.[p1]
+                    let v1 = readAt coo1.list p1 ri cj
 
-                            if ei = ri && ej = cj then
-                                p1 <- p1 + 1
-                                Some ev
-                            else
-                                None
-                        else
-                            None
-
-                    let v2 =
-                        if p2 < coo2.list.Length then
-                            let (ei, ej, ev) = coo2.list.[p2]
-
-                            if ei = ri && ej = cj then
-                                p2 <- p2 + 1
-                                Some ev
-                            else
-                                None
-                        else
-                            None
+                    let v2 = readAt coo2.list p2 ri cj
 
                     f ri cj v1 v2 |> Option.iter (fun value -> buf.Add((ri, cj, value))))
 

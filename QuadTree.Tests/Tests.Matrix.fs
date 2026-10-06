@@ -470,7 +470,7 @@ let ``Condensation of sparse`` () =
     | _ -> Assert.Fail()
 
 [<Fact>]
-let ``fold -> sum`` () =
+let ``fold -> op_add`` () =
     // 222D
     // 222D
     // 222D
@@ -599,7 +599,7 @@ let ``2x3 transposition`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
-let ``Fold sum`` () =
+let ``Fold op_add`` () =
     // 2N2D
     // N2ND
     // DDDD
@@ -1758,7 +1758,7 @@ let ``slice middle of dense matrix returns correct values`` () =
             Assert.Equal(1024UL<nvals>, sliced.nvals)
 
 [<Fact>]
-let ``reduceRows sum on square power of two matrix`` () =
+let ``reduceRows op_add on square power of two matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1772,14 +1772,8 @@ let ``reduceRows sum on square power of two matrix`` () =
     match Matrix.fromCoordinateList coo with
     | Result.Error msg -> Assert.Fail()
     | Result.Ok matrix ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let result = Matrix.reduceRows add matrix
+        let result = Matrix.reduceRows op_add matrix
 
         let vectorCoordinates = Vector.toCoordinateList result
 
@@ -1789,7 +1783,7 @@ let ``reduceRows sum on square power of two matrix`` () =
         Assert.Equal(expected, vectorCoordinates)
 
 [<Fact>]
-let ``reduceRows sum on square power of two matrix with empty row`` () =
+let ``reduceRows op_add on square power of two matrix with empty row`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1799,14 +1793,8 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows add m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (1UL<Vector.index>, 20) ]),
@@ -1815,7 +1803,7 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on square not power of two matrix`` () =
+let ``reduceRows op_add on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1831,14 +1819,8 @@ let ``reduceRows sum on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows add m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1850,7 +1832,7 @@ let ``reduceRows sum on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows mul on square not power of two matrix`` () =
+let ``reduceRows op_mult on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1866,14 +1848,8 @@ let ``reduceRows mul on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows mul m
+        let res = Matrix.reduceRows op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1885,7 +1861,7 @@ let ``reduceRows mul on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on rectangular matrix`` () =
+let ``reduceRows op_add on rectangular matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1899,14 +1875,8 @@ let ``reduceRows sum on rectangular matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows sum m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24) ]),
@@ -1915,34 +1885,22 @@ let ``reduceRows sum on rectangular matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on empty matrix`` () =
+let ``reduceRows op_add on empty matrix`` () =
     match Matrix.fromCoordinateList (CoordinateList(2UL<nrows>, 3UL<ncols>, [])) with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows sum m
+        let res = Matrix.reduceRows op_add m
         Assert.Equal(Vector.CoordinateList(2UL<Vector.dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows mul on single matrix`` () =
+let ``reduceRows op_mult on single matrix`` () =
     match
         Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ]))
     with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows mul m
+        let res = Matrix.reduceRows op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
@@ -1951,7 +1909,7 @@ let ``reduceRows mul on single matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square power of two matrix`` () =
+let ``reduceCols op_add on square power of two matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1964,14 +1922,8 @@ let ``reduceCols sum on square power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 29); (1UL<Vector.index>, 18) ]),
@@ -1980,7 +1932,7 @@ let ``reduceCols sum on square power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square power of two matrix with empty col`` () =
+let ``reduceCols op_add on square power of two matrix with empty col`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1990,14 +1942,8 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 20) ]),
@@ -2006,7 +1952,7 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square not power of two matrix`` () =
+let ``reduceCols op_add on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -2022,14 +1968,8 @@ let ``reduceCols sum on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -2041,7 +1981,7 @@ let ``reduceCols sum on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols mul on square not power of two matrix`` () =
+let ``reduceCols op_mult on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -2057,14 +1997,8 @@ let ``reduceCols mul on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols mul m
+        let res = Matrix.reduceCols op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -2076,7 +2010,7 @@ let ``reduceCols mul on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on rectangular matrix`` () =
+let ``reduceCols op_add on rectangular matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -2090,14 +2024,8 @@ let ``reduceCols sum on rectangular matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols sum m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -2109,34 +2037,22 @@ let ``reduceCols sum on rectangular matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on empty matrix`` () =
+let ``reduceCols op_add on empty matrix`` () =
     match Matrix.fromCoordinateList (CoordinateList(2UL<nrows>, 3UL<ncols>, [])) with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols sum m
+        let res = Matrix.reduceCols op_add m
         Assert.Equal(Vector.CoordinateList(3UL<Vector.dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols mul on single matrix`` () =
+let ``reduceCols op_mult on single matrix`` () =
     match
         Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ]))
     with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols mul m
+        let res = Matrix.reduceCols op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),

@@ -9,8 +9,7 @@
     <Compile Include="Tests.AVLSet.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Tests.Vector.fs" />
-    <Compile Include="Tests.COOArray.fs" />
-    <Compile Include="Tests.COOList.fs" />
+    <Compile Include="Tests.COOFormats.fs" />
     <Compile Include="Tests.Matrix.fs" />
     <Compile Include="PropertyTests.fs" />
     <Compile Include="Tests.LinearAlgebra.fs" />
