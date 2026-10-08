@@ -69,13 +69,6 @@ let cooUpdate
 
         Ok(ListCOO<'a>(coo.nrows, coo.ncols, List.rev acc))
 
-let inline private readAt (rest: COOEntry<'a> list ref) ri cj =
-    match rest.Value with
-    | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
-        rest.Value <- tail
-        Some ev
-    | _ -> None
-
 let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
     let result =
         match op with
@@ -91,7 +84,7 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                 coo.entries
                 |> List.choose (fun (i, j, v) -> f (Some v) |> Option.map (fun r -> (i, j, r)))
             | Some fnone ->
-                let rest = ref coo.entries
+                let mutable rest = coo.entries
 
                 [ for i in range (uint64 coo.nrows) do
                       let ri = i * 1UL<rowindex>
@@ -99,7 +92,12 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                       for j in range (uint64 coo.ncols) do
                           let cj = j * 1UL<colindex>
 
-                          let value = readAt rest ri cj
+                          let value =
+                              match rest with
+                              | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                  rest <- tail
+                                  Some ev
+                              | _ -> None
 
                           let res =
                               match value with
@@ -110,7 +108,7 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                           | Some value -> yield (ri, cj, value)
                           | None -> () ]
         | UnaryOp.AllCellsIndexed f ->
-            let rest = ref coo.entries
+            let mutable rest = coo.entries
 
             [ for i in range (uint64 coo.nrows) do
                   let ri = i * 1UL<rowindex>
@@ -118,7 +116,12 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                   for j in range (uint64 coo.ncols) do
                       let cj = j * 1UL<colindex>
 
-                      let value = readAt rest ri cj
+                      let value =
+                          match rest with
+                          | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                              rest <- tail
+                              Some ev
+                          | _ -> None
 
                       match f ri cj value with
                       | Some value -> yield (ri, cj, value)
@@ -176,8 +179,8 @@ let private cooMap2Inner
                 match f None None with
                 | None -> mergeBinary coo1.entries coo2.entries op
                 | Some _ ->
-                    let rest1 = ref coo1.entries
-                    let rest2 = ref coo2.entries
+                    let mutable rest1 = coo1.entries
+                    let mutable rest2 = coo2.entries
 
                     [ for i in range (uint64 nrows) do
                           let ri = i * 1UL<rowindex>
@@ -185,16 +188,26 @@ let private cooMap2Inner
                           for j in range (uint64 ncols) do
                               let cj = j * 1UL<colindex>
 
-                              let v1 = readAt rest1 ri cj
+                              let v1 =
+                                  match rest1 with
+                                  | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                      rest1 <- tail
+                                      Some ev
+                                  | _ -> None
 
-                              let v2 = readAt rest2 ri cj
+                              let v2 =
+                                  match rest2 with
+                                  | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                      rest2 <- tail
+                                      Some ev
+                                  | _ -> None
 
                               match f v1 v2 with
                               | Some value -> yield (ri, cj, value)
                               | None -> () ]
             | BinaryOp.AllCellsIndexed f ->
-                let rest1 = ref coo1.entries
-                let rest2 = ref coo2.entries
+                let mutable rest1 = coo1.entries
+                let mutable rest2 = coo2.entries
 
                 [ for i in range (uint64 nrows) do
                       let ri = i * 1UL<rowindex>
@@ -202,9 +215,19 @@ let private cooMap2Inner
                       for j in range (uint64 ncols) do
                           let cj = j * 1UL<colindex>
 
-                          let v1 = readAt rest1 ri cj
+                          let v1 =
+                              match rest1 with
+                              | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                  rest1 <- tail
+                                  Some ev
+                              | _ -> None
 
-                          let v2 = readAt rest2 ri cj
+                          let v2 =
+                              match rest2 with
+                              | (ei, ej, ev) :: tail when ei = ri && ej = cj ->
+                                  rest2 <- tail
+                                  Some ev
+                              | _ -> None
 
                           match f ri cj v1 v2 with
                           | Some value -> yield (ri, cj, value)

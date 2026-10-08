@@ -10,8 +10,6 @@ open COOArray
 open Common
 
 
-open Matrix
-open COOArray
 open COOList
 
 module Formats =
