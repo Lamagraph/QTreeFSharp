@@ -116,17 +116,13 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COO_map2i")>]
     member this.CooMap2i() =
-        match
-            cooMap2i cooMatrix1 cooMatrix2 map2iLogic
-        with
+        match cooMap2i cooMatrix1 cooMatrix2 map2iLogic with
         | Ok r -> resultCoo <- r
         | Error _ -> ()
 
     [<Benchmark(Description = "QT_map2i")>]
     member this.QtMap2i() =
-        match
-            map2i qtMatrix1 qtMatrix2 map2iLogic
-        with
+        match map2i qtMatrix1 qtMatrix2 map2iLogic with
         | Ok r -> resultQt <- r
         | Error _ -> ()
 
@@ -148,9 +144,7 @@ type FormatBenchmark() =
 
     [<Benchmark(Description = "COOLIST_map2i")>]
     member this.CooListMap2i() =
-        match
-            COOList.cooMap2i listMatrix1 listMatrix2 map2iLogic
-        with
+        match COOList.cooMap2i listMatrix1 listMatrix2 map2iLogic with
         | Ok r -> resultList <- r
         | Error _ -> ()
 
