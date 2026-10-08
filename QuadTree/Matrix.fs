@@ -38,9 +38,6 @@ type SparseMatrix<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error =
-    | InconsistentStructureOfStorages
-    | InconsistentSizeOfArguments
 
 
 let mkNode x1 x2 x3 x4 =
@@ -79,35 +76,29 @@ type ArrayCOO<'value> =
     val ncols: uint64<ncols>
     val list: COOEntry<'value>[]
 
-    new(_nrows, _ncols, _list: COOEntry<'value> seq) =
-        let sorted =
-            _list
-            |> Seq.toArray
-            |> Array.sortWith (fun (i1, j1, _) (i2, j2, _) ->
-                let c = compare i1 i2
-                if c <> 0 then c else compare j1 j2)
+    static member private SortEntries(list: COOEntry<'value> seq) =
+        list
+        |> Seq.toArray
+        |> Array.sortWith (fun (i1, j1, _) (i2, j2, _) ->
+            let c = compare i1 i2
+            if c <> 0 then c else compare j1 j2)
 
+    new(_nrows, _ncols, _list: COOEntry<'value> seq) =
         { nrows = _nrows
           ncols = _ncols
-          list = sorted }
+          list = ArrayCOO<'value>.SortEntries(_list) }
 
     new(_nrows, _ncols, _list: COOEntry<'value>[], _presorted: bool) =
         let sorted =
             if _presorted then
                 _list
             else
-                _list
-                |> Array.sortWith (fun (i1, j1, _) (i2, j2, _) ->
-                    let c = compare i1 i2
-                    if c <> 0 then c else compare j1 j2)
+                ArrayCOO<'value>.SortEntries(_list)
 
         { nrows = _nrows
           ncols = _ncols
           list = sorted }
 
-    // Fast factory: does NOT re-sort, expects an already sorted array.
-    // Used by COOArray operations whose results are built in (row, col) order and
-    // by cooUpdate, which maintains the sorted invariant itself.
     static member Create(nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value>[]) : ArrayCOO<'value> =
         ArrayCOO<'value>(nrows, ncols, entries, true)
 
@@ -198,6 +189,38 @@ let empty nrows ncols =
 
         SparseMatrix(nrows, ncols, 0UL<nvals>, Storage(storageSize, Leaf Dummy))
 
+let inline routeQuadrant row col (pr: uint64<rowindex>) (pc: uint64<colindex>) (halfSize: uint64) nw ne sw se action =
+    let midR = pr + halfSize * 1UL<rowindex>
+    let midC = pc + halfSize * 1UL<colindex>
+
+    if uint64 row < uint64 midR then
+        if uint64 col < uint64 midC then
+            action nw pr pc
+        else
+            action ne pr midC
+    else if uint64 col < uint64 midC then
+        action sw midR pc
+    else
+        action se midR midC
+
+let inline updateQuadrant row col (pr: uint64<rowindex>) (pc: uint64<colindex>) (halfSize: uint64) nw ne sw se action =
+    let midR = pr + halfSize * 1UL<rowindex>
+    let midC = pc + halfSize * 1UL<colindex>
+
+    if uint64 row < uint64 midR then
+        if uint64 col < uint64 midC then
+            let c, d = action nw pr pc
+            mkNode c ne sw se, d
+        else
+            let c, d = action ne pr midC
+            mkNode nw c sw se, d
+    else if uint64 col < uint64 midC then
+        let c, d = action sw midR pc
+        mkNode nw ne c se, d
+    else
+        let c, d = action se midR midC
+        mkNode nw ne sw c, d
+
 let get (matrix: SparseMatrix<'a>) (row: uint64<rowindex>) (col: uint64<colindex>) : Result<option<'a>, Error> =
     if uint64 row >= uint64 matrix.nrows then
         raise (System.ArgumentOutOfRangeException("row", "Row index is outside the matrix bounds."))
@@ -210,18 +233,7 @@ let get (matrix: SparseMatrix<'a>) (row: uint64<rowindex>) (col: uint64<colindex
             | Leaf(UserValue v) -> v
             | Node(nw, ne, sw, se) ->
                 let halfSize = size / 2UL
-                let midR = pr + halfSize * 1UL<rowindex>
-                let midC = pc + halfSize * 1UL<colindex>
-
-                if uint64 row < uint64 midR then
-                    if uint64 col < uint64 midC then
-                        inner nw pr pc halfSize
-                    else
-                        inner ne pr midC halfSize
-                else if uint64 col < uint64 midC then
-                    inner sw midR pc halfSize
-                else
-                    inner se midR midC halfSize
+                routeQuadrant row col pr pc halfSize nw ne sw se (fun quad r c -> inner quad r c halfSize)
 
         Ok(inner matrix.storage.data (0UL<rowindex>) (0UL<colindex>) (uint64 matrix.storage.size))
 
@@ -254,34 +266,12 @@ let set
                 | Leaf Dummy -> Leaf(UserValue(Some value)), 1L
                 | _ -> failwith "Unreachable"
             else
-                let midR = pr + halfSize * 1UL<rowindex>
-                let midC = pc + halfSize * 1UL<colindex>
-
                 let (nw, ne, sw, se) =
                     match tree with
                     | Node(nw, ne, sw, se) -> nw, ne, sw, se
                     | Leaf v -> Leaf v, Leaf v, Leaf v, Leaf v
 
-                let newChild, delta =
-                    if uint64 row < uint64 midR then
-                        if uint64 col < uint64 midC then
-                            inner nw pr pc halfSize
-                        else
-                            inner ne pr midC halfSize
-                    else if uint64 col < uint64 midC then
-                        inner sw midR pc halfSize
-                    else
-                        inner se midR midC halfSize
-
-                if uint64 row < uint64 midR then
-                    if uint64 col < uint64 midC then
-                        mkNode newChild ne sw se, delta
-                    else
-                        mkNode nw newChild sw se, delta
-                else if uint64 col < uint64 midC then
-                    mkNode nw ne newChild se, delta
-                else
-                    mkNode nw ne sw newChild, delta
+                updateQuadrant row col pr pc halfSize nw ne sw se (fun quad r c -> inner quad r c halfSize)
 
         let storage, deltaNNZ =
             inner matrix.storage.data (0UL<rowindex>) (0UL<colindex>) (uint64 matrix.storage.size)
@@ -317,6 +307,23 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
             mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
+
+            let splitIndexedLeaf (f_res: Option<'b>) =
+                if size = 1UL<storageSize> then
+                    let nvals = if f_res.IsSome then 1UL<nvals> else 0UL<nvals>
+                    Leaf(UserValue(f_res)), nvals
+                else
+                    let halfSize = size / 2UL
+
+                    let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+                        getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+                    let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
+                    let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
+                    let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
+                    let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
+                    mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
+
             match op with
             | UnaryOp.ValuesOnly f ->
                 match v with
@@ -334,22 +341,7 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
             | UnaryOp.ValuesOnlyIndexed f ->
                 match v with
                 | None -> Leaf(UserValue(None)), 0UL<nvals>
-                | Some v' ->
-                    if size = 1UL<storageSize> then
-                        let res = f prow pcol v'
-                        let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
-                        Leaf(UserValue(res)), nvals
-                    else
-                        let halfSize = size / 2UL
-
-                        let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                            getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-                        let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
-                        let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
-                        let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
-                        let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
-                        mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
+                | Some v' -> splitIndexedLeaf (f prow pcol v')
             | UnaryOp.AllCells f ->
                 let res = f v
 
@@ -360,22 +352,7 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
                         0UL<nvals>
 
                 Leaf(UserValue(res)), nvals
-            | UnaryOp.AllCellsIndexed f ->
-                if size = 1UL<storageSize> then
-                    let res = f prow pcol v
-                    let nvals = if res.IsSome then 1UL<nvals> else 0UL<nvals>
-                    Leaf(UserValue(res)), nvals
-                else
-                    let halfSize = size / 2UL
-
-                    let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                        getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-                    let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
-                    let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
-                    let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
-                    let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
-                    mkNode t1 t2 t3 t4, nvals1 + nvals2 + nvals3 + nvals4
+            | UnaryOp.AllCellsIndexed f -> splitIndexedLeaf (f prow pcol v)
 
     let storage, nvals =
         inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
@@ -386,10 +363,6 @@ let map (matrix: SparseMatrix<_>) f = mapInner matrix (UnaryOp.AllCells f)
 
 let mapValues (matrix: SparseMatrix<'a>) f = mapInner matrix (UnaryOp.ValuesOnly f)
 
-type AtLeastOne<'a, 'b> =
-    | Both of 'a * 'b
-    | Left of 'a
-    | Right of 'b
 
 type BinaryOp<'a, 'b, 'c> =
     | ValuesOnly of ('a -> 'b -> Option<'c>)

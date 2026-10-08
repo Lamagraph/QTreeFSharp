@@ -143,3 +143,12 @@ let getNearestUpperPowerOfTwo (x: uint64) =
         find treeOfPowersOfTwo 9223372036854776000UL
     else
         failwithf "Argument is too large. Must be not greater then %A" MAX
+
+type Error =
+    | InconsistentStructureOfStorages
+    | InconsistentSizeOfArguments
+
+type AtLeastOne<'a, 'b> =
+    | Both of 'a * 'b
+    | Left of 'a
+    | Right of 'b

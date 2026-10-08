@@ -117,12 +117,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "COO_map2i")>]
     member this.CooMap2i() =
         match
-            cooMap2i cooMatrix1 cooMatrix2 (fun i j a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y + float (uint64 i))
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            cooMap2i cooMatrix1 cooMatrix2 map2iLogic
         with
         | Ok r -> resultCoo <- r
         | Error _ -> ()
@@ -130,12 +125,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "QT_map2i")>]
     member this.QtMap2i() =
         match
-            map2i qtMatrix1 qtMatrix2 (fun i j a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y + float (uint64 i))
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            map2i qtMatrix1 qtMatrix2 map2iLogic
         with
         | Ok r -> resultQt <- r
         | Error _ -> ()
@@ -159,12 +149,7 @@ type FormatBenchmark() =
     [<Benchmark(Description = "COOLIST_map2i")>]
     member this.CooListMap2i() =
         match
-            COOList.cooMap2i listMatrix1 listMatrix2 (fun i j a b ->
-                match a, b with
-                | Some x, Some y -> Some(x + y + float (uint64 i))
-                | Some x, None -> Some x
-                | None, Some y -> Some y
-                | None, None -> None)
+            COOList.cooMap2i listMatrix1 listMatrix2 map2iLogic
         with
         | Ok r -> resultList <- r
         | Error _ -> ()

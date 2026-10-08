@@ -97,3 +97,10 @@ let inline updateLookups
         | _ -> ()
 
     m
+
+let inline map2iLogic i j (a: double option) (b: double option) : double option =
+    match a, b with
+    | Some x, Some y -> Some(x + y + float (uint64 i))
+    | Some x, None -> Some x
+    | None, Some y -> Some y
+    | None, None -> None

@@ -4,12 +4,12 @@ open Common
 
 type MXMError =
     | InconsistentSizeOfArguments
-    | MatrixAdditionProblem of Matrix.Error
+    | MatrixAdditionProblem of Common.Error
 
 type Error =
     | InconsistentStructureOfStorages
     | InconsistentSizeOfArguments
-    | VectorAdditionProblem of Vector.Error
+    | VectorAdditionProblem of Common.Error
     | MXMError of MXMError
 
 
