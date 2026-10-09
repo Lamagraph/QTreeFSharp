@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,6 +18,8 @@
     <Compile Include="Kronecker.fs"/>
     <Compile Include="MatrixSliceAlign.fs"/>
     <Compile Include="VectorSliceAlign.fs"/>
+    <Compile Include="FormatBenchmarks.fs"/>
+    <Compile Include="RealMatrixBenchmark.fs"/>
     <Compile Include="Main.fs"/>
   </ItemGroup>
 
@@ -30,3 +32,4 @@
   </ItemGroup>
 
 </Project>
+

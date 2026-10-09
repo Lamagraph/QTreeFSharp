@@ -13,6 +13,8 @@ let main argv =
                typeof<QuadTree.Benchmarks.Kronecker.Benchmark>
                typeof<QuadTree.Benchmarks.MatrixSliceAlign.Benchmark>
                typeof<QuadTree.Benchmarks.VectorSliceAlign.Benchmark>
+               typeof<QuadTree.Benchmarks.Formats.FormatBenchmark>
+               typeof<QuadTree.Benchmarks.RealMatrices.RealMatrixBenchmark>
                typeof<QuadTree.Benchmarks.AVLSet.SingleOpsBenchmark>
                typeof<QuadTree.Benchmarks.AVLSet.TraversalSetsBenchmark>
                typeof<QuadTree.Benchmarks.AVLSet.ParallelSetsBenchmark>

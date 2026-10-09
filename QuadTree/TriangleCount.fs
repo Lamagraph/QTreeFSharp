@@ -5,7 +5,7 @@ open Result
 
 type Error =
     | MXMProblem of LinearAlgebra.Error
-    | MaskingProblem of Matrix.Error
+    | MaskingProblem of Common.Error
 
 let triangle_count (graph: Matrix.SparseMatrix<_>) =
     let graph = Matrix.getLowerTriangle graph

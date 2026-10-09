@@ -29,9 +29,6 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error =
-    | InconsistentStructureOfStorages
-    | InconsistentSizeOfArguments
 
 
 let mkNode t1 t2 =
@@ -47,10 +44,6 @@ type UnaryOp<'a, 'b> =
     | AllCellsIndexed of (uint64<index> -> Option<'a> -> Option<'b>)
 
 
-type AtLeastOne<'a, 'b> =
-    | Both of 'a * 'b
-    | Left of 'a
-    | Right of 'b
 
 
 type BinaryOp<'a, 'b, 'c> =

@@ -6,6 +6,11 @@ open System
 open Vector
 open Common
 
+let private fromCoordinateListUnchecked (lst: Vector.CoordinateList<'a>) =
+    match Vector.fromCoordinateList lst with
+    | Ok v -> v
+    | Error e -> failwith e
+
 let printVector (vector: SparseVector<_>) =
     printfn "Vector:"
     printfn "   Length: %A" vector.length
@@ -910,10 +915,11 @@ let ``Sort sorted vector`` () =
 let ``Init vector`` () =
     let expected =
         Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 0); (1UL<index>, 1); (2UL<index>, 2) ])
-        |> Vector.fromCoordinateList
+        |> fromCoordinateListUnchecked
 
     let actual = Vector.init 3UL<dataLength> (fun i -> Some(int i))
-    Assert.Equal(expected, Ok actual)
+    Assert.Equal(expected, actual)
+
 
 [<Fact>]
 let ``map on empty vector returns empty vector`` () =

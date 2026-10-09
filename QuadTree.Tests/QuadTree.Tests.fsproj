@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,7 +9,9 @@
     <Compile Include="Tests.AVLSet.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Tests.Vector.fs" />
+    <Compile Include="Tests.COOFormats.fs" />
     <Compile Include="Tests.Matrix.fs" />
+    <Compile Include="PropertyTests.fs" />
     <Compile Include="Tests.LinearAlgebra.fs" />
     <Compile Include="Tests.BFS.fs" />
     <Compile Include="Tests.TriangleCount.fs" />
@@ -19,8 +21,8 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="FsUnit.xUnit" Version="6.0.1" />
-    <PackageReference Include="FsCheck.Xunit" Version="3.0.0" />
+<PackageReference Include="FsUnit.xUnit" Version="6.0.1" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.4.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />

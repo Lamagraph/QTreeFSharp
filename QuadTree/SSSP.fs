@@ -5,8 +5,8 @@ open Result
 
 type Error =
     | NewFrontierCalculationProblem of LinearAlgebra.Error
-    | FrontierCalculationProblem of Vector.Error
-    | VisitedCalculationProblem of Vector.Error
+    | FrontierCalculationProblem of Common.Error
+    | VisitedCalculationProblem of Common.Error
 
 let sssp graph (startVertex: uint64) =
     let op_add x y =
