@@ -308,8 +308,9 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
         | Leaf(UserValue(v)) ->
 
-            let splitIndexedLeaf (f_res: Option<'b>) =
+            let splitIndexedLeaf (eval_f: unit -> Option<'b>) =
                 if size = 1UL<storageSize> then
+                    let f_res = eval_f ()
                     let nvals = if f_res.IsSome then 1UL<nvals> else 0UL<nvals>
                     Leaf(UserValue(f_res)), nvals
                 else
@@ -341,7 +342,7 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
             | UnaryOp.ValuesOnlyIndexed f ->
                 match v with
                 | None -> Leaf(UserValue(None)), 0UL<nvals>
-                | Some v' -> splitIndexedLeaf (f prow pcol v')
+                | Some v' -> splitIndexedLeaf (fun () -> f prow pcol v')
             | UnaryOp.AllCells f ->
                 let res = f v
 
@@ -352,7 +353,7 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
                         0UL<nvals>
 
                 Leaf(UserValue(res)), nvals
-            | UnaryOp.AllCellsIndexed f -> splitIndexedLeaf (f prow pcol v)
+            | UnaryOp.AllCellsIndexed f -> splitIndexedLeaf (fun () -> f prow pcol v)
 
     let storage, nvals =
         inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
