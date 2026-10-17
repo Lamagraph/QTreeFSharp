@@ -310,7 +310,7 @@ type DenseFormatBenchmark() =
                 | Ok(Some v) -> acc <- acc + v
                 | _ -> ()
 
-        resultCoo <- cooMatrix
+        resultCooVal <- acc
 
     [<Benchmark(Description = "Dense_QT_get")>]
     member this.DenseQtGet() =
@@ -322,7 +322,7 @@ type DenseFormatBenchmark() =
                 | Ok(Some v) -> acc <- acc + v
                 | _ -> ()
 
-        resultQt <- qtMatrix
+        resultQtVal <- acc
 
     [<Benchmark(Description = "Dense_COO_set")>]
     member this.DenseCooSet() =

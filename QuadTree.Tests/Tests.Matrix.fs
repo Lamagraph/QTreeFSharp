@@ -237,9 +237,22 @@ let ``Simple Matrix.map2i. Square where number of cols and rows are not power of
 
         let actual = Matrix.map2i m1 m2 f
 
-        match actual with
-        | Result.Ok _ -> ()
-        | Result.Error _ -> Assert.Fail()
+        let expectedResult =
+            Matrix.CoordinateList(
+                nrows,
+                ncols,
+                [ (0UL<rowindex>, 0UL<colindex>, 11)
+                  (0UL<rowindex>, 1UL<colindex>, 22)
+                  (0UL<rowindex>, 2UL<colindex>, 33)
+                  (1UL<rowindex>, 0UL<colindex>, 18)
+                  (1UL<rowindex>, 1UL<colindex>, 30)
+                  (1UL<rowindex>, 2UL<colindex>, 42) ]
+            )
+            |> Matrix.fromCoordinateList
+
+        match actual, expectedResult with
+        | Result.Ok act, Result.Ok exp -> Assert.Equal(exp, act)
+        | _ -> Assert.Fail()
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2565,3 +2578,65 @@ let ``Matrix map2 returns InconsistentSizeOfArguments when storage sizes differ`
         SparseMatrix(2UL<nrows>, 2UL<ncols>, 0UL<nvals>, Matrix.Storage(4UL<storageSize>, qtree.Leaf(UserValue None)))
 
     Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.map2 m1 m2 (fun a b -> None))
+
+[<Fact>]
+let ``Matrix get retrieves values, handles empty cells, and validates bounds`` () =
+    let clist =
+        Matrix.CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 100); (2UL<rowindex>, 2UL<colindex>, 200) ]
+        )
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        Assert.Equal(Ok(Some 100), Matrix.get m 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 200), Matrix.get m 2UL<rowindex> 2UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get m 0UL<rowindex> 1UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get m 1UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 3UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 0UL<rowindex> 3UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 5UL<rowindex> 5UL<colindex>)
+    | Result.Error msg -> Assert.Fail(msg)
+
+[<Fact>]
+let ``Matrix set updates existing, inserts into empty, and validates bounds`` () =
+    let clist =
+        Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        Assert.Equal(1UL<nvals>, m.nvals)
+
+        // Update existing cell: nvals remains 1
+        match Matrix.set m 0UL<rowindex> 0UL<colindex> 99 with
+        | Result.Ok updated1 ->
+            Assert.Equal(1UL<nvals>, updated1.nvals)
+            Assert.Equal(Ok(Some 99), Matrix.get updated1 0UL<rowindex> 0UL<colindex>)
+
+            // Insert new cell into empty space: nvals becomes 2
+            match Matrix.set updated1 1UL<rowindex> 1UL<colindex> 55 with
+            | Result.Ok updated2 ->
+                Assert.Equal(2UL<nvals>, updated2.nvals)
+                Assert.Equal(Ok(Some 55), Matrix.get updated2 1UL<rowindex> 1UL<colindex>)
+                Assert.Equal(Ok(Some 99), Matrix.get updated2 0UL<rowindex> 0UL<colindex>)
+            | Result.Error e -> failwithf "Unexpected error %A" e
+        | Result.Error e -> failwithf "Unexpected error %A" e
+
+        // Out-of-bounds validation
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.set m 3UL<rowindex> 0UL<colindex> 42)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.set m 0UL<rowindex> 3UL<colindex> 42)
+    | Result.Error msg -> Assert.Fail(msg)
+
+[<Fact>]
+let ``Matrix set into empty uniform matrix splits node correctly`` () =
+    let emptyStorage = Matrix.Storage(4UL<storageSize>, qtree.Leaf(UserValue None))
+
+    let emptyMatrix = SparseMatrix(4UL<nrows>, 4UL<ncols>, 0UL<nvals>, emptyStorage)
+
+    match Matrix.set emptyMatrix 3UL<rowindex> 3UL<colindex> 77 with
+    | Result.Ok updated ->
+        Assert.Equal(1UL<nvals>, updated.nvals)
+        Assert.Equal(Ok(Some 77), Matrix.get updated 3UL<rowindex> 3UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get updated 0UL<rowindex> 0UL<colindex>)
+    | Result.Error e -> failwithf "Unexpected error %A" e
