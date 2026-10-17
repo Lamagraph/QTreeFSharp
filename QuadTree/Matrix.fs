@@ -246,6 +246,12 @@ type UnaryOp<'a, 'b> =
     | AllCells of (Option<'a> -> Option<'b>)
     | AllCellsIndexed of (uint64<rowindex> -> uint64<colindex> -> Option<'a> -> Option<'b>)
 
+let inline private leafNnz res (size: uint64<storageSize>) =
+    if Option.isSome res then
+        (uint64 size) * (uint64 size) * 1UL<nvals>
+    else
+        0UL<nvals>
+
 let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMatrix<'b> =
     let rec inner
         (prow: uint64<rowindex>)
@@ -291,8 +297,7 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
             let splitIndexedLeaf (eval_f: unit -> Option<'b>) =
                 if size = 1UL<storageSize> then
                     let f_res = eval_f ()
-                    let nvals = if f_res.IsSome then 1UL<nvals> else 0UL<nvals>
-                    Leaf(UserValue(f_res)), nvals
+                    Leaf(UserValue(f_res)), leafNnz f_res size
                 else
                     let halfSize = size / 2UL
 
@@ -311,28 +316,14 @@ let private mapInner (matrix: SparseMatrix<'a>) (op: UnaryOp<'a, 'b>) : SparseMa
                 | None -> Leaf(UserValue(None)), 0UL<nvals>
                 | Some v' ->
                     let res = f v'
-
-                    let nvals =
-                        if res.IsSome then
-                            (uint64 size) * (uint64 size) * 1UL<nvals>
-                        else
-                            0UL<nvals>
-
-                    Leaf(UserValue(res)), nvals
+                    Leaf(UserValue(res)), leafNnz res size
             | UnaryOp.ValuesOnlyIndexed f ->
                 match v with
                 | None -> Leaf(UserValue(None)), 0UL<nvals>
                 | Some v' -> splitIndexedLeaf (fun () -> f prow pcol v')
             | UnaryOp.AllCells f ->
                 let res = f v
-
-                let nvals =
-                    if res.IsSome then
-                        (uint64 size) * (uint64 size) * 1UL<nvals>
-                    else
-                        0UL<nvals>
-
-                Leaf(UserValue(res)), nvals
+                Leaf(UserValue(res)), leafNnz res size
             | UnaryOp.AllCellsIndexed f -> splitIndexedLeaf (fun () -> f prow pcol v)
 
     let storage, nvals =
@@ -471,14 +462,7 @@ let private map2Inner
             else
                 let res = applyBinary op prow pcol v1 v2
 
-                let nnz =
-                    if res.IsSome then
-                        (uint64 size) * (uint64 size) * 1UL<nvals>
-                    else
-                        0UL<nvals>
-
-                Ok(Leaf(UserValue(res)), nnz)
-        | _ -> Error Error.InconsistentStructureOfStorages
+                Ok(Leaf(UserValue(res)), leafNnz res size)
 
     if
         matrix1.nrows = matrix2.nrows

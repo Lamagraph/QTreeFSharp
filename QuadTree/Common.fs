@@ -158,3 +158,14 @@ type AtLeastOne<'a, 'b> =
     | Both of 'a * 'b
     | Left of 'a
     | Right of 'b
+
+let inline compareCoords (r1: uint64<'mr>) (c1: uint64<'mc>) (r2: uint64<'mr>) (c2: uint64<'mc>) : int =
+    let c = compare r1 r2
+    if c <> 0 then c else compare c1 c2
+
+let inline entryCoordCompare (r1, c1, _) (r2, c2, _) : int = compareCoords r1 c1 r2 c2
+
+let inline isAddNeutral (op_add: Option<'v> -> Option<'v> -> Option<'v>) (v: 'v) : bool =
+    op_add (Some v) None = Some v && op_add None (Some v) = Some v
+
+let inline canMergeOpAdd (op_add: Option<'v> -> Option<'v> -> Option<'v>) : bool = Option.isNone (op_add None None)

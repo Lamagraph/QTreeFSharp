@@ -11,7 +11,7 @@ let private isStrictlySortedList (entries: COOEntry<'v> list) : bool =
         | (rCurr, cCurr, _) as curr :: tail ->
             let (rPrev, cPrev, _) = prev
 
-            if rPrev < rCurr || (rPrev = rCurr && cPrev < cCurr) then
+            if compareCoords rPrev cPrev rCurr cCurr < 0 then
                 loop curr tail
             else
                 false
@@ -38,11 +38,7 @@ let private sortAndDeduplicateList (entries: COOEntry<'v> list) : COOEntry<'v> l
     elif List.isEmpty entries then
         entries
     else
-        let sorted =
-            entries
-            |> List.sortWith (fun (r1, c1, _) (r2, c2, _) ->
-                let c = compare r1 r2
-                if c <> 0 then c else compare c1 c2)
+        let sorted = entries |> List.sortWith entryCoordCompare
 
         let rec deduplicate acc curEntry rest =
             match rest with
@@ -142,12 +138,11 @@ type ListCOO<'value> =
                     match list with
                     | [] -> None
                     | (i, j, v) :: tail ->
-                        if i = rowindex && j = colindex then
-                            Some v
-                        elif i > rowindex || (i = rowindex && j > colindex) then
-                            None
-                        else
-                            findEntry tail
+                        let c = compareCoords i j rowindex colindex
+
+                        if c = 0 then Some v
+                        elif c > 0 then None
+                        else findEntry tail
 
                 Ok(findEntry this.entries)
 
@@ -176,63 +171,34 @@ let cooUpdate
             | (i, j, v) :: tail ->
                 if inserted then
                     loop tail ((i, j, v) :: acc) true
-                elif i = rowindex && j = colindex then
-                    loop tail ((rowindex, colindex, value) :: acc) true
-                elif rowindex < i || (rowindex = i && colindex < j) then
-                    loop rest ((rowindex, colindex, value) :: acc) true
                 else
-                    loop tail ((i, j, v) :: acc) false
+                    let c = compareCoords rowindex colindex i j
+
+                    if c = 0 then
+                        loop tail ((rowindex, colindex, value) :: acc) true
+                    elif c < 0 then
+                        loop rest ((rowindex, colindex, value) :: acc) true
+                    else
+                        loop tail ((i, j, v) :: acc) false
 
         Ok(ListCOO.CreatePresorted(coo.nrows, coo.ncols, loop coo.entries [] false))
 
-let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
+let inline private advanceCursor ri cj entries =
+    match entries with
+    | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
+    | _ -> None, entries
+
+let rec private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
     let result =
         match op with
-        | UnaryOp.ValuesOnly f ->
-            coo.entries
-            |> List.choose (fun (i, j, v) -> f v |> Option.map (fun r -> (i, j, r)))
+        | UnaryOp.ValuesOnly f -> (cooMapInner coo (UnaryOp.ValuesOnlyIndexed(fun _ _ v -> f v))).entries
         | UnaryOp.ValuesOnlyIndexed f ->
             coo.entries
             |> List.choose (fun (i, j, v) -> f i j v |> Option.map (fun r -> (i, j, r)))
         | UnaryOp.AllCells f ->
             match f None with
-            | None ->
-                coo.entries
-                |> List.choose (fun (i, j, v) -> f (Some v) |> Option.map (fun r -> (i, j, r)))
-            | Some fnone ->
-                let rec loopRow i curRest acc =
-                    if i < uint64 coo.nrows then
-                        let ri = i * 1UL<rowindex>
-
-                        let rec loopCol j r acc' =
-                            if j < uint64 coo.ncols then
-                                let cj = j * 1UL<colindex>
-
-                                let v, nextR =
-                                    match r with
-                                    | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                    | _ -> None, r
-
-                                let res =
-                                    match v with
-                                    | Some value -> f (Some value)
-                                    | None -> Some fnone
-
-                                let acc'' =
-                                    match res with
-                                    | Some value -> (ri, cj, value) :: acc'
-                                    | None -> acc'
-
-                                loopCol (j + 1UL) nextR acc''
-                            else
-                                r, acc'
-
-                        let nextR, nextAcc = loopCol 0UL curRest acc
-                        loopRow (i + 1UL) nextR nextAcc
-                    else
-                        List.rev acc
-
-                loopRow 0UL coo.entries []
+            | None -> (cooMapInner coo (UnaryOp.ValuesOnly(fun v -> f (Some v)))).entries
+            | Some _ -> (cooMapInner coo (UnaryOp.AllCellsIndexed(fun _ _ v -> f v))).entries
         | UnaryOp.AllCellsIndexed f ->
             let rec loopRow i curRest acc =
                 if i < uint64 coo.nrows then
@@ -241,11 +207,7 @@ let private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
                     let rec loopCol j r acc' =
                         if j < uint64 coo.ncols then
                             let cj = j * 1UL<colindex>
-
-                            let v, nextR =
-                                match r with
-                                | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                | _ -> None, r
+                            let v, nextR = advanceCursor ri cj r
 
                             let acc'' =
                                 match f ri cj v with
@@ -284,14 +246,16 @@ let private mergeBinary (l1: COOEntry<'a> list) (l2: COOEntry<'b> list) (op: Bin
 
             loop acc' [] t2
         | (i1, j1, v1) :: t1, (i2, j2, v2) :: t2 ->
-            if i1 = i2 && j1 = j2 then
+            let c = compareCoords i1 j1 i2 j2
+
+            if c = 0 then
                 let acc' =
                     match applyBinary op i1 j1 (Some v1) (Some v2) with
                     | Some r -> (i1, j1, r) :: acc
                     | None -> acc
 
                 loop acc' t1 t2
-            elif i1 < i2 || (i1 = i2 && j1 < j2) then
+            elif c < 0 then
                 let acc' =
                     match applyBinary op i1 j1 (Some v1) None with
                     | Some r -> (i1, j1, r) :: acc
@@ -319,79 +283,40 @@ let private cooMap2Inner
         let nrows = coo1.nrows
         let ncols = coo1.ncols
 
+        let runDense f =
+            let rec loopRow i curRest1 curRest2 acc =
+                if i < uint64 nrows then
+                    let ri = i * 1UL<rowindex>
+
+                    let rec loopCol j r1 r2 acc' =
+                        if j < uint64 ncols then
+                            let cj = j * 1UL<colindex>
+                            let v1, nextR1 = advanceCursor ri cj r1
+                            let v2, nextR2 = advanceCursor ri cj r2
+
+                            let acc'' =
+                                match f ri cj v1 v2 with
+                                | Some value -> (ri, cj, value) :: acc'
+                                | None -> acc'
+
+                            loopCol (j + 1UL) nextR1 nextR2 acc''
+                        else
+                            r1, r2, acc'
+
+                    let nextR1, nextR2, nextAcc = loopCol 0UL curRest1 curRest2 acc
+                    loopRow (i + 1UL) nextR1 nextR2 nextAcc
+                else
+                    List.rev acc
+
+            loopRow 0UL coo1.entries coo2.entries []
+
         let result =
             match op with
             | BinaryOp.AllCells f ->
                 match f None None with
                 | None -> mergeBinary coo1.entries coo2.entries op
-                | Some _ ->
-                    let rec loopRow i curRest1 curRest2 acc =
-                        if i < uint64 nrows then
-                            let ri = i * 1UL<rowindex>
-
-                            let rec loopCol j r1 r2 acc' =
-                                if j < uint64 ncols then
-                                    let cj = j * 1UL<colindex>
-
-                                    let v1, nextR1 =
-                                        match r1 with
-                                        | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                        | _ -> None, r1
-
-                                    let v2, nextR2 =
-                                        match r2 with
-                                        | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                        | _ -> None, r2
-
-                                    let acc'' =
-                                        match f v1 v2 with
-                                        | Some value -> (ri, cj, value) :: acc'
-                                        | None -> acc'
-
-                                    loopCol (j + 1UL) nextR1 nextR2 acc''
-                                else
-                                    r1, r2, acc'
-
-                            let nextR1, nextR2, nextAcc = loopCol 0UL curRest1 curRest2 acc
-                            loopRow (i + 1UL) nextR1 nextR2 nextAcc
-                        else
-                            List.rev acc
-
-                    loopRow 0UL coo1.entries coo2.entries []
-            | BinaryOp.AllCellsIndexed f ->
-                let rec loopRow i curRest1 curRest2 acc =
-                    if i < uint64 nrows then
-                        let ri = i * 1UL<rowindex>
-
-                        let rec loopCol j r1 r2 acc' =
-                            if j < uint64 ncols then
-                                let cj = j * 1UL<colindex>
-
-                                let v1, nextR1 =
-                                    match r1 with
-                                    | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                    | _ -> None, r1
-
-                                let v2, nextR2 =
-                                    match r2 with
-                                    | (ei, ej, ev) :: tail when ei = ri && ej = cj -> Some ev, tail
-                                    | _ -> None, r2
-
-                                let acc'' =
-                                    match f ri cj v1 v2 with
-                                    | Some value -> (ri, cj, value) :: acc'
-                                    | None -> acc'
-
-                                loopCol (j + 1UL) nextR1 nextR2 acc''
-                            else
-                                r1, r2, acc'
-
-                        let nextR1, nextR2, nextAcc = loopCol 0UL curRest1 curRest2 acc
-                        loopRow (i + 1UL) nextR1 nextR2 nextAcc
-                    else
-                        List.rev acc
-
-                loopRow 0UL coo1.entries coo2.entries []
+                | Some _ -> runDense (fun _ _ v1 v2 -> f v1 v2)
+            | BinaryOp.AllCellsIndexed f -> runDense f
             | _ -> mergeBinary coo1.entries coo2.entries op
 
         ListCOO.CreatePresorted(nrows, ncols, result) |> Ok
@@ -530,26 +455,12 @@ let mxmcoo
 
             let result = emitProducts entries1 []
 
-            let checkAddCondition list =
-                let rec loop l =
-                    match l with
-                    | [] -> true
-                    | (_, _, v) :: tail ->
-                        if op_add (Some v) None = Some v && op_add None (Some v) = Some v then
-                            loop tail
-                        else
-                            false
-
-                loop list
-
-            let canMerge = Option.isNone (op_add None None) && checkAddCondition result
+            let canMerge =
+                canMergeOpAdd op_add
+                && List.forall (fun (_, _, v) -> isAddNeutral op_add v) result
 
             if canMerge then
-                let sorted =
-                    result
-                    |> List.sortWith (fun (i1, j1, _) (i2, j2, _) ->
-                        let c = compare i1 i2
-                        if c <> 0 then c else compare j1 j2)
+                let sorted = result |> List.sortWith entryCoordCompare
 
                 let rec reduceAdjacent acc curKey curSum rest =
                     match rest with
