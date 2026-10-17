@@ -215,12 +215,7 @@ let set
                 match tree with
                 | Leaf(UserValue oldVal) ->
                     let newVal = Some value
-
-                    let delta =
-                        match newVal, oldVal with
-                        | Some _, None -> 1L
-                        | None, Some _ -> -1L
-                        | _ -> 0L
+                    let delta = if Option.isNone oldVal then 1L else 0L
 
                     Ok(Leaf(UserValue newVal), delta)
                 | Leaf Dummy -> Ok(Leaf(UserValue(Some value)), 1L)
@@ -437,17 +432,78 @@ let private map2Inner
         | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) -> split x1 x2 x3 x4 y1 y2 y3 y4
         | Node(x1, x2, x3, x4), Leaf(v2) -> split x1 x2 x3 x4 (Leaf(v2)) (Leaf(v2)) (Leaf(v2)) (Leaf(v2))
         | Leaf(v1), Node(y1, y2, y3, y4) -> split (Leaf(v1)) (Leaf(v1)) (Leaf(v1)) (Leaf(v1)) y1 y2 y3 y4
-        | Leaf(Dummy), Leaf(Dummy) -> Ok(Leaf(Dummy), 0UL<nvals>)
+        | Leaf(Dummy), Leaf(Dummy) ->
+            if uint64 prow >= uint64 matrix1.nrows || uint64 pcol >= uint64 matrix1.ncols then
+                Ok(Leaf Dummy, 0UL<nvals>)
+            elif
+                size = 1UL<storageSize>
+                || (uint64 prow + uint64 size <= uint64 matrix1.nrows
+                    && uint64 pcol + uint64 size <= uint64 matrix1.ncols)
+            then
+                if size > 1UL<storageSize> && isIndexedBinary op then
+                    split
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                        (Leaf Dummy)
+                else
+                    let res = applyBinary op prow pcol None None
+
+                    match res with
+                    | Some v -> Ok(Leaf(UserValue(Some v)), leafNnz (Some v) size)
+                    | None -> Ok(Leaf Dummy, 0UL<nvals>)
+            else
+                split
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
         | Leaf(Dummy), Leaf(UserValue(v2)) ->
             if uint64 prow >= uint64 matrix1.nrows || uint64 pcol >= uint64 matrix1.ncols then
-                Ok(Leaf(Dummy), 0UL<nvals>)
-            else
+                Ok(Leaf Dummy, 0UL<nvals>)
+            elif
+                size = 1UL<storageSize>
+                || (uint64 prow + uint64 size <= uint64 matrix1.nrows
+                    && uint64 pcol + uint64 size <= uint64 matrix1.ncols)
+            then
                 inner prow pcol size (Leaf(UserValue None)) (Leaf(UserValue v2))
+            else
+                split
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf(UserValue v2))
+                    (Leaf(UserValue v2))
+                    (Leaf(UserValue v2))
+                    (Leaf(UserValue v2))
         | Leaf(UserValue(v1)), Leaf(Dummy) ->
             if uint64 prow >= uint64 matrix1.nrows || uint64 pcol >= uint64 matrix1.ncols then
-                Ok(Leaf(Dummy), 0UL<nvals>)
-            else
+                Ok(Leaf Dummy, 0UL<nvals>)
+            elif
+                size = 1UL<storageSize>
+                || (uint64 prow + uint64 size <= uint64 matrix1.nrows
+                    && uint64 pcol + uint64 size <= uint64 matrix1.ncols)
+            then
                 inner prow pcol size (Leaf(UserValue v1)) (Leaf(UserValue None))
+            else
+                split
+                    (Leaf(UserValue v1))
+                    (Leaf(UserValue v1))
+                    (Leaf(UserValue v1))
+                    (Leaf(UserValue v1))
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
+                    (Leaf Dummy)
         | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
             if size > 1UL<storageSize> && isIndexedBinary op then
                 split

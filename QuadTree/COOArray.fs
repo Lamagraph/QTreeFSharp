@@ -265,80 +265,91 @@ let rec private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO
         | None -> cooMapInner coo (UnaryOp.ValuesOnly(fun v -> f (Some v)))
         | Some _ -> cooMapInner coo (UnaryOp.AllCellsIndexed(fun _ _ v -> f v))
     | UnaryOp.AllCellsIndexed f ->
-        let totalCells = int (uint64 coo.nrows * uint64 coo.ncols)
-        let target = Array.zeroCreate totalCells
+        let totalCells64 = uint64 coo.nrows * uint64 coo.ncols
 
-        let rec loopRow i ptr outIdx =
-            if i < uint64 coo.nrows then
-                let ri = i * 1UL<rowindex>
+        if totalCells64 > uint64 System.Int32.MaxValue then
+            let rec loopRow i ptr acc =
+                if i < uint64 coo.nrows then
+                    let ri = i * 1UL<rowindex>
 
-                let rec loopCol j curPtr curOut =
-                    if j < uint64 coo.ncols then
-                        let cj = j * 1UL<colindex>
-                        let v, nextPtr = advanceArrayCursor ri cj coo.entries curPtr
+                    let rec loopCol j curPtr curAcc =
+                        if j < uint64 coo.ncols then
+                            let cj = j * 1UL<colindex>
+                            let v, nextPtr = advanceArrayCursor ri cj coo.entries curPtr
 
-                        match f ri cj v with
-                        | Some r ->
-                            target.[curOut] <- (ri, cj, r)
-                            loopCol (j + 1UL) nextPtr (curOut + 1)
-                        | None -> loopCol (j + 1UL) nextPtr curOut
-                    else
-                        curPtr, curOut
+                            match f ri cj v with
+                            | Some r -> loopCol (j + 1UL) nextPtr ((ri, cj, r) :: curAcc)
+                            | None -> loopCol (j + 1UL) nextPtr curAcc
+                        else
+                            curPtr, curAcc
 
-                let nextPtr, nextOut = loopCol 0UL ptr outIdx
-                loopRow (i + 1UL) nextPtr nextOut
-            else
-                outIdx
+                    let nextPtr, nextAcc = loopCol 0UL ptr acc
+                    loopRow (i + 1UL) nextPtr nextAcc
+                else
+                    List.rev acc
 
-        let total = loopRow 0UL 0 0
-        let finalArr = truncate total target
-        ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, finalArr)
+            let entries = loopRow 0UL 0 [] |> List.toArray
+            ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, entries)
+        else
+            let totalCells = int totalCells64
+            let target = Array.zeroCreate totalCells
+
+            let rec loopRow i ptr outIdx =
+                if i < uint64 coo.nrows then
+                    let ri = i * 1UL<rowindex>
+
+                    let rec loopCol j curPtr curOut =
+                        if j < uint64 coo.ncols then
+                            let cj = j * 1UL<colindex>
+                            let v, nextPtr = advanceArrayCursor ri cj coo.entries curPtr
+
+                            match f ri cj v with
+                            | Some r ->
+                                target.[curOut] <- (ri, cj, r)
+                                loopCol (j + 1UL) nextPtr (curOut + 1)
+                            | None -> loopCol (j + 1UL) nextPtr curOut
+                        else
+                            curPtr, curOut
+
+                    let nextPtr, nextOut = loopCol 0UL ptr outIdx
+                    loopRow (i + 1UL) nextPtr nextOut
+                else
+                    outIdx
+
+            let total = loopRow 0UL 0 0
+            let finalArr = truncate total target
+            ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, finalArr)
 
 let private mergeBinary (a1: COOEntry<'a>[]) (a2: COOEntry<'b>[]) (op: BinaryOp<'a, 'b, 'c>) : COOEntry<'c>[] =
     let target = Array.zeroCreate (a1.Length + a2.Length)
 
     let rec loop p1 p2 outIdx =
+        let inline emit i j v1 v2 nextP1 nextP2 =
+            match applyBinary op i j v1 v2 with
+            | Some r ->
+                target.[outIdx] <- (i, j, r)
+                loop nextP1 nextP2 (outIdx + 1)
+            | None -> loop nextP1 nextP2 outIdx
+
         if p1 >= a1.Length && p2 >= a2.Length then
             outIdx
         elif p1 >= a1.Length then
             let (i, j, v2) = a2.[p2]
-
-            match applyBinary op i j None (Some v2) with
-            | Some r ->
-                target.[outIdx] <- (i, j, r)
-                loop p1 (p2 + 1) (outIdx + 1)
-            | None -> loop p1 (p2 + 1) outIdx
+            emit i j None (Some v2) p1 (p2 + 1)
         elif p2 >= a2.Length then
             let (i, j, v1) = a1.[p1]
-
-            match applyBinary op i j (Some v1) None with
-            | Some r ->
-                target.[outIdx] <- (i, j, r)
-                loop (p1 + 1) p2 (outIdx + 1)
-            | None -> loop (p1 + 1) p2 outIdx
+            emit i j (Some v1) None (p1 + 1) p2
         else
             let (i1, j1, v1) = a1.[p1]
             let (i2, j2, v2) = a2.[p2]
             let c = compareCoords i1 j1 i2 j2
 
             if c = 0 then
-                match applyBinary op i1 j1 (Some v1) (Some v2) with
-                | Some r ->
-                    target.[outIdx] <- (i1, j1, r)
-                    loop (p1 + 1) (p2 + 1) (outIdx + 1)
-                | None -> loop (p1 + 1) (p2 + 1) outIdx
+                emit i1 j1 (Some v1) (Some v2) (p1 + 1) (p2 + 1)
             elif c < 0 then
-                match applyBinary op i1 j1 (Some v1) None with
-                | Some r ->
-                    target.[outIdx] <- (i1, j1, r)
-                    loop (p1 + 1) p2 (outIdx + 1)
-                | None -> loop (p1 + 1) p2 outIdx
+                emit i1 j1 (Some v1) None (p1 + 1) p2
             else
-                match applyBinary op i2 j2 None (Some v2) with
-                | Some r ->
-                    target.[outIdx] <- (i2, j2, r)
-                    loop p1 (p2 + 1) (outIdx + 1)
-                | None -> loop p1 (p2 + 1) outIdx
+                emit i2 j2 None (Some v2) p1 (p2 + 1)
 
     let total = loop 0 0 0
     truncate total target
@@ -471,6 +482,7 @@ let mxmcoo
             Option.isNone (op_mult None None)
             && checkMultCondition m1.entries (fun v -> Some v) (fun _ -> None)
             && checkMultCondition m2.entries (fun _ -> None) (fun v -> Some v)
+            && uint64 m2.nrows <= uint64 System.Int32.MaxValue
 
         let generalResult () =
             let m1Map = m1.entries |> Array.map (fun (i, j, v) -> ((i, j), v)) |> Map.ofArray

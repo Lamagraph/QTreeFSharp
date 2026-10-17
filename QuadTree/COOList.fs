@@ -189,86 +189,65 @@ let inline private advanceCursor ri cj entries =
     | _ -> None, entries
 
 let rec private cooMapInner (coo: ListCOO<'a>) (op: UnaryOp<'a, 'b>) : ListCOO<'b> =
-    let result =
-        match op with
-        | UnaryOp.ValuesOnly f -> (cooMapInner coo (UnaryOp.ValuesOnlyIndexed(fun _ _ v -> f v))).entries
-        | UnaryOp.ValuesOnlyIndexed f ->
+    match op with
+    | UnaryOp.ValuesOnly f -> cooMapInner coo (UnaryOp.ValuesOnlyIndexed(fun _ _ v -> f v))
+    | UnaryOp.ValuesOnlyIndexed f ->
+        let entries =
             coo.entries
             |> List.choose (fun (i, j, v) -> f i j v |> Option.map (fun r -> (i, j, r)))
-        | UnaryOp.AllCells f ->
-            match f None with
-            | None -> (cooMapInner coo (UnaryOp.ValuesOnly(fun v -> f (Some v)))).entries
-            | Some _ -> (cooMapInner coo (UnaryOp.AllCellsIndexed(fun _ _ v -> f v))).entries
-        | UnaryOp.AllCellsIndexed f ->
-            let rec loopRow i curRest acc =
-                if i < uint64 coo.nrows then
-                    let ri = i * 1UL<rowindex>
 
-                    let rec loopCol j r acc' =
-                        if j < uint64 coo.ncols then
-                            let cj = j * 1UL<colindex>
-                            let v, nextR = advanceCursor ri cj r
+        ListCOO.CreatePresorted(coo.nrows, coo.ncols, entries)
+    | UnaryOp.AllCells f ->
+        match f None with
+        | None -> cooMapInner coo (UnaryOp.ValuesOnly(fun v -> f (Some v)))
+        | Some _ -> cooMapInner coo (UnaryOp.AllCellsIndexed(fun _ _ v -> f v))
+    | UnaryOp.AllCellsIndexed f ->
+        let rec loopRow i curRest acc =
+            if i < uint64 coo.nrows then
+                let ri = i * 1UL<rowindex>
 
-                            let acc'' =
-                                match f ri cj v with
-                                | Some value -> (ri, cj, value) :: acc'
-                                | None -> acc'
+                let rec loopCol j r acc' =
+                    if j < uint64 coo.ncols then
+                        let cj = j * 1UL<colindex>
+                        let v, nextR = advanceCursor ri cj r
 
-                            loopCol (j + 1UL) nextR acc''
-                        else
-                            r, acc'
+                        let acc'' =
+                            match f ri cj v with
+                            | Some value -> (ri, cj, value) :: acc'
+                            | None -> acc'
 
-                    let nextR, nextAcc = loopCol 0UL curRest acc
-                    loopRow (i + 1UL) nextR nextAcc
-                else
-                    List.rev acc
+                        loopCol (j + 1UL) nextR acc''
+                    else
+                        r, acc'
 
-            loopRow 0UL coo.entries []
+                let nextR, nextAcc = loopCol 0UL curRest acc
+                loopRow (i + 1UL) nextR nextAcc
+            else
+                List.rev acc
 
-    ListCOO.CreatePresorted(coo.nrows, coo.ncols, result)
+        let entries = loopRow 0UL coo.entries []
+        ListCOO.CreatePresorted(coo.nrows, coo.ncols, entries)
 
 let private mergeBinary (l1: COOEntry<'a> list) (l2: COOEntry<'b> list) (op: BinaryOp<'a, 'b, 'c>) : COOEntry<'c> list =
     let rec loop acc rest1 rest2 =
+        let inline emit i j v1 v2 nextRest1 nextRest2 =
+            let acc' =
+                match applyBinary op i j v1 v2 with
+                | Some r -> (i, j, r) :: acc
+                | None -> acc
+
+            loop acc' nextRest1 nextRest2
+
         match rest1, rest2 with
         | [], [] -> List.rev acc
-        | (i, j, v1) :: t1, [] ->
-            let acc' =
-                match applyBinary op i j (Some v1) None with
-                | Some r -> (i, j, r) :: acc
-                | None -> acc
-
-            loop acc' t1 []
-        | [], (i, j, v2) :: t2 ->
-            let acc' =
-                match applyBinary op i j None (Some v2) with
-                | Some r -> (i, j, r) :: acc
-                | None -> acc
-
-            loop acc' [] t2
+        | (i, j, v1) :: t1, [] -> emit i j (Some v1) None t1 []
+        | [], (i, j, v2) :: t2 -> emit i j None (Some v2) [] t2
         | (i1, j1, v1) :: t1, (i2, j2, v2) :: t2 ->
             let c = compareCoords i1 j1 i2 j2
 
-            if c = 0 then
-                let acc' =
-                    match applyBinary op i1 j1 (Some v1) (Some v2) with
-                    | Some r -> (i1, j1, r) :: acc
-                    | None -> acc
-
-                loop acc' t1 t2
-            elif c < 0 then
-                let acc' =
-                    match applyBinary op i1 j1 (Some v1) None with
-                    | Some r -> (i1, j1, r) :: acc
-                    | None -> acc
-
-                loop acc' t1 ((i2, j2, v2) :: t2)
-            else
-                let acc' =
-                    match applyBinary op i2 j2 None (Some v2) with
-                    | Some r -> (i2, j2, r) :: acc
-                    | None -> acc
-
-                loop acc' ((i1, j1, v1) :: t1) t2
+            if c = 0 then emit i1 j1 (Some v1) (Some v2) t1 t2
+            elif c < 0 then emit i1 j1 (Some v1) None t1 rest2
+            else emit i2 j2 None (Some v2) rest1 t2
 
     loop [] l1 l2
 
@@ -282,44 +261,54 @@ let private cooMap2Inner
     else
         let nrows = coo1.nrows
         let ncols = coo1.ncols
+        let totalCells64 = uint64 nrows * uint64 ncols
 
-        let runDense f =
-            let rec loopRow i curRest1 curRest2 acc =
-                if i < uint64 nrows then
-                    let ri = i * 1UL<rowindex>
-
-                    let rec loopCol j r1 r2 acc' =
-                        if j < uint64 ncols then
-                            let cj = j * 1UL<colindex>
-                            let v1, nextR1 = advanceCursor ri cj r1
-                            let v2, nextR2 = advanceCursor ri cj r2
-
-                            let acc'' =
-                                match f ri cj v1 v2 with
-                                | Some value -> (ri, cj, value) :: acc'
-                                | None -> acc'
-
-                            loopCol (j + 1UL) nextR1 nextR2 acc''
-                        else
-                            r1, r2, acc'
-
-                    let nextR1, nextR2, nextAcc = loopCol 0UL curRest1 curRest2 acc
-                    loopRow (i + 1UL) nextR1 nextR2 nextAcc
-                else
-                    List.rev acc
-
-            loopRow 0UL coo1.entries coo2.entries []
-
-        let result =
+        let isDense =
             match op with
-            | BinaryOp.AllCells f ->
-                match f None None with
-                | None -> mergeBinary coo1.entries coo2.entries op
-                | Some _ -> runDense (fun _ _ v1 v2 -> f v1 v2)
-            | BinaryOp.AllCellsIndexed f -> runDense f
-            | _ -> mergeBinary coo1.entries coo2.entries op
+            | BinaryOp.AllCells f -> (f None None).IsSome
+            | BinaryOp.AllCellsIndexed _ -> true
+            | _ -> false
 
-        ListCOO.CreatePresorted(nrows, ncols, result) |> Ok
+        if isDense && totalCells64 > uint64 System.Int32.MaxValue then
+            Error Error.InconsistentSizeOfArguments
+        else
+            let runDense f =
+                let rec loopRow i curRest1 curRest2 acc =
+                    if i < uint64 nrows then
+                        let ri = i * 1UL<rowindex>
+
+                        let rec loopCol j r1 r2 acc' =
+                            if j < uint64 ncols then
+                                let cj = j * 1UL<colindex>
+                                let v1, nextR1 = advanceCursor ri cj r1
+                                let v2, nextR2 = advanceCursor ri cj r2
+
+                                let acc'' =
+                                    match f ri cj v1 v2 with
+                                    | Some value -> (ri, cj, value) :: acc'
+                                    | None -> acc'
+
+                                loopCol (j + 1UL) nextR1 nextR2 acc''
+                            else
+                                r1, r2, acc'
+
+                        let nextR1, nextR2, nextAcc = loopCol 0UL curRest1 curRest2 acc
+                        loopRow (i + 1UL) nextR1 nextR2 nextAcc
+                    else
+                        List.rev acc
+
+                loopRow 0UL coo1.entries coo2.entries []
+
+            let result =
+                match op with
+                | BinaryOp.AllCells f ->
+                    match f None None with
+                    | None -> mergeBinary coo1.entries coo2.entries op
+                    | Some _ -> runDense (fun _ _ v1 v2 -> f v1 v2)
+                | BinaryOp.AllCellsIndexed f -> runDense f
+                | _ -> mergeBinary coo1.entries coo2.entries op
+
+            ListCOO.CreatePresorted(nrows, ncols, result) |> Ok
 
 let cooMap (coo: ListCOO<'a>) f = cooMapInner coo (UnaryOp.AllCells f)
 
@@ -462,27 +451,27 @@ let mxmcoo
             if canMerge then
                 let sorted = result |> List.sortWith entryCoordCompare
 
-                let rec reduceAdjacent acc curKey curSum rest =
+                let rec reduceAdjacent acc curR curC curSum rest =
                     match rest with
                     | [] ->
                         match curSum with
-                        | Some v -> List.rev ((fst curKey, snd curKey, v) :: acc)
+                        | Some v -> List.rev ((curR, curC, v) :: acc)
                         | None -> List.rev acc
                     | (i, j, v) :: tail ->
-                        if (i, j) = curKey then
-                            reduceAdjacent acc curKey (op_add curSum (Some v)) tail
+                        if i = curR && j = curC then
+                            reduceAdjacent acc curR curC (op_add curSum (Some v)) tail
                         else
                             let acc' =
                                 match curSum with
-                                | Some sv -> (fst curKey, snd curKey, sv) :: acc
+                                | Some sv -> (curR, curC, sv) :: acc
                                 | None -> acc
 
-                            reduceAdjacent acc' (i, j) (Some v) tail
+                            reduceAdjacent acc' i j (Some v) tail
 
                 let grouped =
                     match sorted with
                     | [] -> []
-                    | (i, j, v) :: tail -> reduceAdjacent [] (i, j) (Some v) tail
+                    | (i, j, v) :: tail -> reduceAdjacent [] i j (Some v) tail
 
                 ListCOO.CreatePresorted(m1.nrows, m2.ncols, grouped) |> Ok
             else
