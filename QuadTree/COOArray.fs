@@ -3,17 +3,28 @@ module COOArray
 open Common
 open Matrix
 
-let private compareEntriesByRowCol (e1: COOEntry<'v>) (e2: COOEntry<'v>) =
-    let (i1, j1, _) = e1
-    let (i2, j2, _) = e2
-    let c = compare i1 i2
-    if c <> 0 then c else compare j1 j2
+let inline private truncate (total: int) (arr: 'T[]) : 'T[] =
+    if total = arr.Length then arr else Array.sub arr 0 total
 
-let private entryComparer<'v> =
-    { new System.Collections.Generic.IComparer<COOEntry<'v>> with
-        member _.Compare(e1, e2) = compareEntriesByRowCol e1 e2 }
+let inline private binarySearchEntries
+    (arr: COOEntry<'v>[])
+    (targetR: uint64<rowindex>)
+    (targetC: uint64<colindex>)
+    : int =
+    let rec loop low high =
+        if low <= high then
+            let mid = low + ((high - low) >>> 1)
+            let (r, c, _) = arr.[mid]
+            let cmpR = compare targetR r
+            let cmp = if cmpR <> 0 then cmpR else compare targetC c
 
+            if cmp = 0 then mid
+            elif cmp < 0 then loop low (mid - 1)
+            else loop (mid + 1) high
+        else
+            ~~~low
 
+    loop 0 (arr.Length - 1)
 
 let private isStrictlySorted (arr: COOEntry<'v>[]) =
     let rec loop i =
@@ -55,18 +66,16 @@ let private sortAndDeduplicate (arr: COOEntry<'v>[]) : COOEntry<'v>[] =
                 let (r, c, v) = arr.[idx]
                 (r, c, v, idx))
 
-        System.Array.Sort(
-            tagged,
-            { new System.Collections.Generic.IComparer<uint64<rowindex> * uint64<colindex> * 'v * int> with
-                member _.Compare((r1, c1, _, idx1), (r2, c2, _, idx2)) =
-                    let c = compare r1 r2
+        Array.sortInPlaceWith
+            (fun (r1, c1, _, idx1) (r2, c2, _, idx2) ->
+                let c = compare r1 r2
 
-                    if c <> 0 then
-                        c
-                    else
-                        let cCol = compare c1 c2
-                        if cCol <> 0 then cCol else compare idx1 idx2 }
-        )
+                if c <> 0 then
+                    c
+                else
+                    let cCol = compare c1 c2
+                    if cCol <> 0 then cCol else compare idx1 idx2)
+            tagged
 
         let rec countUnique i count =
             if i < tagged.Length then
@@ -176,7 +185,7 @@ type ArrayCOO<'value> =
         : Result<ArrayCOO<'value>, Error> =
         ArrayCOO<'value>.TryCreate(nrows, ncols, List.toArray entries)
 
-    static member CreatePresorted
+    static member internal CreatePresorted
         (nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value>[])
         : ArrayCOO<'value> =
 #if DEBUG
@@ -192,12 +201,7 @@ type ArrayCOO<'value> =
             match checkBounds (uint64 this.nrows) (uint64 this.ncols) (uint64 rowindex) (uint64 colindex) with
             | Error e -> Error e
             | Ok() ->
-                let idx =
-                    System.Array.BinarySearch(
-                        this.entries,
-                        (rowindex, colindex, Unchecked.defaultof<'value>),
-                        entryComparer<'value>
-                    )
+                let idx = binarySearchEntries this.entries rowindex colindex
 
                 if idx >= 0 then
                     let (_, _, value) = this.entries.[idx]
@@ -214,8 +218,7 @@ let cooUpdate
     match checkBounds (uint64 coo.nrows) (uint64 coo.ncols) (uint64 rowindex) (uint64 colindex) with
     | Error e -> Error e
     | Ok() ->
-        let idx =
-            System.Array.BinarySearch(coo.entries, (rowindex, colindex, Unchecked.defaultof<'a>), entryComparer<'a>)
+        let idx = binarySearchEntries coo.entries rowindex colindex
 
         if idx >= 0 then
             let arr = Array.copy coo.entries
@@ -248,13 +251,7 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
                 outIdx
 
         let total = loop 0 0
-
-        let res =
-            if total = target.Length then
-                target
-            else
-                Array.sub target 0 total
-
+        let res = truncate total target
         ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, res)
     | UnaryOp.ValuesOnlyIndexed f ->
         let target = Array.zeroCreate coo.entries.Length
@@ -272,13 +269,7 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
                 outIdx
 
         let total = loop 0 0
-
-        let res =
-            if total = target.Length then
-                target
-            else
-                Array.sub target 0 total
-
+        let res = truncate total target
         ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, res)
     | UnaryOp.AllCells f ->
         match f None with
@@ -298,13 +289,7 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
                     outIdx
 
             let total = loop 0 0
-
-            let res =
-                if total = target.Length then
-                    target
-                else
-                    Array.sub target 0 total
-
+            let res = truncate total target
             ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, res)
         | Some fnone ->
             let totalCells = int (uint64 coo.nrows * uint64 coo.ncols)
@@ -349,12 +334,7 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
 
             let total = loopRow 0UL 0 0
 
-            let finalArr =
-                if total = target.Length then
-                    target
-                else
-                    Array.sub target 0 total
-
+            let finalArr = truncate total target
             ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, finalArr)
     | UnaryOp.AllCellsIndexed f ->
         let totalCells = int (uint64 coo.nrows * uint64 coo.ncols)
@@ -394,12 +374,7 @@ let private cooMapInner (coo: ArrayCOO<'a>) (op: UnaryOp<'a, 'b>) : ArrayCOO<'b>
 
         let total = loopRow 0UL 0 0
 
-        let finalArr =
-            if total = target.Length then
-                target
-            else
-                Array.sub target 0 total
-
+        let finalArr = truncate total target
         ArrayCOO.CreatePresorted(coo.nrows, coo.ncols, finalArr)
 
 let private mergeBinary (a1: COOEntry<'a>[]) (a2: COOEntry<'b>[]) (op: BinaryOp<'a, 'b, 'c>) : COOEntry<'c>[] =
@@ -448,11 +423,7 @@ let private mergeBinary (a1: COOEntry<'a>[]) (a2: COOEntry<'b>[]) (op: BinaryOp<
                 | None -> loop p1 (p2 + 1) outIdx
 
     let total = loop 0 0 0
-
-    if total = target.Length then
-        target
-    else
-        Array.sub target 0 total
+    truncate total target
 
 let private cooMap2Inner
     (coo1: ArrayCOO<'a>)
@@ -464,14 +435,73 @@ let private cooMap2Inner
     else
         let nrows = coo1.nrows
         let ncols = coo1.ncols
+        let totalCells64 = uint64 nrows * uint64 ncols
 
-        let result =
+        let isDense =
             match op with
-            | BinaryOp.AllCells f ->
-                match f None None with
-                | None -> mergeBinary coo1.entries coo2.entries op
-                | Some _ ->
-                    let totalCells = int (uint64 nrows * uint64 ncols)
+            | BinaryOp.AllCells f -> (f None None).IsSome
+            | BinaryOp.AllCellsIndexed _ -> true
+            | _ -> false
+
+        if isDense && totalCells64 > uint64 System.Int32.MaxValue then
+            Error Error.InconsistentSizeOfArguments
+        else
+            let totalCells = if isDense then int totalCells64 else 0
+
+            let result =
+                match op with
+                | BinaryOp.AllCells f ->
+                    match f None None with
+                    | None -> mergeBinary coo1.entries coo2.entries op
+                    | Some _ ->
+                        let target = Array.zeroCreate totalCells
+
+                        let rec loopRow i p1 p2 outIdx =
+                            if i < uint64 nrows then
+                                let ri = i * 1UL<rowindex>
+
+                                let rec loopCol j curP1 curP2 curOut =
+                                    if j < uint64 ncols then
+                                        let cj = j * 1UL<colindex>
+
+                                        let v1, nextP1 =
+                                            if curP1 < coo1.entries.Length then
+                                                let (ei, ej, ev) = coo1.entries.[curP1]
+
+                                                if ei = ri && ej = cj then
+                                                    Some ev, curP1 + 1
+                                                else
+                                                    None, curP1
+                                            else
+                                                None, curP1
+
+                                        let v2, nextP2 =
+                                            if curP2 < coo2.entries.Length then
+                                                let (ei, ej, ev) = coo2.entries.[curP2]
+
+                                                if ei = ri && ej = cj then
+                                                    Some ev, curP2 + 1
+                                                else
+                                                    None, curP2
+                                            else
+                                                None, curP2
+
+                                        match f v1 v2 with
+                                        | Some r ->
+                                            target.[curOut] <- (ri, cj, r)
+                                            loopCol (j + 1UL) nextP1 nextP2 (curOut + 1)
+                                        | None -> loopCol (j + 1UL) nextP1 nextP2 curOut
+                                    else
+                                        curP1, curP2, curOut
+
+                                let nextP1, nextP2, nextOut = loopCol 0UL p1 p2 outIdx
+                                loopRow (i + 1UL) nextP1 nextP2 nextOut
+                            else
+                                outIdx
+
+                        let total = loopRow 0UL 0 0 0
+                        truncate total target
+                | BinaryOp.AllCellsIndexed f ->
                     let target = Array.zeroCreate totalCells
 
                     let rec loopRow i p1 p2 outIdx =
@@ -504,7 +534,7 @@ let private cooMap2Inner
                                         else
                                             None, curP2
 
-                                    match f v1 v2 with
+                                    match f ri cj v1 v2 with
                                     | Some r ->
                                         target.[curOut] <- (ri, cj, r)
                                         loopCol (j + 1UL) nextP1 nextP2 (curOut + 1)
@@ -518,67 +548,10 @@ let private cooMap2Inner
                             outIdx
 
                     let total = loopRow 0UL 0 0 0
+                    truncate total target
+                | _ -> mergeBinary coo1.entries coo2.entries op
 
-                    if total = target.Length then
-                        target
-                    else
-                        Array.sub target 0 total
-            | BinaryOp.AllCellsIndexed f ->
-                let totalCells = int (uint64 nrows * uint64 ncols)
-                let target = Array.zeroCreate totalCells
-
-                let rec loopRow i p1 p2 outIdx =
-                    if i < uint64 nrows then
-                        let ri = i * 1UL<rowindex>
-
-                        let rec loopCol j curP1 curP2 curOut =
-                            if j < uint64 ncols then
-                                let cj = j * 1UL<colindex>
-
-                                let v1, nextP1 =
-                                    if curP1 < coo1.entries.Length then
-                                        let (ei, ej, ev) = coo1.entries.[curP1]
-
-                                        if ei = ri && ej = cj then
-                                            Some ev, curP1 + 1
-                                        else
-                                            None, curP1
-                                    else
-                                        None, curP1
-
-                                let v2, nextP2 =
-                                    if curP2 < coo2.entries.Length then
-                                        let (ei, ej, ev) = coo2.entries.[curP2]
-
-                                        if ei = ri && ej = cj then
-                                            Some ev, curP2 + 1
-                                        else
-                                            None, curP2
-                                    else
-                                        None, curP2
-
-                                match f ri cj v1 v2 with
-                                | Some r ->
-                                    target.[curOut] <- (ri, cj, r)
-                                    loopCol (j + 1UL) nextP1 nextP2 (curOut + 1)
-                                | None -> loopCol (j + 1UL) nextP1 nextP2 curOut
-                            else
-                                curP1, curP2, curOut
-
-                        let nextP1, nextP2, nextOut = loopCol 0UL p1 p2 outIdx
-                        loopRow (i + 1UL) nextP1 nextP2 nextOut
-                    else
-                        outIdx
-
-                let total = loopRow 0UL 0 0 0
-
-                if total = target.Length then
-                    target
-                else
-                    Array.sub target 0 total
-            | _ -> mergeBinary coo1.entries coo2.entries op
-
-        ArrayCOO.CreatePresorted(nrows, ncols, result) |> Ok
+            ArrayCOO.CreatePresorted(nrows, ncols, result) |> Ok
 
 let cooMap (coo: ArrayCOO<'a>) f = cooMapInner coo (UnaryOp.AllCells f)
 
@@ -745,12 +718,7 @@ let mxmcoo
                     writePos
 
             let actualProductsCount = emitProducts 0 0
-
-            let effectiveProducts =
-                if actualProductsCount = products.Length then
-                    products
-                else
-                    Array.sub products 0 actualProductsCount
+            let effectiveProducts = truncate actualProductsCount products
 
             let canMerge =
                 Option.isNone (op_add None None)
@@ -768,7 +736,11 @@ let mxmcoo
                     checkAdd 0)
 
             if canMerge then
-                System.Array.Sort(effectiveProducts, entryComparer<'c>)
+                Array.sortInPlaceWith
+                    (fun (i1, j1, _) (i2, j2, _) ->
+                        let c = compare i1 i2
+                        if c <> 0 then c else compare j1 j2)
+                    effectiveProducts
 
                 let target = Array.zeroCreate effectiveProducts.Length
 
@@ -798,12 +770,7 @@ let mxmcoo
                         outIdx
 
                 let finalCount = reduceProducts 0 0
-
-                let resultArr =
-                    if finalCount = target.Length then
-                        target
-                    else
-                        Array.sub target 0 finalCount
+                let resultArr = truncate finalCount target
 
                 ArrayCOO.CreatePresorted(m1.nrows, m2.ncols, resultArr) |> Ok
             else

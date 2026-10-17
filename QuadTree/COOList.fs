@@ -38,34 +38,24 @@ let private sortAndDeduplicateList (entries: COOEntry<'v> list) : COOEntry<'v> l
     elif List.isEmpty entries then
         entries
     else
-        let tagged = entries |> List.mapi (fun idx (r, c, v) -> (r, c, v, idx))
-
-        let sortedTagged =
-            tagged
-            |> List.sortWith (fun (r1, c1, _, idx1) (r2, c2, _, idx2) ->
+        let sorted =
+            entries
+            |> List.sortWith (fun (r1, c1, _) (r2, c2, _) ->
                 let c = compare r1 r2
-
-                if c <> 0 then
-                    c
-                else
-                    let cc = compare c1 c2
-                    if cc <> 0 then cc else compare idx1 idx2)
+                if c <> 0 then c else compare c1 c2)
 
         let rec deduplicate acc curEntry rest =
             match rest with
-            | [] ->
-                let (r, c, v, _) = curEntry
-                List.rev ((r, c, v) :: acc)
-            | ((r2, c2, _, _) as nextEntry) :: tail ->
-                let (r1, c1, _, _) = curEntry
+            | [] -> List.rev (curEntry :: acc)
+            | ((r2, c2, _) as nextEntry) :: tail ->
+                let (r1, c1, _) = curEntry
 
                 if r1 = r2 && c1 = c2 then
                     deduplicate acc nextEntry tail
                 else
-                    let (r, c, v, _) = curEntry
-                    deduplicate ((r, c, v) :: acc) nextEntry tail
+                    deduplicate (curEntry :: acc) nextEntry tail
 
-        match sortedTagged with
+        match sorted with
         | [] -> []
         | head :: tail -> deduplicate [] head tail
 
@@ -132,7 +122,7 @@ type ListCOO<'value> =
         : Result<ListCOO<'value>, Error> =
         ListCOO<'value>.TryCreate(nrows, ncols, Array.toList entries)
 
-    static member CreatePresorted
+    static member internal CreatePresorted
         (nrows: uint64<nrows>, ncols: uint64<ncols>, entries: COOEntry<'value> list)
         : ListCOO<'value> =
 #if DEBUG
@@ -514,7 +504,6 @@ let mxmcoo
             ListCOO.CreatePresorted(m1.nrows, m2.ncols, result)
 
         if canOptimize then
-            let m1ByRow = entries1 |> List.groupBy (fun (i, _, _) -> i) |> Map.ofList
             let m2ByRow = entries2 |> List.groupBy (fun (k, _, _) -> k) |> Map.ofList
 
             let rec emitProducts m1List acc =

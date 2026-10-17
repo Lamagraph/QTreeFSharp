@@ -2521,3 +2521,47 @@ let ``kronecker product with filtering (only even results)`` () =
             Assert.True(List.length coo.list < 16)
         | Result.Error msg -> Assert.Fail(msg)
     | _ -> Assert.Fail()
+
+[<Fact>]
+let ``Matrix map and map2 handle Dummy in rectangular padding correctly on dense fill`` () =
+    let clist =
+        CoordinateList(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 2) ])
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        let mapped =
+            Matrix.map m (fun opt ->
+                match opt with
+                | Some v -> Some v
+                | None -> Some 0)
+
+        let coo = Matrix.toCoordinateList mapped
+        Assert.Equal(3UL<nrows>, coo.nrows)
+        Assert.Equal(3UL<ncols>, coo.ncols)
+        Assert.Equal(9, coo.list.Length)
+
+        match
+            Matrix.map2 m m (fun a b ->
+                match a, b with
+                | Some x, Some y -> Some(x + y)
+                | Some x, None -> Some x
+                | None, Some y -> Some y
+                | None, None -> Some 0)
+        with
+        | Result.Ok mapped2 ->
+            let coo2 = Matrix.toCoordinateList mapped2
+            Assert.Equal(3UL<nrows>, coo2.nrows)
+            Assert.Equal(3UL<ncols>, coo2.ncols)
+            Assert.Equal(9, coo2.list.Length)
+        | Result.Error e -> failwithf "Unexpected error %A" e
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``Matrix map2 returns InconsistentSizeOfArguments when storage sizes differ`` () =
+    let m1 =
+        SparseMatrix(2UL<nrows>, 2UL<ncols>, 0UL<nvals>, Matrix.Storage(2UL<storageSize>, qtree.Leaf(UserValue None)))
+
+    let m2 =
+        SparseMatrix(2UL<nrows>, 2UL<ncols>, 0UL<nvals>, Matrix.Storage(4UL<storageSize>, qtree.Leaf(UserValue None)))
+
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.map2 m1 m2 (fun a b -> None))

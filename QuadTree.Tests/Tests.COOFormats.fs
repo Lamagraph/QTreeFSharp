@@ -1375,3 +1375,18 @@ let ``ArrayCOO and ListCOO TryCreate validates bounds`` () =
     match ListCOO<int>.TryCreate(2UL<nrows>, 2UL<ncols>, goodEntries) with
     | Ok l -> Assert.Equal(2, l.entries.Length)
     | Error e -> failwithf "Unexpected error %A" e
+
+[<Fact>]
+let ``ArrayCOO cooMap2 returns error on dense mapping with overflow over Int32 MaxValue`` () =
+    let bigCOO =
+        match ArrayCOO<int>.TryCreate(100_000UL<nrows>, 100_000UL<ncols>, []) with
+        | Ok coo -> coo
+        | Error e -> failwithf "Unexpected error %A" e
+
+    let denseBinaryF a b =
+        match a, b with
+        | Some x, _ -> Some x
+        | None, None -> Some 1
+        | _ -> None
+
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, COOArray.cooMap2 bigCOO bigCOO denseBinaryF)
