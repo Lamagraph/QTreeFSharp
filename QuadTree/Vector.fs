@@ -29,9 +29,9 @@ type SparseVector<'value> =
           nvals = _nvals
           storage = _storage }
 
-type Error = Common.Error
-
-
+type Error =
+    | InconsistentStructureOfStorages
+    | InconsistentSizeOfArguments
 
 let mkNode t1 t2 =
     match (t1, t2) with

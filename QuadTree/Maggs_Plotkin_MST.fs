@@ -6,8 +6,8 @@ open Matrix
 
 
 type Error =
-    | DiagAdditionProblem of Common.Error
-    | MSTComputationProblem of Common.Error
+    | DiagAdditionProblem of Matrix.Error
+    | MSTComputationProblem of Matrix.Error
     | ClosureComputationProblem of LinearAlgebra.Error
 
 let mst (graph: Matrix.SparseMatrix<'a>) =
