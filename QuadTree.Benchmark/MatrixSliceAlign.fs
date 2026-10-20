@@ -27,26 +27,11 @@ type Benchmark() =
 
     member val Matrix = Unchecked.defaultof<Matrix.SparseMatrix<double>> with get, set
 
-    member private this.GenerateMatrix(size: int, density: float, rng: Random) =
-        let coords =
-            [ for i in 0 .. size - 1 do
-                  for j in 0 .. size - 1 do
-                      if rng.NextDouble() < density then
-                          let value = double (rng.Next(1, 4))
-                          yield (uint64 i * 1UL<Matrix.rowindex>, uint64 j * 1UL<Matrix.colindex>, value) ]
-
-        match
-            Matrix.fromCoordinateList (
-                Matrix.CoordinateList(uint64 size * 1UL<Matrix.nrows>, uint64 size * 1UL<Matrix.ncols>, coords)
-            )
-        with
-        | Ok m -> m
-        | Error msg -> failwithf "Failed to create matrix: %s" msg
 
     [<GlobalSetup>]
     member this.Setup() =
         let rng = Random(this.Seed)
-        this.Matrix <- this.GenerateMatrix(this.Size, this.Density, rng)
+        this.Matrix <- QuadTree.Benchmarks.Utils.generateMatrix this.Size this.Density rng
 
     member private this.SliceWithOffset(m: Matrix.SparseMatrix<double>) =
         let n = int m.nrows

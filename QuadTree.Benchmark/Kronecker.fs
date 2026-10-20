@@ -23,27 +23,12 @@ type Benchmark() =
     member val A = Unchecked.defaultof<Matrix.SparseMatrix<double>> with get, set
     member val B = Unchecked.defaultof<Matrix.SparseMatrix<double>> with get, set
 
-    member private this.GenerateMatrix(size: int, density: float, rng: Random) =
-        let coords =
-            [ for i in 0 .. size - 1 do
-                  for j in 0 .. size - 1 do
-                      if rng.NextDouble() < density then
-                          let value = double (rng.Next(1, 4))
-                          yield (uint64 i * 1UL<Matrix.rowindex>, uint64 j * 1UL<Matrix.colindex>, value) ]
-
-        match
-            Matrix.fromCoordinateList (
-                Matrix.CoordinateList(uint64 size * 1UL<Matrix.nrows>, uint64 size * 1UL<Matrix.ncols>, coords)
-            )
-        with
-        | Ok m -> m
-        | Error msg -> failwithf "Failed to create matrix: %s" msg
 
     [<GlobalSetup>]
     member this.Setup() =
         let rng = Random(this.Seed)
-        this.A <- this.GenerateMatrix(this.SizeA, 0.01, rng)
-        this.B <- this.GenerateMatrix(this.SizeB, this.DensityB, rng)
+        this.A <- QuadTree.Benchmarks.Utils.generateMatrix this.SizeA 0.01 rng
+        this.B <- QuadTree.Benchmarks.Utils.generateMatrix this.SizeB this.DensityB rng
 
     [<Benchmark>]
     member this.Kronecker() =

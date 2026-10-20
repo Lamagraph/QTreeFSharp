@@ -1,10 +1,18 @@
 module Matrix.Tests
 
+open OptionMonoid
+
 open System
 open Xunit
 
 open Matrix
+open COOArray
 open Common
+
+let private fromCoordinateListUnchecked (lst: Matrix.CoordinateList<'a>) =
+    match Matrix.fromCoordinateList lst with
+    | Ok m -> m
+    | Error e -> failwith e
 
 let printMatrix (matrix: SparseMatrix<_>) =
     printfn "Matrix:"
@@ -29,17 +37,7 @@ let leaf_v v = qtree.Leaf << UserValue <| Some v
 let leaf_n () = qtree.Leaf << UserValue <| None
 let leaf_d () = qtree.Leaf Dummy
 
-let op_add x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a + b)
-    | Some(a), _
-    | _, Some(a) -> Some(a)
-    | _ -> None
 
-let op_mult x y =
-    match (x, y) with
-    | Some(a), Some(b) -> Some(a * b)
-    | _ -> None
 (*
 N,1,1,N
 3,2,2,3
@@ -239,9 +237,22 @@ let ``Simple Matrix.map2i. Square where number of cols and rows are not power of
 
         let actual = Matrix.map2i m1 m2 f
 
-        match actual with
-        | Result.Ok _ -> ()
-        | Result.Error _ -> Assert.Fail()
+        let expectedResult =
+            Matrix.CoordinateList(
+                nrows,
+                ncols,
+                [ (0UL<rowindex>, 0UL<colindex>, 11)
+                  (0UL<rowindex>, 1UL<colindex>, 22)
+                  (0UL<rowindex>, 2UL<colindex>, 33)
+                  (1UL<rowindex>, 0UL<colindex>, 18)
+                  (1UL<rowindex>, 1UL<colindex>, 30)
+                  (1UL<rowindex>, 2UL<colindex>, 42) ]
+            )
+            |> Matrix.fromCoordinateList
+
+        match actual, expectedResult with
+        | Result.Ok act, Result.Ok exp -> Assert.Equal(exp, act)
+        | _ -> Assert.Fail()
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -464,7 +475,7 @@ let ``Condensation of sparse`` () =
     | _ -> Assert.Fail()
 
 [<Fact>]
-let ``fold -> sum`` () =
+let ``fold -> op_add`` () =
     // 222D
     // 222D
     // 222D
@@ -593,7 +604,7 @@ let ``2x3 transposition`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
-let ``Fold sum`` () =
+let ``Fold op_add`` () =
     // 2N2D
     // N2ND
     // DDDD
@@ -616,7 +627,393 @@ let ``Fold sum`` () =
     Assert.Equal(expected, actual)
 
 [<Fact>]
-let ``fromCoordinateList with out-of-range coordinates returns Error`` () =
+let ``matrix get existing value`` () =
+    let m =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 7); (1UL<rowindex>, 2UL<colindex>, 9) ]
+            )
+        )
+
+    Assert.Equal(Ok(Some 7), get m 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 9), get m 1UL<rowindex> 2UL<colindex>)
+
+[<Fact>]
+let ``matrix get missing value`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 7) ]))
+
+    Assert.Equal(Ok None, get m 1UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix get out of bounds`` () =
+    let m = fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, []))
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, get m 5UL<rowindex> 5UL<colindex>)
+
+[<Fact>]
+let ``matrix set replaces existing`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 7) ]))
+
+    let actual = set m 0UL<rowindex> 0UL<colindex> 99 |> Result.defaultValue m
+
+    Assert.Equal(Ok(Some 99), get actual 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 7), get m 0UL<rowindex> 0UL<colindex>)
+
+[<Fact>]
+let ``matrix set inserts new`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 7) ]))
+
+    let actual = set m 2UL<rowindex> 2UL<colindex> 42 |> Result.defaultValue m
+
+    Assert.Equal(Ok(Some 42), get actual 2UL<rowindex> 2UL<colindex>)
+
+[<Fact>]
+let ``matrix set out of bounds`` () =
+    let m = fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, []))
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, set m 5UL<rowindex> 5UL<colindex> 99)
+
+[<Fact>]
+let ``matrix set then get roundtrip`` () =
+    let m0 = empty 4UL<nrows> 4UL<ncols>
+    let m1 = set m0 0UL<rowindex> 0UL<colindex> 1 |> Result.defaultValue m0
+    let m2 = set m1 1UL<rowindex> 2UL<colindex> 2 |> Result.defaultValue m1
+    let m3 = set m2 3UL<rowindex> 3UL<colindex> 3 |> Result.defaultValue m2
+
+    Assert.Equal(Ok(Some 1), get m3 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 2), get m3 1UL<rowindex> 2UL<colindex>)
+    Assert.Equal(Ok(Some 3), get m3 3UL<rowindex> 3UL<colindex>)
+    Assert.Equal(Ok(None), get m3 2UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix map doubles values`` () =
+    let m =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 2UL<colindex>, 5) ]
+            )
+        )
+
+    let result = map m (Option.map (fun v -> v * 2))
+
+    Assert.Equal(Ok(Some 6), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 10), get result 1UL<rowindex> 2UL<colindex>)
+    Assert.Equal(Ok(None), get result 0UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix map filters Some to None`` () =
+    let m =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 2UL<colindex>, 5) ]
+            )
+        )
+
+    let result =
+        map m (fun v ->
+            match v with
+            | Some x when x > 4 -> Some x
+            | _ -> None)
+
+    Assert.Equal(Ok(None), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 5), get result 1UL<rowindex> 2UL<colindex>)
+
+[<Fact>]
+let ``matrix map fills None with values`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 3) ]))
+
+    let result =
+        map m (fun v ->
+            Some(
+                match v with
+                | Some x -> x
+                | None -> 0
+            ))
+
+    Assert.Equal(Ok(Some 3), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 0), get result 1UL<rowindex> 1UL<colindex>)
+    Assert.Equal(Ok(Some 0), get result 3UL<rowindex> 3UL<colindex>)
+
+[<Fact>]
+let ``matrix map on empty matrix`` () =
+    let m = empty 4UL<nrows> 4UL<ncols>
+
+    let result = map m (Option.map (fun v -> v + 1))
+
+    Assert.Equal(Ok(None), get result 0UL<rowindex> 0UL<colindex>)
+
+[<Fact>]
+let ``matrix map nvals updated`` () =
+    let m =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 3); (1UL<rowindex>, 2UL<colindex>, 5) ]
+            )
+        )
+
+    Assert.Equal(2UL, uint64 m.nvals)
+
+    let result = map m (fun _ -> None)
+
+    Assert.Equal(0UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix mapValues applies only to stored values`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 3) ]))
+
+    let result = mapValues m (fun v -> Some(v * 2))
+
+    Assert.Equal(Ok(Some 6), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(None), get result 2UL<rowindex> 2UL<colindex>)
+    Assert.Equal(Ok(None), get result 0UL<rowindex> 1UL<colindex>)
+    Assert.Equal(1UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix mapValues can drop stored values`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 3) ]))
+
+    let result = mapValues m (fun _ -> None)
+
+    Assert.Equal(0UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix mapiValues applies only to stored values with indices`` () =
+    let m =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 2UL<colindex>, 5) ]))
+
+    let result = mapiValues m (fun i j v -> Some(v + int (uint64 i) + int (uint64 j)))
+
+    Assert.Equal(Ok(Some 8), get result 1UL<rowindex> 2UL<colindex>)
+    Assert.Equal(Ok(None), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(1UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix mapi expands uniform leaf`` () =
+    let m =
+        SparseMatrix(
+            4UL<nrows>,
+            4UL<ncols>,
+            4UL<nvals>,
+            Storage(4UL<storageSize>, Matrix.qtree.Node(leaf_v 5, leaf_n (), leaf_n (), leaf_n ()))
+        )
+
+    let result =
+        mapi m (fun i j v -> v |> Option.map (fun x -> x + int (uint64 i) + int (uint64 j)))
+
+    Assert.Equal(4UL, uint64 result.nvals)
+    Assert.Equal(Ok(Some 5), get result 0UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 6), get result 0UL<rowindex> 1UL<colindex>)
+    Assert.Equal(Ok(Some 6), get result 1UL<rowindex> 0UL<colindex>)
+    Assert.Equal(Ok(Some 7), get result 1UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix map2Values applies only where both values present`` () =
+    let m1 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ]
+            )
+        )
+
+    let m2 =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ]))
+
+    match map2Values m1 m2 (fun a b -> Some(a + b + 100)) with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 111), get result 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(None), get result 1UL<rowindex> 1UL<colindex>)
+        Assert.Equal(1UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix map2AllCells equals map2`` () =
+    let m1 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ]
+            )
+        )
+
+    let m2 =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ]))
+
+    let f a b =
+        match a, b with
+        | Some x, Some y -> Some(x + y)
+        | _ -> None
+
+    Assert.Equal(map2 m1 m2 f, map2AllCells m1 m2 f)
+
+[<Fact>]
+let ``matrix map2AtLeastOne distinguishes both left right`` () =
+    let m1 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ]
+            )
+        )
+
+    let m2 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                3UL<nrows>,
+                3UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 30) ]
+            )
+        )
+
+    let f =
+        function
+        | AtLeastOne.Both(a, b) -> Some(a + b)
+        | AtLeastOne.Left a -> Some(a * 100)
+        | AtLeastOne.Right b -> Some(b * -1)
+
+    match map2AtLeastOne m1 m2 f with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 11), get result 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 200), get result 1UL<rowindex> 1UL<colindex>)
+        Assert.Equal(Ok(Some -30), get result 2UL<rowindex> 2UL<colindex>)
+
+[<Fact>]
+let ``matrix map2LeftValues applies where left value present`` () =
+    let m1 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 1); (1UL<rowindex>, 1UL<colindex>, 2) ]
+            )
+        )
+
+    let m2 =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ]))
+
+    match map2LeftValues m1 m2 (fun a b -> Some(a + (defaultArg b 0))) with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 11), get result 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 2), get result 1UL<rowindex> 1UL<colindex>)
+        Assert.Equal(2UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix map2i expands uniform leaves on both sides`` () =
+    let m1 =
+        SparseMatrix(
+            4UL<nrows>,
+            4UL<ncols>,
+            4UL<nvals>,
+            Storage(4UL<storageSize>, Matrix.qtree.Node(leaf_v 5, leaf_n (), leaf_n (), leaf_n ()))
+        )
+
+    let m2 =
+        SparseMatrix(
+            4UL<nrows>,
+            4UL<ncols>,
+            4UL<nvals>,
+            Storage(4UL<storageSize>, Matrix.qtree.Node(leaf_v 10, leaf_n (), leaf_n (), leaf_n ()))
+        )
+
+    let f i j a b =
+        match a, b with
+        | Some x, Some y -> Some(x + y + int (uint64 i) * 10 + int (uint64 j))
+        | _ -> None
+
+    match map2i m1 m2 f with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(4UL, uint64 result.nvals)
+        Assert.Equal(Ok(Some 15), get result 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 16), get result 0UL<rowindex> 1UL<colindex>)
+        Assert.Equal(Ok(Some 25), get result 1UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 26), get result 1UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix map2iValues applies indexed where both values present`` () =
+    let m1 =
+        fromCoordinateListUnchecked (CoordinateList(4UL<nrows>, 4UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ]))
+
+    let m2 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                4UL<nrows>,
+                4UL<ncols>,
+                [ (1UL<rowindex>, 1UL<colindex>, 10); (2UL<rowindex>, 2UL<colindex>, 20) ]
+            )
+        )
+
+    let f i j a b =
+        Some(a + b + int (uint64 i) + int (uint64 j))
+
+    match map2iValues m1 m2 f with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 14), get result 1UL<rowindex> 1UL<colindex>)
+        Assert.Equal(Ok(None), get result 2UL<rowindex> 2UL<colindex>)
+        Assert.Equal(1UL, uint64 result.nvals)
+
+[<Fact>]
+let ``matrix map2iAtLeastOne passes indices and side`` () =
+    let m1 =
+        fromCoordinateListUnchecked (CoordinateList(2UL<nrows>, 2UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1) ]))
+
+    let m2 =
+        fromCoordinateListUnchecked (
+            CoordinateList(
+                2UL<nrows>,
+                2UL<ncols>,
+                [ (0UL<rowindex>, 0UL<colindex>, 10); (1UL<rowindex>, 1UL<colindex>, 20) ]
+            )
+        )
+
+    let f i j =
+        function
+        | AtLeastOne.Both(a, b) -> Some(a + b + int (uint64 i) + int (uint64 j))
+        | AtLeastOne.Left a -> Some(a)
+        | AtLeastOne.Right b -> Some(b + int (uint64 i) * 100 + int (uint64 j))
+
+    match map2iAtLeastOne m1 m2 f with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 11), get result 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 121), get result 1UL<rowindex> 1UL<colindex>)
+
+[<Fact>]
+let ``matrix map2iLeftValues applies indexed where left present`` () =
+    let m1 =
+        fromCoordinateListUnchecked (CoordinateList(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 2) ]))
+
+    let m2 =
+        fromCoordinateListUnchecked (CoordinateList(2UL<nrows>, 2UL<ncols>, [ (1UL<rowindex>, 1UL<colindex>, 10) ]))
+
+    let f i j a b =
+        Some(a + (defaultArg b 0) + int (uint64 i) * 10 + int (uint64 j))
+
+    match map2iLeftValues m1 m2 f with
+    | Error e -> failwithf "unexpected error %A" e
+    | Ok result ->
+        Assert.Equal(Ok(Some 23), get result 1UL<rowindex> 1UL<colindex>)
+        Assert.Equal(1UL, uint64 result.nvals)
+
+let ``fromCoordinateListUnchecked with out-of-range coordinates returns Error`` () =
     let coo =
         CoordinateList(6UL<nrows>, 6UL<ncols>, [ (9UL<rowindex>, 9UL<colindex>, 13) ])
 
@@ -1366,7 +1763,7 @@ let ``slice middle of dense matrix returns correct values`` () =
             Assert.Equal(1024UL<nvals>, sliced.nvals)
 
 [<Fact>]
-let ``reduceRows sum on square power of two matrix`` () =
+let ``reduceRows op_add on square power of two matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1380,14 +1777,8 @@ let ``reduceRows sum on square power of two matrix`` () =
     match Matrix.fromCoordinateList coo with
     | Result.Error msg -> Assert.Fail()
     | Result.Ok matrix ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let result = Matrix.reduceRows add matrix
+        let result = Matrix.reduceRows op_add matrix
 
         let vectorCoordinates = Vector.toCoordinateList result
 
@@ -1397,7 +1788,7 @@ let ``reduceRows sum on square power of two matrix`` () =
         Assert.Equal(expected, vectorCoordinates)
 
 [<Fact>]
-let ``reduceRows sum on square power of two matrix with empty row`` () =
+let ``reduceRows op_add on square power of two matrix with empty row`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1407,14 +1798,8 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows add m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (1UL<Vector.index>, 20) ]),
@@ -1423,7 +1808,7 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on square not power of two matrix`` () =
+let ``reduceRows op_add on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1439,14 +1824,8 @@ let ``reduceRows sum on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows add m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1458,7 +1837,7 @@ let ``reduceRows sum on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows mul on square not power of two matrix`` () =
+let ``reduceRows op_mult on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1474,14 +1853,8 @@ let ``reduceRows mul on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows mul m
+        let res = Matrix.reduceRows op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1493,7 +1866,7 @@ let ``reduceRows mul on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on rectangular matrix`` () =
+let ``reduceRows op_add on rectangular matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1507,14 +1880,8 @@ let ``reduceRows sum on rectangular matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows sum m
+        let res = Matrix.reduceRows op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24) ]),
@@ -1523,34 +1890,22 @@ let ``reduceRows sum on rectangular matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows sum on empty matrix`` () =
+let ``reduceRows op_add on empty matrix`` () =
     match Matrix.fromCoordinateList (CoordinateList(2UL<nrows>, 3UL<ncols>, [])) with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows sum m
+        let res = Matrix.reduceRows op_add m
         Assert.Equal(Vector.CoordinateList(2UL<Vector.dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceRows mul on single matrix`` () =
+let ``reduceRows op_mult on single matrix`` () =
     match
         Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ]))
     with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceRows mul m
+        let res = Matrix.reduceRows op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
@@ -1559,7 +1914,7 @@ let ``reduceRows mul on single matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square power of two matrix`` () =
+let ``reduceCols op_add on square power of two matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1572,14 +1927,8 @@ let ``reduceCols sum on square power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 29); (1UL<Vector.index>, 18) ]),
@@ -1588,7 +1937,7 @@ let ``reduceCols sum on square power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square power of two matrix with empty col`` () =
+let ``reduceCols op_add on square power of two matrix with empty col`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1598,14 +1947,8 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 20) ]),
@@ -1614,7 +1957,7 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on square not power of two matrix`` () =
+let ``reduceCols op_add on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1630,14 +1973,8 @@ let ``reduceCols sum on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let add x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols add m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1649,7 +1986,7 @@ let ``reduceCols sum on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols mul on square not power of two matrix`` () =
+let ``reduceCols op_mult on square not power of two matrix`` () =
     let coo =
         CoordinateList(
             3UL<nrows>,
@@ -1665,14 +2002,8 @@ let ``reduceCols mul on square not power of two matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols mul m
+        let res = Matrix.reduceCols op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1684,7 +2015,7 @@ let ``reduceCols mul on square not power of two matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on rectangular matrix`` () =
+let ``reduceCols op_add on rectangular matrix`` () =
     let coo =
         CoordinateList(
             2UL<nrows>,
@@ -1698,14 +2029,8 @@ let ``reduceCols sum on rectangular matrix`` () =
 
     match Matrix.fromCoordinateList coo with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols sum m
+        let res = Matrix.reduceCols op_add m
 
         Assert.Equal(
             Vector.CoordinateList(
@@ -1717,34 +2042,22 @@ let ``reduceCols sum on rectangular matrix`` () =
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols sum on empty matrix`` () =
+let ``reduceCols op_add on empty matrix`` () =
     match Matrix.fromCoordinateList (CoordinateList(2UL<nrows>, 3UL<ncols>, [])) with
     | Result.Ok m ->
-        let sum x y =
-            match x, y with
-            | Some a, Some b -> Some(a + b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols sum m
+        let res = Matrix.reduceCols op_add m
         Assert.Equal(Vector.CoordinateList(3UL<Vector.dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg)
 
 [<Fact>]
-let ``reduceCols mul on single matrix`` () =
+let ``reduceCols op_mult on single matrix`` () =
     match
         Matrix.fromCoordinateList (CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 33) ]))
     with
     | Result.Ok m ->
-        let mul x y =
-            match x, y with
-            | Some a, Some b -> Some(a * b)
-            | Some a, None
-            | None, Some a -> Some a
-            | _ -> None
 
-        let res = Matrix.reduceCols mul m
+        let res = Matrix.reduceCols op_mult m
 
         Assert.Equal(
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
@@ -2221,3 +2534,109 @@ let ``kronecker product with filtering (only even results)`` () =
             Assert.True(List.length coo.list < 16)
         | Result.Error msg -> Assert.Fail(msg)
     | _ -> Assert.Fail()
+
+[<Fact>]
+let ``Matrix map and map2 handle Dummy in rectangular padding correctly on dense fill`` () =
+    let clist =
+        CoordinateList(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 1); (2UL<rowindex>, 2UL<colindex>, 2) ])
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        let mapped =
+            Matrix.map m (fun opt ->
+                match opt with
+                | Some v -> Some v
+                | None -> Some 0)
+
+        let coo = Matrix.toCoordinateList mapped
+        Assert.Equal(3UL<nrows>, coo.nrows)
+        Assert.Equal(3UL<ncols>, coo.ncols)
+        Assert.Equal(9, coo.list.Length)
+
+        match
+            Matrix.map2 m m (fun a b ->
+                match a, b with
+                | Some x, Some y -> Some(x + y)
+                | Some x, None -> Some x
+                | None, Some y -> Some y
+                | None, None -> Some 0)
+        with
+        | Result.Ok mapped2 ->
+            let coo2 = Matrix.toCoordinateList mapped2
+            Assert.Equal(3UL<nrows>, coo2.nrows)
+            Assert.Equal(3UL<ncols>, coo2.ncols)
+            Assert.Equal(9, coo2.list.Length)
+        | Result.Error e -> failwithf "Unexpected error %A" e
+    | Result.Error msg -> failwith msg
+
+[<Fact>]
+let ``Matrix map2 returns InconsistentSizeOfArguments when storage sizes differ`` () =
+    let m1 =
+        SparseMatrix(2UL<nrows>, 2UL<ncols>, 0UL<nvals>, Matrix.Storage(2UL<storageSize>, qtree.Leaf(UserValue None)))
+
+    let m2 =
+        SparseMatrix(2UL<nrows>, 2UL<ncols>, 0UL<nvals>, Matrix.Storage(4UL<storageSize>, qtree.Leaf(UserValue None)))
+
+    Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.map2 m1 m2 (fun a b -> None))
+
+[<Fact>]
+let ``Matrix get retrieves values, handles empty cells, and validates bounds`` () =
+    let clist =
+        Matrix.CoordinateList(
+            3UL<nrows>,
+            3UL<ncols>,
+            [ (0UL<rowindex>, 0UL<colindex>, 100); (2UL<rowindex>, 2UL<colindex>, 200) ]
+        )
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        Assert.Equal(Ok(Some 100), Matrix.get m 0UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Ok(Some 200), Matrix.get m 2UL<rowindex> 2UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get m 0UL<rowindex> 1UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get m 1UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 3UL<rowindex> 0UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 0UL<rowindex> 3UL<colindex>)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.get m 5UL<rowindex> 5UL<colindex>)
+    | Result.Error msg -> Assert.Fail(msg)
+
+[<Fact>]
+let ``Matrix set updates existing, inserts into empty, and validates bounds`` () =
+    let clist =
+        Matrix.CoordinateList(3UL<nrows>, 3UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 10) ])
+
+    match Matrix.fromCoordinateList clist with
+    | Result.Ok m ->
+        Assert.Equal(1UL<nvals>, m.nvals)
+
+        // Update existing cell: nvals remains 1
+        match Matrix.set m 0UL<rowindex> 0UL<colindex> 99 with
+        | Result.Ok updated1 ->
+            Assert.Equal(1UL<nvals>, updated1.nvals)
+            Assert.Equal(Ok(Some 99), Matrix.get updated1 0UL<rowindex> 0UL<colindex>)
+
+            // Insert new cell into empty space: nvals becomes 2
+            match Matrix.set updated1 1UL<rowindex> 1UL<colindex> 55 with
+            | Result.Ok updated2 ->
+                Assert.Equal(2UL<nvals>, updated2.nvals)
+                Assert.Equal(Ok(Some 55), Matrix.get updated2 1UL<rowindex> 1UL<colindex>)
+                Assert.Equal(Ok(Some 99), Matrix.get updated2 0UL<rowindex> 0UL<colindex>)
+            | Result.Error e -> failwithf "Unexpected error %A" e
+        | Result.Error e -> failwithf "Unexpected error %A" e
+
+        // Out-of-bounds validation
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.set m 3UL<rowindex> 0UL<colindex> 42)
+        Assert.Equal(Error Error.InconsistentSizeOfArguments, Matrix.set m 0UL<rowindex> 3UL<colindex> 42)
+    | Result.Error msg -> Assert.Fail(msg)
+
+[<Fact>]
+let ``Matrix set into empty uniform matrix splits node correctly`` () =
+    let emptyStorage = Matrix.Storage(4UL<storageSize>, qtree.Leaf(UserValue None))
+
+    let emptyMatrix = SparseMatrix(4UL<nrows>, 4UL<ncols>, 0UL<nvals>, emptyStorage)
+
+    match Matrix.set emptyMatrix 3UL<rowindex> 3UL<colindex> 77 with
+    | Result.Ok updated ->
+        Assert.Equal(1UL<nvals>, updated.nvals)
+        Assert.Equal(Ok(Some 77), Matrix.get updated 3UL<rowindex> 3UL<colindex>)
+        Assert.Equal(Ok None, Matrix.get updated 0UL<rowindex> 0UL<colindex>)
+    | Result.Error e -> failwithf "Unexpected error %A" e

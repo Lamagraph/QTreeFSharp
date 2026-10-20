@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -6,11 +6,14 @@
 
     <ItemGroup>
         <Compile Include="Common.fs" />
+        <Compile Include="OptionMonoid.fs" />
         <Compile Include="Result.fs" />
         <Compile Include="AVLSet.fs" />
         <Compile Include="ParallelAVLSet.fs" />
         <Compile Include="Vector.fs" />
         <Compile Include="Matrix.fs" />
+        <Compile Include="COOArray.fs" />
+        <Compile Include="COOList.fs" />
         <Compile Include="LinearAlgebra.fs" />
         <Compile Include="BFS.fs" />
         <Compile Include="TriangleCount.fs" />

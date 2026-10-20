@@ -33,7 +33,6 @@ type Error =
     | InconsistentStructureOfStorages
     | InconsistentSizeOfArguments
 
-
 let mkNode t1 t2 =
     match (t1, t2) with
     | Leaf(v1), Leaf(v2) when v1 = v2 -> Leaf(v1)
@@ -47,10 +46,6 @@ type UnaryOp<'a, 'b> =
     | AllCellsIndexed of (uint64<index> -> Option<'a> -> Option<'b>)
 
 
-type AtLeastOne<'a, 'b> =
-    | Both of 'a * 'b
-    | Left of 'a
-    | Right of 'b
 
 
 type BinaryOp<'a, 'b, 'c> =
