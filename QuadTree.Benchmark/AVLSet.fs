@@ -2,8 +2,8 @@
 
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Configs
-open QuadTree.AVLSet
-open QuadTree.AVLSet.Parallel
+open Utils.AVLSet
+open Utils.AVLSet.Parallel
 open System.Collections.Generic
 
 [<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]

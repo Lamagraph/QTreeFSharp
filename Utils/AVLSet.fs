@@ -1,4 +1,4 @@
-﻿namespace QuadTree.AVLSet
+﻿namespace Utils.AVLSet
 
 open Result
 

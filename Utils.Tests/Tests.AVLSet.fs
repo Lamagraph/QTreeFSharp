@@ -1,10 +1,10 @@
-namespace QuadTree.Tests.AVLSet
+namespace Utils.Tests.AVLSet
 
 open Xunit
 open FsUnit.Xunit
 open FsCheck.Xunit
-open QuadTree.AVLSet
-open QuadTree.AVLSet.Parallel
+open Utils.AVLSet
+open Utils.AVLSet.Parallel
 
 module SetTests =
     let rec isSetValid n mn mx =

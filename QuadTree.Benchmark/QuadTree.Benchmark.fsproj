@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Benchmark.Common\Benchmark.Common.fsproj" />
     <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+    <ProjectReference Include="..\Utils\Utils.fsproj" />
   </ItemGroup>
 
 </Project>
