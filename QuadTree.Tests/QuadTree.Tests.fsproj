@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Tests.AVLSet.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Tests.Vector.fs" />
     <Compile Include="Tests.Matrix.fs" />
