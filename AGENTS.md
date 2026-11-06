@@ -30,11 +30,15 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 
 ## Projects
 
-- `QuadTree/` — library; see `QuadTree.fsproj` for compile order.
-- `QuadTree.Tests/` — xUnit + FsUnit + FsCheck tests.
-- `QuadTree.Benchmark/` — BenchmarkDotNet console app.
+- `QuadTree/` — core library (representations, linear algebra); see `QuadTree.fsproj` for compile order.
+- `Graph/` — graph algorithms built on the core library; see `Graph.fsproj` for compile order.
+- `QuadTree.Tests/` — xUnit + FsUnit + FsCheck tests for the core library.
+- `Graph.Tests/` — xUnit tests for graph algorithms.
+- `QuadTree.Benchmark/` — BenchmarkDotNet console app for the core library.
+- `Graph.Benchmark/` — BenchmarkDotNet console app for graph algorithms.
+- `Benchmark.Common/` — shared benchmark utilities (matrix reader, `MyConfig`) used by both benchmark apps.
 
-F# compiles files top-to-bottom: new source files must be added to the relevant `.fsproj` `<Compile Include=...>` list in dependency order, or they will silently not be compiled. Benchmark classes must also be registered in `QuadTree.Benchmark/Main.fs`'s `BenchmarkSwitcher`.
+F# compiles files top-to-bottom: new source files must be added to the relevant `.fsproj` `<Compile Include=...>` list in dependency order, or they will silently not be compiled. Benchmark classes must also be registered in the relevant benchmark project's `Main.fs` `BenchmarkSwitcher` (`QuadTree.Benchmark` or `Graph.Benchmark`).
 
 Requires .NET SDK 10 (`net10.0`).
 
@@ -54,10 +58,11 @@ CI (`.github/workflows/dotnet-tests.yaml`) fails on any formatting diff, so run 
 ## Benchmarks
 
 ```bash
-dotnet run -c Release --project QuadTree.Benchmark -- --filter '*BFS*'
+dotnet run -c Release --project QuadTree.Benchmark -- --filter '*AVLSet*'
+dotnet run -c Release --project Graph.Benchmark -- --filter '*BFS*'
 ```
 
-- Matrices go in `QuadTree.Benchmark/data/`. `Utils.DIR_WITH_MATRICES` is a seven-level relative path chosen so it resolves from BenchmarkDotNet's generated working directory; do not "fix" it to a repo-relative path.
+- Matrices go in the shared `data/` folder at the repo root. `Benchmark.Common.Utils.DIR_WITH_MATRICES` is an eight-level relative path chosen so it resolves from BenchmarkDotNet's child-process working directory (`<project>/bin/<config>/<tfm>/<Assembly>-<Job>-N/bin/<config>/<tfm>`, always eight levels below the repo root for top-level projects); do not "fix" it to a repo-relative path.
 - `*.mtx` is gitignored, but the small demo matrices are committed. Use `git add -f` only when intentionally adding one.
 
 ## User workflow

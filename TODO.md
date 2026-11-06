@@ -4,7 +4,7 @@ Always append, never delete, use Markdown's checklists.
 
 Order isn't important.
 
-- [ ] Move algorithms to separate project.
+- [x] Move algorithms to separate project.
 - [ ] Decide on project name and move `AVLSet.fs` to separate project for data structures required in algorithms, e.g. as matrix elements. (see GraphBLAS and LAGraph for inspiration).
 - [ ] Deprecate (or remove) `ParallelAVLSet.fs`.
 - [ ] Check code for consistency, fix non-functional style in main code, remove dead code.
