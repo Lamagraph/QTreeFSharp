@@ -2,7 +2,7 @@ namespace QuadTree.Benchmarks.Kronecker
 
 open System
 open BenchmarkDotNet.Attributes
-open QuadTree.Benchmarks.Utils
+open Benchmark.Common.Utils
 
 [<Config(typeof<MyConfig>)>]
 [<MemoryDiagnoser>]

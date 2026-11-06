@@ -8,10 +8,6 @@
 
   <ItemGroup>
     <Compile Include="AVLSet.fs"/>
-    <Compile Include="Utils.fs"/>
-    <Compile Include="BFS.fs"/>
-    <Compile Include="SSSP.fs"/>
-    <Compile Include="Triangles.fs"/>
     <Compile Include="ReduceComparison.fs"/>
     <Compile Include="VectorSlice.fs"/>
     <Compile Include="MatrixSlice.fs"/>
@@ -26,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Benchmark.Common\Benchmark.Common.fsproj" />
     <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
   </ItemGroup>
 

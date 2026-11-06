@@ -2,7 +2,7 @@ namespace QuadTree.Benchmarks.MatrixSliceAlign
 
 open System
 open BenchmarkDotNet.Attributes
-open QuadTree.Benchmarks.Utils
+open Benchmark.Common.Utils
 open Matrix
 open QuadTree
 
