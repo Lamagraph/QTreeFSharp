@@ -1,7 +1,7 @@
-namespace QuadTree.Benchmarks.Triangles
+namespace Graph.Benchmarks.BFS
 
 open BenchmarkDotNet.Attributes
-open QuadTree.Benchmarks.Utils
+open Benchmark.Common.Utils
 
 [<Config(typeof<MyConfig>)>]
 type Benchmark() =
@@ -19,5 +19,14 @@ type Benchmark() =
             | Error msg -> failwith $"Failed to load matrix {this.MatrixName}: {msg}"
 
     [<Benchmark>]
-    member this.TriangleCount() =
-        Graph.TriangleCount.triangle_count matrix
+    member this.BFS() =
+        let startVerticesResult =
+            Vector.CoordinateList((uint64 matrix.ncols) * 1UL<Vector.dataLength>, [ 0UL<Vector.index>, 1UL ])
+            |> Vector.fromCoordinateList
+
+        let startVertices =
+            match startVerticesResult with
+            | Ok v -> v
+            | Error msg -> failwith $"Failed to create start vertices: {msg}"
+
+        Graph.BFS.bfs_level matrix startVertices

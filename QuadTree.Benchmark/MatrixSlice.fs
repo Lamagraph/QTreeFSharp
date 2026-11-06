@@ -4,7 +4,7 @@ open System
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Configs
 open BenchmarkDotNet.Jobs
-open QuadTree.Benchmarks.Utils
+open Benchmark.Common.Utils
 
 type RealConfig() =
     inherit ManualConfig()

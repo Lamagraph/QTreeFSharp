@@ -3,7 +3,7 @@ namespace QuadTree.Benchmarks.ReduceComparison
 open System
 open System.IO
 open BenchmarkDotNet.Attributes
-open QuadTree.Benchmarks.Utils
+open Benchmark.Common.Utils
 
 [<Config(typeof<MyConfig>)>]
 [<MemoryDiagnoser>]
@@ -93,7 +93,7 @@ type Benchmark() =
         if not (File.Exists path) then
             failwithf "File not found: %s\nSearched in: %s" path projectRoot
 
-        match QuadTree.Benchmarks.Utils.readMtx path false with
+        match Benchmark.Common.Utils.readMtx path false with
         | Ok m ->
             this.Matrix <- m
             this.Size <- int m.nrows

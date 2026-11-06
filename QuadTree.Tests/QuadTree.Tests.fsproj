@@ -11,10 +11,6 @@
     <Compile Include="Tests.Vector.fs" />
     <Compile Include="Tests.Matrix.fs" />
     <Compile Include="Tests.LinearAlgebra.fs" />
-    <Compile Include="Tests.BFS.fs" />
-    <Compile Include="Tests.TriangleCount.fs" />
-    <Compile Include="Tests.SSSP.fs" />
-    <Compile Include="Tests.MST.fs" />
   </ItemGroup>
 
   <ItemGroup>
