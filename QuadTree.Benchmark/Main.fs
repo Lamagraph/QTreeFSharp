@@ -12,8 +12,7 @@ let main argv =
                typeof<QuadTree.Benchmarks.VectorSliceAlign.Benchmark>
                typeof<QuadTree.Benchmarks.AVLSet.SingleOpsBenchmark>
                typeof<QuadTree.Benchmarks.AVLSet.TraversalSetsBenchmark>
-               typeof<QuadTree.Benchmarks.AVLSet.FSSetsBenchmark>
-               typeof<QuadTree.Benchmarks.AVLSet.HashSetBenchmark> |]
+               typeof<QuadTree.Benchmarks.AVLSet.FSSetsBenchmark> |]
 
     benchmarks.Run argv |> ignore
     0
