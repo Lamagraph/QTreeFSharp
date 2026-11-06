@@ -16,7 +16,9 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 ## Coding Conventions
 
 - Units of measure must be used for a clear distinction between dimensions and indices. They are usually of type `uint64`. Keep them on new APIs.
-- Graph algorithms and basic linear algebra operations are generic over `op_add`/`op_mult` (semiring-style).
+- Graph algorithms are generic over `op_add`/`op_mult` (semiring-style).
+- Algorithm modules live under `Graph.*`.
+- Containers for algorithms (like `AVLSet`) and other supporting things reside in `Utils`.
 - Main code must not use imperative or OOP constructions like `for`-loops or classes, implementation must be as functionally idiomatic as possible. Test and benchmarks aren't restricted by this rule.
 - OOP-style exceptions are prohibited. Use `Result<_, Error>` and `resultM { ... }` computation expression from `QuadTree/Result.fs`.
 
@@ -31,11 +33,13 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 ## Projects
 
 - `QuadTree/` — core library (representations, linear algebra); see `QuadTree.fsproj` for compile order.
-- `Graph/` — graph algorithms built on the core library; see `Graph.fsproj` for compile order.
 - `QuadTree.Tests/` — xUnit + FsUnit + FsCheck tests for the core library.
-- `Graph.Tests/` — xUnit tests for graph algorithms.
 - `QuadTree.Benchmark/` — BenchmarkDotNet console app for the core library.
+- `Graph/` — graph algorithms built on the core library; see `Graph.fsproj` for compile order.
+- `Graph.Tests/` — xUnit tests for graph algorithms.
 - `Graph.Benchmark/` — BenchmarkDotNet console app for graph algorithms.
+- `Utils/` — reusable data structures (currently `AVLSet`); see `Utils.fsproj` for compile order.
+- `Utils.Tests/` — xUnit + FsUnit + FsCheck tests for reusable data structures.
 - `Benchmark.Common/` — shared benchmark utilities (matrix reader, `MyConfig`) used by both benchmark apps.
 
 F# compiles files top-to-bottom: new source files must be added to the relevant `.fsproj` `<Compile Include=...>` list in dependency order, or they will silently not be compiled. Benchmark classes must also be registered in the relevant benchmark project's `Main.fs` `BenchmarkSwitcher` (`QuadTree.Benchmark` or `Graph.Benchmark`).
