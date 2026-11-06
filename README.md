@@ -4,8 +4,8 @@
 Quad‑tree based linear algebra in F# for GraphBLAS‑style graph analysis. This is a prototype for implementations using interaction nets. An example of such an implementation using Inpla can be found in [this repository](https://github.com/Lamagraph/QTreeInpla).
 
 ## Benchmarks
-Infrastructure for benchmarking the implemented algorithms is available in the [respective project](QuadTree.Benchmark/).
-For performance testing details and instructions on how to run them, see the [Benchmarks README](QuadTree.Benchmark/README.md).
+Infrastructure for benchmarking the implemented algorithms is available in the [QuadTree.Benchmark](QuadTree.Benchmark/) and [Graph.Benchmark](Graph.Benchmark/) projects, sharing the [Benchmark.Common](Benchmark.Common/) utilities and the [`data/`](data/) matrix folder.
+For performance testing details and instructions on how to run them, see the [Benchmarks READMEs](QuadTree.Benchmark/README.md).
 
 ## Implemented Algorithms
 
