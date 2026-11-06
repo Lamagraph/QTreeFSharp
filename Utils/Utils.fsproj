@@ -6,7 +6,6 @@
 
     <ItemGroup>
         <Compile Include="AVLSet.fs" />
-        <Compile Include="ParallelAVLSet.fs" />
     </ItemGroup>
 
     <ItemGroup>
