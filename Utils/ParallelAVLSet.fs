@@ -1,6 +1,6 @@
-namespace QuadTree.AVLSet.Parallel
+namespace Utils.AVLSet.Parallel
 
-open QuadTree.AVLSet
+open Utils.AVLSet
 open Result
 
 /// <summary>

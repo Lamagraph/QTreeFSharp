@@ -7,8 +7,6 @@
     <ItemGroup>
         <Compile Include="Common.fs" />
         <Compile Include="Result.fs" />
-        <Compile Include="AVLSet.fs" />
-        <Compile Include="ParallelAVLSet.fs" />
         <Compile Include="Vector.fs" />
         <Compile Include="Matrix.fs" />
         <Compile Include="LinearAlgebra.fs" />
