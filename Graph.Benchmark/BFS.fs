@@ -29,4 +29,4 @@ type Benchmark() =
             | Ok v -> v
             | Error msg -> failwith $"Failed to create start vertices: {msg}"
 
-        Graph.BFS.bfs_level matrix startVertices
+        Graph.BFS.bfsLevel matrix startVertices

@@ -42,7 +42,7 @@ let bfs
 
     inner startVertices initialVisited
 
-let bfs_level graph startVertices =
+let bfsLevel graph startVertices =
     let op_add x y =
         match (x, y) with
         | Some(v), _
@@ -58,7 +58,7 @@ let bfs_level graph startVertices =
 
     bfs op_add op_mult initVisited graph frontier0
 
-let bfs_parent graph startVertices =
+let bfsParent graph startVertices =
     let op_add x y =
         match (x, y) with
         | Some(v), _
