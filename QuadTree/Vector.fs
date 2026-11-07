@@ -337,7 +337,6 @@ let fromCoordinateList (lst: CoordinateList<'a>) : Result<SparseVector<'a>, Erro
     else
         let length = lst.length
         let nvals = (uint64 <| List.length lst.data) * 1UL<nvals>
-        let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
 
         let rec traverse coordinates pointer size =
             match coordinates with
@@ -353,12 +352,16 @@ let fromCoordinateList (lst: CoordinateList<'a>) : Result<SparseVector<'a>, Erro
 
                 mkNode left right, rCoordinates
 
-        let sortedCoordinates = List.sort unique
+        match getNearestUpperPowerOfTwo (uint64 length) with
+        | Error error -> Error(StorageSizeTooLarge error)
+        | Ok storageSize ->
+            let storageSize = storageSize * 1UL<storageSize>
+            let sortedCoordinates = List.sort unique
 
-        let tree, _ =
-            traverse sortedCoordinates 0UL<index> ((uint64 storageSize) * 1UL<index>)
+            let tree, _ =
+                traverse sortedCoordinates 0UL<index> ((uint64 storageSize) * 1UL<index>)
 
-        Ok(SparseVector(length, nvals, Storage(storageSize, tree)))
+            Ok(SparseVector(length, nvals, Storage(storageSize, tree)))
 
 let toCoordinateList (vector: SparseVector<'a>) =
     let length = vector.length
@@ -404,9 +407,7 @@ let mapi (vector: SparseVector<'a>) f =
 
 
 let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : Result<SparseVector<'a>, Error> =
-    let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
-
-    let rec build (pointer: uint64<index>) (size: uint64<storageSize>) =
+    let rec buildTree (pointer: uint64<index>) (size: uint64<storageSize>) =
         if uint64 pointer >= uint64 length then
             Leaf Dummy, 0UL<nvals>
         elif size = 1UL<storageSize> then
@@ -421,14 +422,17 @@ let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : Result<
                  | None -> 0UL<nvals>)
         else
             let halfSize = size / 2UL
-            let left, nvals1 = build pointer halfSize
+            let left, nvals1 = buildTree pointer halfSize
             let newPointer = (uint64 pointer + uint64 halfSize) * 1UL<index>
-            let right, nvals2 = build newPointer halfSize
+            let right, nvals2 = buildTree newPointer halfSize
             mkNode left right, nvals1 + nvals2
 
-    let storage, nvals = build 0UL<index> storageSize
-
-    Ok(SparseVector(length, nvals, Storage(storageSize, storage)))
+    match getNearestUpperPowerOfTwo (uint64 length) with
+    | Error error -> Error(StorageSizeTooLarge error)
+    | Ok rawSize ->
+        let storageSize = rawSize * 1UL<storageSize>
+        let storage, nvals = buildTree 0UL<index> storageSize
+        Ok(SparseVector(length, nvals, Storage(storageSize, storage)))
 
 let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2Inner vector1 vector2 (BinaryOp.AllCells f)
@@ -555,72 +559,75 @@ let slice (startIndex: int) (endIndex: int) (vector: SparseVector<'a>) : Result<
         let startIdx = uint64 startIndex * 1UL<index>
         let endIdx = uint64 endIndex * 1UL<index>
         let newLength = uint64 (endIndex - startIndex + 1) * 1UL<dataLength>
-        let newSize = getNearestUpperPowerOfTwo (uint64 newLength) * 1UL<storageSize>
 
-        let rec narrowOld
-            (oldPos: uint64<index>)
-            (oldSize: uint64<storageSize>)
-            (oldTree: btree<Option<'a>>)
-            (qStart: uint64<index>)
-            (qEnd: uint64<index>)
-            : struct (uint64<index> * uint64<storageSize> * btree<Option<'a>>) =
+        match getNearestUpperPowerOfTwo (uint64 newLength) with
+        | Error error -> Error(StorageSizeTooLarge error)
+        | Ok rawSize ->
+            let newSize = rawSize * 1UL<storageSize>
 
-            match oldTree with
-            | Leaf _ -> struct (oldPos, oldSize, oldTree)
-            | Node(left, right) ->
-                let half = oldSize / 2UL
-                let mid = oldPos + (uint64 half) * 1UL<index>
+            let rec narrowOld
+                (oldPos: uint64<index>)
+                (oldSize: uint64<storageSize>)
+                (oldTree: btree<Option<'a>>)
+                (qStart: uint64<index>)
+                (qEnd: uint64<index>)
+                : struct (uint64<index> * uint64<storageSize> * btree<Option<'a>>) =
+                match oldTree with
+                | Leaf _ -> struct (oldPos, oldSize, oldTree)
+                | Node(left, right) ->
+                    let half = oldSize / 2UL
+                    let mid = oldPos + (uint64 half) * 1UL<index>
 
-                let crosses = qStart < mid && qEnd >= mid
+                    let crosses = qStart < mid && qEnd >= mid
 
-                if crosses then struct (oldPos, oldSize, oldTree)
-                elif qEnd < mid then narrowOld oldPos half left qStart qEnd
-                else narrowOld mid half right qStart qEnd
+                    if crosses then struct (oldPos, oldSize, oldTree)
+                    elif qEnd < mid then narrowOld oldPos half left qStart qEnd
+                    else narrowOld mid half right qStart qEnd
 
-        let rec buildNewTree
-            (targetSize: uint64<storageSize>)
-            (relPos: uint64<index>)
-            (oldPos: uint64<index>)
-            (oldSize: uint64<storageSize>)
-            (oldTree: btree<Option<'a>>)
-            : struct (btree<Option<'a>> * uint64<nvals>) =
+            let rec buildNewTree
+                (targetSize: uint64<storageSize>)
+                (relPos: uint64<index>)
+                (oldPos: uint64<index>)
+                (oldSize: uint64<storageSize>)
+                (oldTree: btree<Option<'a>>)
+                : struct (btree<Option<'a>> * uint64<nvals>) =
 
-            let absPos = startIdx + relPos
-            let absEnd = absPos + (uint64 targetSize * 1UL<index>) - 1UL<index>
+                let absPos = startIdx + relPos
+                let absEnd = absPos + (uint64 targetSize * 1UL<index>) - 1UL<index>
 
-            if absPos > endIdx then
-                struct (Leaf Dummy, 0UL<nvals>)
-            else
-                let queryEnd = if absEnd > endIdx then endIdx else absEnd
-                let struct (nPos, nSize, nTree) = narrowOld oldPos oldSize oldTree absPos queryEnd
-                let fullyInBounds = absEnd <= endIdx
+                if absPos > endIdx then
+                    struct (Leaf Dummy, 0UL<nvals>)
+                else
+                    let queryEnd = if absEnd > endIdx then endIdx else absEnd
+                    let struct (nPos, nSize, nTree) = narrowOld oldPos oldSize oldTree absPos queryEnd
+                    let fullyInBounds = absEnd <= endIdx
 
-                match nTree with
-                | Leaf Dummy -> struct (Leaf Dummy, 0UL<nvals>)
-                | Leaf(UserValue None) when fullyInBounds -> struct (Leaf(UserValue None), 0UL<nvals>)
-                | Leaf(UserValue(Some v)) when fullyInBounds ->
-                    let blockSize = (uint64 nSize) * 1UL<nvals>
-                    struct (Leaf(UserValue(Some v)), blockSize)
-                | _ ->
-                    if targetSize = 1UL<storageSize> then
-                        struct (Leaf Dummy, 0UL<nvals>)
-                    else
-                        let half = targetSize / 2UL
-                        let halfIdx = (uint64 half) * 1UL<index>
-
-                        let struct (leftTree, leftNvals) = buildNewTree half relPos nPos nSize nTree
-
-                        let struct (rightTree, rightNvals) =
-                            buildNewTree half (relPos + halfIdx) nPos nSize nTree
-
-                        let totalNvals = leftNvals + rightNvals
-
-                        if totalNvals = 0UL<nvals> then
+                    match nTree with
+                    | Leaf Dummy -> struct (Leaf Dummy, 0UL<nvals>)
+                    | Leaf(UserValue None) when fullyInBounds -> struct (Leaf(UserValue None), 0UL<nvals>)
+                    | Leaf(UserValue(Some v)) when fullyInBounds ->
+                        let blockSize = (uint64 nSize) * 1UL<nvals>
+                        struct (Leaf(UserValue(Some v)), blockSize)
+                    | _ ->
+                        if targetSize = 1UL<storageSize> then
                             struct (Leaf Dummy, 0UL<nvals>)
                         else
-                            struct (mkNode leftTree rightTree, totalNvals)
+                            let half = targetSize / 2UL
+                            let halfIdx = (uint64 half) * 1UL<index>
 
-        let struct (finalTree, finalNvals) =
-            buildNewTree newSize 0UL<index> 0UL<index> vector.storage.size vector.storage.data
+                            let struct (leftTree, leftNvals) = buildNewTree half relPos nPos nSize nTree
 
-        Ok(SparseVector(newLength, finalNvals, Storage(newSize, finalTree)))
+                            let struct (rightTree, rightNvals) =
+                                buildNewTree half (relPos + halfIdx) nPos nSize nTree
+
+                            let totalNvals = leftNvals + rightNvals
+
+                            if totalNvals = 0UL<nvals> then
+                                struct (Leaf Dummy, 0UL<nvals>)
+                            else
+                                struct (mkNode leftTree rightTree, totalNvals)
+
+            let struct (finalTree, finalNvals) =
+                buildNewTree newSize 0UL<index> 0UL<index> vector.storage.size vector.storage.data
+
+            Ok(SparseVector(newLength, finalNvals, Storage(newSize, finalTree)))
