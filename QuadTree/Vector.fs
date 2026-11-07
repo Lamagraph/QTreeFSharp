@@ -411,15 +411,12 @@ let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : Result<
         if uint64 pointer >= uint64 length then
             Leaf Dummy, 0UL<nvals>
         elif size = 1UL<storageSize> then
-            if uint64 pointer >= uint64 length then
-                Leaf Dummy, 0UL<nvals>
-            else
-                let v = f pointer
+            let v = f pointer
 
-                Leaf(UserValue v),
-                (match v with
-                 | Some _ -> 1UL<nvals>
-                 | None -> 0UL<nvals>)
+            Leaf(UserValue v),
+            (match v with
+             | Some _ -> 1UL<nvals>
+             | None -> 0UL<nvals>)
         else
             let halfSize = size / 2UL
             let left, nvals1 = buildTree pointer halfSize
