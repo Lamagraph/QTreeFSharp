@@ -99,7 +99,7 @@ let private rebuildQuadrants
     (size: uint64<storageSize>)
     (prow: uint64<rowindex>)
     (pcol: uint64<colindex>)
-    (visit: uint64<rowindex> * uint64<colindex> * uint64<storageSize> -> 'subtree -> 'result * uint64<nvals>)
+    (visit: uint64<rowindex> * uint64<colindex> * uint64<storageSize> -> 'subtree -> qtree<'value> * uint64<nvals>)
     (q1: 'subtree, q2: 'subtree, q3: 'subtree, q4: 'subtree)
     =
     let halfSize = size / 2UL
