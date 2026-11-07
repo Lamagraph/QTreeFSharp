@@ -294,7 +294,7 @@ let update (vector: SparseVector<'a>) i v op : Result<SparseVector<'a>, Error> =
                     | None, Some _ -> -1L
                     | _ -> 0
 
-                Ok(Leaf(UserValue(op x v)), deltaNNZ)
+                Ok(Leaf(UserValue(res)), deltaNNZ)
             else
                 let halfSize = size / 2UL
 
