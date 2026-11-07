@@ -87,6 +87,40 @@ let private getQuadrantCoords (pr, pc) halfSize =
     (pr + halfSize * 1UL<rowindex>, pc), // SOUTH WEST
     (pr + halfSize * 1UL<rowindex>, pc + halfSize * 1UL<colindex>) // SOUTH EAST
 
+/// The four subtrees of a node, or the leaf itself four times. Lets the
+/// Node/Leaf recursion cases share one path.
+let private quadrants tree =
+    match tree with
+    | Node(x1, x2, x3, x4) -> x1, x2, x3, x4
+    | leaf -> leaf, leaf, leaf, leaf
+
+/// Recurse into the four quadrants, then rebuild the node and sum nvals.
+let private rebuildQuadrants
+    (size: uint64<storageSize>)
+    (prow: uint64<rowindex>)
+    (pcol: uint64<colindex>)
+    (visit: uint64<rowindex> * uint64<colindex> * uint64<storageSize> -> 'subtree -> 'result * uint64<nvals>)
+    (q1: 'subtree, q2: 'subtree, q3: 'subtree, q4: 'subtree)
+    =
+    let halfSize = size / 2UL
+
+    let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
+        getQuadrantCoords (prow, pcol) (uint64 halfSize)
+
+    let t1, nvals1 = visit (nwR, nwC, halfSize) q1
+    let t2, nvals2 = visit (neR, neC, halfSize) q2
+    let t3, nvals3 = visit (swR, swC, halfSize) q3
+    let t4, nvals4 = visit (seR, seC, halfSize) q4
+    (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+
+let private mkLeafResult res =
+    let nvals =
+        match res with
+        | Some _ -> 1UL<nvals>
+        | None -> 0UL<nvals>
+
+    Leaf(UserValue(res)), nvals
+
 let fromCoordinateList (coo: CoordinateList<'a>) : Result<SparseMatrix<'a>, Error> =
     let unique =
         coo.list
@@ -237,67 +271,20 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
 let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix1 matrix2 =
         match (matrix1, matrix2) with
-        | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) ->
-            let halfSize = size / 2UL
-
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-            let t1, nvals1 = inner nwR nwC halfSize x1 y1
-            let t2, nvals2 = inner neR neC halfSize x2 y2
-            let t3, nvals3 = inner swR swC halfSize x3 y3
-            let t4, nvals4 = inner seR seC halfSize x4 y4
-            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
-        | Node(x1, x2, x3, x4), Leaf(v2) ->
-            let halfSize = size / 2UL
-
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-            let t1, nvals1 = inner nwR nwC halfSize x1 (Leaf(v2))
-            let t2, nvals2 = inner neR neC halfSize x2 (Leaf(v2))
-            let t3, nvals3 = inner swR swC halfSize x3 (Leaf(v2))
-            let t4, nvals4 = inner seR seC halfSize x4 (Leaf(v2))
-            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
-        | Leaf(v1), Node(y1, y2, y3, y4) ->
-            let halfSize = size / 2UL
-
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-            let t1, nvals1 = inner nwR nwC halfSize (Leaf(v1)) y1
-            let t2, nvals2 = inner neR neC halfSize (Leaf(v1)) y2
-            let t3, nvals3 = inner swR swC halfSize (Leaf(v1)) y3
-            let t4, nvals4 = inner seR seC halfSize (Leaf(v1)) y4
-            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
         | Leaf(Dummy), Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) ->
-            let res = f prow pcol v1 v2
+        | Leaf(UserValue(v1)), Leaf(UserValue(v2)) -> mkLeafResult (f prow pcol v1 v2)
+        | Leaf(UserValue(v)), Leaf(Dummy) -> mkLeafResult (f prow pcol v None)
+        | Leaf(Dummy), Leaf(UserValue(v)) -> mkLeafResult (f prow pcol None v)
+        | _ ->
+            let x1, x2, x3, x4 = quadrants matrix1
+            let y1, y2, y3, y4 = quadrants matrix2
 
-            let nnz =
-                match res with
-                | Some _ -> 1UL<nvals>
-                | None -> 0UL<nvals>
-
-            Leaf(UserValue(res)), nnz
-        | Leaf(UserValue(v)), Leaf(Dummy) ->
-            let res = f prow pcol v None
-
-            let nnz =
-                match res with
-                | Some _ -> 1UL<nvals>
-                | None -> 0UL<nvals>
-
-            Leaf(UserValue(res)), nnz
-        | Leaf(Dummy), Leaf(UserValue(v)) ->
-            let res = f prow pcol None v
-
-            let nnz =
-                match res with
-                | Some _ -> 1UL<nvals>
-                | None -> 0UL<nvals>
-
-            Leaf(UserValue(res)), nnz
+            rebuildQuadrants
+                size
+                prow
+                pcol
+                (fun (r, c, s) (a, b) -> inner r c s a b)
+                ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
         let storage, nvals =
@@ -311,39 +298,9 @@ let map2i (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
 let mapi (matrix: SparseMatrix<'a>) f =
     let rec inner (prow: uint64<rowindex>) (pcol: uint64<colindex>) (size: uint64<storageSize>) matrix =
         match matrix with
-        | Node(x1, x2, x3, x4) ->
-            let halfSize = size / 2UL
-
-            let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-            let t1, nvals1 = inner nwR nwC halfSize x1
-            let t2, nvals2 = inner neR neC halfSize x2
-            let t3, nvals3 = inner swR swC halfSize x3
-            let t4, nvals4 = inner seR seC halfSize x4
-            (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
         | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v)) ->
-            if size = 1UL<storageSize> then
-                let res = f prow pcol v
-
-                let nnz =
-                    match res with
-                    | Some _ -> 1UL<nvals>
-                    | None -> 0UL<nvals>
-
-                Leaf(UserValue(res)), nnz
-            else
-                let halfSize = size / 2UL
-
-                let (nwR, nwC), (neR, neC), (swR, swC), (seR, seC) =
-                    getQuadrantCoords (prow, pcol) (uint64 halfSize)
-
-                let t1, nvals1 = inner nwR nwC halfSize (Leaf(UserValue(v)))
-                let t2, nvals2 = inner neR neC halfSize (Leaf(UserValue(v)))
-                let t3, nvals3 = inner swR swC halfSize (Leaf(UserValue(v)))
-                let t4, nvals4 = inner seR seC halfSize (Leaf(UserValue(v)))
-                (mkNode t1 t2 t3 t4), nvals1 + nvals2 + nvals3 + nvals4
+        | Leaf(UserValue(v)) when size = 1UL<storageSize> -> mkLeafResult (f prow pcol v)
+        | _ -> rebuildQuadrants size prow pcol (fun (r, c, s) subtree -> inner r c s subtree) (quadrants matrix)
 
     let storage, nvals =
         inner 0UL<rowindex> 0UL<colindex> matrix.storage.size matrix.storage.data
