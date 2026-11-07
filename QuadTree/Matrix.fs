@@ -165,14 +165,8 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     let sorted = List.sort coo
     CoordinateList(nrows, ncols, sorted)
 
-let empty nrows ncols =
-    match fromCoordinateList (CoordinateList(nrows, ncols, [])) with
-    | Ok m -> m
-    | Error _ ->
-        let storageSize =
-            getNearestUpperPowerOfTwo (max (uint64 nrows) (uint64 ncols)) * 1UL<storageSize>
-
-        SparseMatrix(nrows, ncols, 0UL<nvals>, Storage(storageSize, Leaf Dummy))
+let empty (nrows: uint64<nrows>) (ncols: uint64<ncols>) : Result<SparseMatrix<'a>, Error> =
+    fromCoordinateList (CoordinateList(nrows, ncols, []))
 
 let map (matrix: SparseMatrix<'a>) f =
     let rec inner (size: uint64<storageSize>) (tree: qtree<Option<'a>>) =
