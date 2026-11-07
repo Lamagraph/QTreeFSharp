@@ -18,12 +18,12 @@ type Error =
 
 let mst (graph: Matrix.SparseMatrix<'a>) : Result<SparseMatrix<'a>, Error> =
 
-    let _max x y =
+    let op_max x y =
         match (x, y) with
         | Some x, Some y -> max x y |> Some
         | _ -> None
 
-    let _min x y =
+    let op_min x y =
         match (x, y) with
         | Some x, Some y -> min x y |> Some
         | Some x, None
@@ -60,7 +60,7 @@ let mst (graph: Matrix.SparseMatrix<'a>) : Result<SparseMatrix<'a>, Error> =
 
                 resultM {
 
-                    let! step = LinearAlgebra.mxm _min _max matrix matrix
+                    let! step = LinearAlgebra.mxm op_min op_max matrix matrix
 
                     if nnz = step.nvals && matrix.storage = step.storage then
                         return step
