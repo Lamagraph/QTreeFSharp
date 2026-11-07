@@ -7,6 +7,7 @@ type Error =
     | NewFrontierCalculationProblem of LinearAlgebra.Error
     | FrontierCalculationProblem of Vector.Error
     | VisitedCalculationProblem of Vector.Error
+    | FrontierInitProblem of Vector.Error
 
 let sssp graph (startVertex: uint64) =
     let op_add x y =
