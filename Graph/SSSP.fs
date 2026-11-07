@@ -50,9 +50,7 @@ let sssp graph (startVertex: uint64) =
         Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
         |> Vector.fromCoordinateList
 
-    let frontier =
-        match frontierResult with
-        | Ok v -> v
-        | Error _ -> Vector.empty ((uint64 graph.ncols) * 1UL<Vector.dataLength>)
-
-    inner frontier frontier 0
+    resultM {
+        let! frontier = frontierResult |> Result.mapError FrontierInitProblem
+        return! inner frontier frontier 0
+    }
