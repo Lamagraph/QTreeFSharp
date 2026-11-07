@@ -32,6 +32,11 @@ type SparseVector<'value> =
 type Error =
     | InconsistentStructureOfStorages
     | InconsistentSizeOfArguments
+    | CoordinatesOutOfRange
+    | StorageSizeTooLarge of Common.Error
+    | SliceStartInvalid
+    | SliceEndInvalid
+    | SliceRangeInvalid
 
 
 let mkNode t1 t2 =
