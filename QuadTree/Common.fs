@@ -14,6 +14,8 @@ type BinSearchTree<'value> =
     | Leaf of 'value
     | Node of BinSearchTree<'value> * 'value * BinSearchTree<'value>
 
+type Error = ArgumentTooLarge of max: uint64
+
 let treeOfPowersOfTwo =
     BinSearchTree.Node(
         BinSearchTree.Node(
