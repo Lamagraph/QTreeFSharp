@@ -99,7 +99,7 @@ type Benchmark() =
             this.Size <- int m.nrows
             this.Density <- float m.nvals / (float m.nrows * float m.ncols)
             this.IsSymmetric <- this.CheckSymmetric(m)
-        | Error msg -> failwithf "Failed to load %s: %s" this.MatrixName msg
+        | Error msg -> failwithf "Failed to load %s: %O" this.MatrixName msg
 
     [<Benchmark>]
     member this.ReduceCols_Original() = Matrix.reduceCols add this.Matrix
