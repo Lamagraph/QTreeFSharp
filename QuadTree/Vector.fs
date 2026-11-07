@@ -44,7 +44,7 @@ type Error =
         | InconsistentSizeOfArguments -> "Inconsistent size of arguments"
         | CoordinatesOutOfRange -> "Index out of range"
         | StorageSizeTooLarge(Common.ArgumentTooLarge max) ->
-            sprintf "Argument is too large. Must be not greater then %A" max
+            sprintf "Argument is too large. Must not be greater than %A" max
         | SliceStartInvalid -> "Start index is out of range"
         | SliceEndInvalid -> "End index is out of range"
         | SliceRangeInvalid -> "End should be >= Start"
