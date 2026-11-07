@@ -38,6 +38,17 @@ type Error =
     | SliceEndInvalid
     | SliceRangeInvalid
 
+    override this.ToString() =
+        match this with
+        | InconsistentStructureOfStorages -> "Inconsistent structure of storages"
+        | InconsistentSizeOfArguments -> "Inconsistent size of arguments"
+        | CoordinatesOutOfRange -> "Index out of range"
+        | StorageSizeTooLarge(Common.ArgumentTooLarge max) ->
+            sprintf "Argument is too large. Must be not greater then %A" max
+        | SliceStartInvalid -> "Start is out of range"
+        | SliceEndInvalid -> "End is out of range"
+        | SliceRangeInvalid -> "Start is greater than end"
+
 
 let mkNode t1 t2 =
     match (t1, t2) with
@@ -311,7 +322,7 @@ let update (vector: SparseVector<_>) i v op =
     else
         Error Error.InconsistentSizeOfArguments
 
-let fromCoordinateList (lst: CoordinateList<'a>) : Result<SparseVector<'a>, string> =
+let fromCoordinateList (lst: CoordinateList<'a>) : Result<SparseVector<'a>, Error> =
     let unique =
         lst.data
         |> List.groupBy fst
@@ -320,7 +331,7 @@ let fromCoordinateList (lst: CoordinateList<'a>) : Result<SparseVector<'a>, stri
             (idx, value))
 
     if unique |> List.exists (fun (i, _) -> uint64 i >= uint64 lst.length) then
-        Error "Index out of range"
+        Error CoordinatesOutOfRange
     else
         let length = lst.length
         let nvals = (uint64 <| List.length lst.data) * 1UL<nvals>

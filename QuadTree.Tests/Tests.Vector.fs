@@ -981,13 +981,13 @@ let ``map can change type from int to string`` () =
 [<Fact>]
 let ``fromCoordinateList with out-of-range index returns error`` () =
     let coo = CoordinateList(6UL<dataLength>, [ (9UL<index>, 8) ])
-    let expected = Error "Index out of range"
+    let expected = Error CoordinatesOutOfRange
     Assert.Equal(expected, fromCoordinateList coo)
 
 [<Fact>]
 let ``fromCoordinateList with zero size returns error`` () =
     let coo = CoordinateList(0UL<dataLength>, [ (33UL<index>, 33); (39UL<index>, 1) ])
-    let expected = Error "Index out of range"
+    let expected = Error CoordinatesOutOfRange
     Assert.Equal(expected, fromCoordinateList coo)
 
 [<Fact>]
