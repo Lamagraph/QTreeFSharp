@@ -237,7 +237,8 @@ let mxm
         let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
             let halfSize = size / 2UL
 
-            // Double check this code
+            // C_nw = A_nw*B_nw + A_ne*B_sw    C_ne = A_nw*B_ne + A_ne*B_se
+            // C_sw = A_sw*B_nw + A_se*B_sw    C_se = A_sw*B_ne + A_se*B_se
             let nw1_x_nw2, ne1_x_sw2, nw1_x_ne2, ne1_x_se2, sw1_x_nw2, se1_x_sw2, sw1_x_ne2, se1_x_se2 =
                 (multiply halfSize nw1 nw2),
                 (multiply halfSize ne1 sw2),
