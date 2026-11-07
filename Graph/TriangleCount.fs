@@ -7,7 +7,7 @@ type Error =
     | MXMProblem of LinearAlgebra.Error
     | MaskingProblem of Matrix.Error
 
-let triangle_count (graph: Matrix.SparseMatrix<_>) =
+let triangleCount (graph: Matrix.SparseMatrix<_>) =
     let graph = Matrix.getLowerTriangle graph
 
     let op_add o1 o2 =

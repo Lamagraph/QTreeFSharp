@@ -54,7 +54,7 @@ let ``7V Triangle count`` () =
 
     match g with
     | Ok graph ->
-        match triangle_count graph with
+        match triangleCount graph with
         | Ok(Some actual) -> Assert.Equal(expected, actual)
         | _ -> Assert.Fail "Triangle count failed"
     | Error _ -> Assert.Fail "fromCoordinateList failed"
@@ -88,7 +88,7 @@ let ``5V Triangle count`` () =
 
     match g with
     | Ok graph ->
-        match triangle_count graph with
+        match triangleCount graph with
         | Ok(Some actual) -> Assert.Equal(expected, actual)
         | _ -> Assert.Fail "Triangle count failed"
     | Error _ -> Assert.Fail "fromCoordinateList failed"
