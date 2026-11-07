@@ -15,7 +15,7 @@ let unsafes (n: uint64) (v: Vector.SparseVector<_>) =
     List.init (int n) (fun i -> Vector.unsafeGet v (uint64 i * 1UL<Vector.index>))
 
 let runTest
-    (graphResult: Result<Matrix.SparseMatrix<uint64>, string>)
+    (graphResult: Result<Matrix.SparseMatrix<uint64>, Matrix.Error>)
     (startResult: Result<Vector.SparseVector<uint64>, Vector.Error>)
     bfsFunc
     expected

@@ -37,7 +37,7 @@ type Benchmark() =
             )
         with
         | Ok m -> m
-        | Error msg -> failwithf "Failed to create matrix: %s" msg
+        | Error msg -> failwithf "Failed to create matrix: %O" msg
 
     [<GlobalSetup>]
     member this.Setup() =
@@ -49,5 +49,5 @@ type Benchmark() =
     member this.Kronecker() =
         match Matrix.kroneckerProduct this.A this.B (fun a b -> Some(a * b)) with
         | Ok res -> res
-        | Error msg -> failwithf "Kronecker failed: %s" msg
+        | Error msg -> failwithf "Kronecker failed: %O" msg
         |> ignore
