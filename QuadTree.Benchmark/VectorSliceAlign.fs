@@ -53,7 +53,7 @@ type Benchmark() =
 
         match Vector.slice start last v with
         | Ok res -> res
-        | Error msg -> failwithf "Slice failed: %s" msg
+        | Error msg -> failwithf "Slice failed: %O" msg
 
     [<Benchmark>]
     member this.Slice() =

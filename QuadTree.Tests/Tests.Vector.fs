@@ -1077,7 +1077,7 @@ let ``slice returns error when start is negative`` () =
     | Result.Ok vec ->
         match slice -1 3 vec with
         | Result.Ok _ -> Assert.Fail("Expected Error")
-        | Result.Error msg -> Assert.Equal("Start should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceStartInvalid, msg)
 
 [<Fact>]
 let ``slice returns error when end is negative`` () =
@@ -1086,7 +1086,7 @@ let ``slice returns error when end is negative`` () =
     | Result.Ok vec ->
         match slice 1 -3 vec with
         | Result.Ok _ -> Assert.Fail("Expected Error")
-        | Result.Error msg -> Assert.Equal("End should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceEndInvalid, msg)
 
 [<Fact>]
 let ``slice returns error when start is out of range`` () =
@@ -1095,7 +1095,7 @@ let ``slice returns error when start is out of range`` () =
     | Result.Ok vec ->
         match slice 7 3 vec with
         | Result.Ok _ -> Assert.Fail("Expected Error")
-        | Result.Error msg -> Assert.Equal("Start is out of Vector length", msg)
+        | Result.Error msg -> Assert.Equal(SliceStartInvalid, msg)
 
 [<Fact>]
 let ``slice returns error when end is out of range`` () =
@@ -1104,7 +1104,7 @@ let ``slice returns error when end is out of range`` () =
     | Result.Ok vec ->
         match slice 3 7 vec with
         | Result.Ok _ -> Assert.Fail("Expected Error")
-        | Result.Error msg -> Assert.Equal("End is out of Vector length", msg)
+        | Result.Error msg -> Assert.Equal(SliceEndInvalid, msg)
 
 [<Fact>]
 let ``slice returns error when end is less than start`` () =
@@ -1113,7 +1113,7 @@ let ``slice returns error when end is less than start`` () =
     | Result.Ok vec ->
         match slice 4 3 vec with
         | Result.Ok _ -> Assert.Fail("Expected Error")
-        | Result.Error msg -> Assert.Equal("End should be >= Start", msg)
+        | Result.Error msg -> Assert.Equal(SliceRangeInvalid, msg)
 
 [<Fact>]
 let ``slice returns correct subvector`` () =
@@ -1124,7 +1124,7 @@ let ``slice returns correct subvector`` () =
         | Result.Ok result ->
             let coo = Vector.toCoordinateList result
             Assert.Equal(CoordinateList(3UL<dataLength>, [ (1UL<index>, 10) ]), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns subvector without elements`` () =
@@ -1135,7 +1135,7 @@ let ``slice returns subvector without elements`` () =
         | Result.Ok result ->
             let coo = toCoordinateList result
             Assert.Equal(CoordinateList(3UL<dataLength>, []), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns single subvector`` () =
@@ -1146,7 +1146,7 @@ let ``slice returns single subvector`` () =
         | Result.Ok result ->
             let coo = toCoordinateList result
             Assert.Equal(CoordinateList(1UL<dataLength>, [ (0UL<index>, 10) ]), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns correct subvector equals to vector`` () =
@@ -1159,7 +1159,7 @@ let ``slice returns correct subvector equals to vector`` () =
         | Result.Ok result ->
             let coo = toCoordinateList result
             Assert.Equal(CoordinateList(7UL<dataLength>, [ (2UL<index>, 10); (3UL<index>, 33); (6UL<index>, 20) ]), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns correct subvector when start of subvector equals to start of vector`` () =
@@ -1172,7 +1172,7 @@ let ``slice returns correct subvector when start of subvector equals to start of
         | Result.Ok result ->
             let coo = Vector.toCoordinateList result
             Assert.Equal(CoordinateList(5UL<dataLength>, [ (0UL<index>, 10); (3UL<index>, 33) ]), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns correct subvector when end of subvector equals to end of vector`` () =
@@ -1185,4 +1185,4 @@ let ``slice returns correct subvector when end of subvector equals to end of vec
         | Result.Ok result ->
             let coo = Vector.toCoordinateList result
             Assert.Equal(CoordinateList(5UL<dataLength>, [ (1UL<index>, 33); (4UL<index>, 20) ]), coo)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
