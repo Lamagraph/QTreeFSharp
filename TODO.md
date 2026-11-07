@@ -10,3 +10,4 @@ Order isn't important.
 - [ ] Check code for consistency, fix non-functional style in main code, remove dead code.
 - [ ] Create documentation for existing quadtree representation.
 - [ ] Implement COO matrix representation. Note that we need neither `Dummy` nor `Option` for storing values.
+- [ ] Add units of measure to slicing functions (`Vector.slice`, `Matrix.slice`) and take `uint64` arguments instead of `int`.

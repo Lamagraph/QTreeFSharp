@@ -953,7 +953,7 @@ let ``slice returns error when row start is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m -1 4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -969,7 +969,7 @@ let ``slice returns error when row end is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 -4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End row should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -985,7 +985,7 @@ let ``slice returns error when col start is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 -2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1001,7 +1001,7 @@ let ``slice returns error when col end is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 2 -3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End column should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1017,7 +1017,7 @@ let ``slice returns error when row start is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 6 4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1033,7 +1033,7 @@ let ``slice returns error when row end is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 10 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End row is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1049,7 +1049,7 @@ let ``slice returns error when col start is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 10 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1065,7 +1065,7 @@ let ``slice returns error when col end is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 2 2 10 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End column is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1081,7 +1081,7 @@ let ``slice returns error when row end is less than row start`` () =
     | Result.Ok m ->
         match Matrix.slice m 2 1 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row should be <= end row", msg)
+        | Result.Error msg -> Assert.Equal(SliceRangeInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1097,7 +1097,7 @@ let ``slice returns error when col end is less than col start`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 2 3 2 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column should be <= end column", msg)
+        | Result.Error msg -> Assert.Equal(SliceRangeInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
