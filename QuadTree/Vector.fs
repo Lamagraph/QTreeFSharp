@@ -401,7 +401,7 @@ let mapi (vector: SparseVector<'a>) f =
     mapInner vector (UnaryOp.AllCellsIndexed f)
 
 
-let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseVector<'a> =
+let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : Result<SparseVector<'a>, Error> =
     let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
 
     let rec build (pointer: uint64<index>) (size: uint64<storageSize>) =
@@ -426,7 +426,7 @@ let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseV
 
     let storage, nvals = build 0UL<index> storageSize
 
-    SparseVector(length, nvals, Storage(storageSize, storage))
+    Ok(SparseVector(length, nvals, Storage(storageSize, storage)))
 
 let map2 (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2Inner vector1 vector2 (BinaryOp.AllCells f)
