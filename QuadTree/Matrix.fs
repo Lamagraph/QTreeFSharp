@@ -452,27 +452,27 @@ let slice
     (rowEnd: int)
     (colStart: int)
     (colEnd: int)
-    : Result<SparseMatrix<'a>, string> =
+    : Result<SparseMatrix<'a>, Error> =
     if rowStart < 0 then
-        Error "Start row should be >= 0"
+        Error SliceBoundsInvalid
     elif rowEnd < 0 then
-        Error "End row should be >= 0"
+        Error SliceBoundsInvalid
     elif colStart < 0 then
-        Error "Start column should be >= 0"
+        Error SliceBoundsInvalid
     elif colEnd < 0 then
-        Error "End column should be >= 0"
+        Error SliceBoundsInvalid
     elif rowStart > int matrix.nrows - 1 then
-        Error "Start row is out of matrix length"
+        Error SliceBoundsInvalid
     elif rowEnd > int matrix.nrows - 1 then
-        Error "End row is out of matrix length"
+        Error SliceBoundsInvalid
     elif colStart > int matrix.ncols - 1 then
-        Error "Start column is out of matrix length"
+        Error SliceBoundsInvalid
     elif colEnd > int matrix.ncols - 1 then
-        Error "End column is out of matrix length"
+        Error SliceBoundsInvalid
     elif rowStart > rowEnd then
-        Error "Start row should be <= end row"
+        Error SliceRangeInvalid
     elif colStart > colEnd then
-        Error "Start column should be <= end column"
+        Error SliceRangeInvalid
     else
         let rowStartIdx = uint64 rowStart * 1UL<rowindex>
         let rowEndIdx = uint64 rowEnd * 1UL<rowindex>
