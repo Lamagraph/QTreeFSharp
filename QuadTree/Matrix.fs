@@ -106,38 +106,40 @@ let fromCoordinateList (coo: CoordinateList<'a>) : Result<SparseMatrix<'a>, Erro
         let ncols = coo.ncols
 
         // the resulting matrix is always square
-        let storageSize = getNearestUpperPowerOfTwo (max (uint64 nrows) (uint64 ncols))
+        match getNearestUpperPowerOfTwo (max (uint64 nrows) (uint64 ncols)) with
+        | Error error -> Error(StorageSizeTooLarge error)
+        | Ok storageSize ->
+            let isEntryInQuadrant (pr, pc) size (entry: COOEntry<'a>) =
+                let (i, j, _) = entry
 
-        let isEntryInQuadrant (pr, pc) size (entry: COOEntry<'a>) =
-            let (i, j, _) = entry
+                i >= pr
+                && j >= pc
+                && i < pr + size * 1UL<rowindex>
+                && j < pc + size * 1UL<colindex>
 
-            i >= pr
-            && j >= pc
-            && i < pr + size * 1UL<rowindex>
-            && j < pc + size * 1UL<colindex>
+            let rec traverse coordinates (pr, pc) size =
+                match coordinates with
+                | [] when (uint64 pr) + size < uint64 nrows && (uint64 pc) + size < uint64 ncols ->
+                    Leaf <| UserValue None
+                | [] when uint64 pr >= uint64 nrows || uint64 pc >= uint64 ncols -> Leaf Dummy
+                | (i, j, value) :: _ when pr = i && pc = j && size = 1UL -> Leaf << UserValue <| Some value
+                | _ ->
+                    let halfSize = size / 2UL
+                    let nwp, nep, swp, sep = getQuadrantCoords (pr, pc) halfSize
+                    let nwCoo = coordinates |> List.filter (isEntryInQuadrant nwp halfSize)
+                    let neCoo = coordinates |> List.filter (isEntryInQuadrant nep halfSize)
+                    let swCoo = coordinates |> List.filter (isEntryInQuadrant swp halfSize)
+                    let seCoo = coordinates |> List.filter (isEntryInQuadrant sep halfSize)
 
-        let rec traverse coordinates (pr, pc) size =
-            match coordinates with
-            | [] when (uint64 pr) + size < uint64 nrows && (uint64 pc) + size < uint64 ncols -> Leaf <| UserValue None
-            | [] when uint64 pr >= uint64 nrows || uint64 pc >= uint64 ncols -> Leaf Dummy
-            | (i, j, value) :: _ when pr = i && pc = j && size = 1UL -> Leaf << UserValue <| Some value
-            | _ ->
-                let halfSize = size / 2UL
-                let nwp, nep, swp, sep = getQuadrantCoords (pr, pc) halfSize
-                let nwCoo = coordinates |> List.filter (isEntryInQuadrant nwp halfSize)
-                let neCoo = coordinates |> List.filter (isEntryInQuadrant nep halfSize)
-                let swCoo = coordinates |> List.filter (isEntryInQuadrant swp halfSize)
-                let seCoo = coordinates |> List.filter (isEntryInQuadrant sep halfSize)
+                    mkNode
+                        (traverse nwCoo nwp halfSize)
+                        (traverse neCoo nep halfSize)
+                        (traverse swCoo swp halfSize)
+                        (traverse seCoo sep halfSize)
 
-                mkNode
-                    (traverse nwCoo nwp halfSize)
-                    (traverse neCoo nep halfSize)
-                    (traverse swCoo swp halfSize)
-                    (traverse seCoo sep halfSize)
+            let tree = traverse unique (0UL<rowindex>, 0UL<colindex>) storageSize
 
-        let tree = traverse unique (0UL<rowindex>, 0UL<colindex>) storageSize
-
-        Ok(SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageSize>, tree)))
+            Ok(SparseMatrix(nrows, ncols, nvals, Storage(storageSize * 1UL<storageSize>, tree)))
 
 let toCoordinateList (matrix: SparseMatrix<'a>) =
     let nrows = matrix.nrows
@@ -481,111 +483,112 @@ let slice
         let newRows = uint64 (rowEnd - rowStart + 1) * 1UL<nrows>
         let newCols = uint64 (colEnd - colStart + 1) * 1UL<ncols>
 
-        let newSize =
-            getNearestUpperPowerOfTwo (max (uint64 newRows) (uint64 newCols))
-            * 1UL<storageSize>
+        match getNearestUpperPowerOfTwo (max (uint64 newRows) (uint64 newCols)) with
+        | Error error -> Error(StorageSizeTooLarge error)
+        | Ok rawSize ->
+            let newSize = rawSize * 1UL<storageSize>
 
-        let rec narrowOld
-            (oldRow: uint64<rowindex>)
-            (oldCol: uint64<colindex>)
-            (oldSize: uint64<storageSize>)
-            (oldTree: qtree<Option<'a>>)
-            (qRowStart: uint64<rowindex>)
-            (qRowEnd: uint64<rowindex>)
-            (qColStart: uint64<colindex>)
-            (qColEnd: uint64<colindex>)
-            : struct (uint64<rowindex> * uint64<colindex> * uint64<storageSize> * qtree<Option<'a>>) =
-            match oldTree with
-            | Leaf _ -> struct (oldRow, oldCol, oldSize, oldTree)
-            | Node(nw, ne, sw, se) ->
-                let half = oldSize / 2UL
-                let halfRow = (uint64 half) * 1UL<rowindex>
-                let halfCol = (uint64 half) * 1UL<colindex>
-                let midRow = oldRow + halfRow
-                let midCol = oldCol + halfCol
+            let rec narrowOld
+                (oldRow: uint64<rowindex>)
+                (oldCol: uint64<colindex>)
+                (oldSize: uint64<storageSize>)
+                (oldTree: qtree<Option<'a>>)
+                (qRowStart: uint64<rowindex>)
+                (qRowEnd: uint64<rowindex>)
+                (qColStart: uint64<colindex>)
+                (qColEnd: uint64<colindex>)
+                : struct (uint64<rowindex> * uint64<colindex> * uint64<storageSize> * qtree<Option<'a>>) =
+                match oldTree with
+                | Leaf _ -> struct (oldRow, oldCol, oldSize, oldTree)
+                | Node(nw, ne, sw, se) ->
+                    let half = oldSize / 2UL
+                    let halfRow = (uint64 half) * 1UL<rowindex>
+                    let halfCol = (uint64 half) * 1UL<colindex>
+                    let midRow = oldRow + halfRow
+                    let midCol = oldCol + halfCol
 
-                let crossesRow = qRowStart < midRow && qRowEnd >= midRow
-                let crossesCol = qColStart < midCol && qColEnd >= midCol
+                    let crossesRow = qRowStart < midRow && qRowEnd >= midRow
+                    let crossesCol = qColStart < midCol && qColEnd >= midCol
 
-                if crossesRow || crossesCol then
-                    struct (oldRow, oldCol, oldSize, oldTree)
-                elif qRowEnd < midRow && qColEnd < midCol then
-                    narrowOld oldRow oldCol half nw qRowStart qRowEnd qColStart qColEnd
-                elif qRowEnd < midRow && qColStart >= midCol then
-                    narrowOld oldRow midCol half ne qRowStart qRowEnd qColStart qColEnd
-                elif qRowStart >= midRow && qColEnd < midCol then
-                    narrowOld midRow oldCol half sw qRowStart qRowEnd qColStart qColEnd
-                else
-                    narrowOld midRow midCol half se qRowStart qRowEnd qColStart qColEnd
-
-        let rec buildNewTree
-            (targetSize: uint64<storageSize>)
-            (relRow: uint64<rowindex>)
-            (relCol: uint64<colindex>)
-            (oldRow: uint64<rowindex>)
-            (oldCol: uint64<colindex>)
-            (oldSize: uint64<storageSize>)
-            (oldTree: qtree<Option<'a>>)
-            : struct (qtree<Option<'a>> * uint64<nvals>) =
-
-            let absRow = rowStartIdx + relRow
-            let absCol = colStartIdx + relCol
-            let absRowEnd = absRow + (uint64 targetSize * 1UL<rowindex>) - 1UL<rowindex>
-            let absColEnd = absCol + (uint64 targetSize * 1UL<colindex>) - 1UL<colindex>
-
-            if absRow > rowEndIdx || absCol > colEndIdx then
-                struct (Leaf Dummy, 0UL<nvals>)
-            else
-                let queryRowEnd = if absRowEnd > rowEndIdx then rowEndIdx else absRowEnd
-                let queryColEnd = if absColEnd > colEndIdx then colEndIdx else absColEnd
-
-                let struct (nRow, nCol, nSize, nTree) =
-                    narrowOld oldRow oldCol oldSize oldTree absRow queryRowEnd absCol queryColEnd
-
-                let fullyInBounds = absRowEnd <= rowEndIdx && absColEnd <= colEndIdx
-
-                match nTree with
-                | Leaf Dummy -> struct (Leaf Dummy, 0UL<nvals>)
-                | Leaf(UserValue None) when fullyInBounds -> struct (Leaf(UserValue None), 0UL<nvals>)
-                | Leaf(UserValue(Some v)) when fullyInBounds ->
-                    struct (Leaf(UserValue(Some v)), (uint64 targetSize) * (uint64 targetSize) * 1UL<nvals>)
-                | _ ->
-                    if targetSize = 1UL<storageSize> then
-                        struct (Leaf Dummy, 0UL<nvals>)
+                    if crossesRow || crossesCol then
+                        struct (oldRow, oldCol, oldSize, oldTree)
+                    elif qRowEnd < midRow && qColEnd < midCol then
+                        narrowOld oldRow oldCol half nw qRowStart qRowEnd qColStart qColEnd
+                    elif qRowEnd < midRow && qColStart >= midCol then
+                        narrowOld oldRow midCol half ne qRowStart qRowEnd qColStart qColEnd
+                    elif qRowStart >= midRow && qColEnd < midCol then
+                        narrowOld midRow oldCol half sw qRowStart qRowEnd qColStart qColEnd
                     else
-                        let half = targetSize / 2UL
-                        let halfRow = (uint64 half) * 1UL<rowindex>
-                        let halfCol = (uint64 half) * 1UL<colindex>
+                        narrowOld midRow midCol half se qRowStart qRowEnd qColStart qColEnd
 
-                        let struct (nwTree, nwNvals) = buildNewTree half relRow relCol nRow nCol nSize nTree
+            let rec buildNewTree
+                (targetSize: uint64<storageSize>)
+                (relRow: uint64<rowindex>)
+                (relCol: uint64<colindex>)
+                (oldRow: uint64<rowindex>)
+                (oldCol: uint64<colindex>)
+                (oldSize: uint64<storageSize>)
+                (oldTree: qtree<Option<'a>>)
+                : struct (qtree<Option<'a>> * uint64<nvals>) =
 
-                        let struct (neTree, neNvals) =
-                            buildNewTree half relRow (relCol + halfCol) nRow nCol nSize nTree
+                let absRow = rowStartIdx + relRow
+                let absCol = colStartIdx + relCol
+                let absRowEnd = absRow + (uint64 targetSize * 1UL<rowindex>) - 1UL<rowindex>
+                let absColEnd = absCol + (uint64 targetSize * 1UL<colindex>) - 1UL<colindex>
 
-                        let struct (swTree, swNvals) =
-                            buildNewTree half (relRow + halfRow) relCol nRow nCol nSize nTree
+                if absRow > rowEndIdx || absCol > colEndIdx then
+                    struct (Leaf Dummy, 0UL<nvals>)
+                else
+                    let queryRowEnd = if absRowEnd > rowEndIdx then rowEndIdx else absRowEnd
+                    let queryColEnd = if absColEnd > colEndIdx then colEndIdx else absColEnd
 
-                        let struct (seTree, seNvals) =
-                            buildNewTree half (relRow + halfRow) (relCol + halfCol) nRow nCol nSize nTree
+                    let struct (nRow, nCol, nSize, nTree) =
+                        narrowOld oldRow oldCol oldSize oldTree absRow queryRowEnd absCol queryColEnd
 
-                        let totalNvals = nwNvals + neNvals + swNvals + seNvals
+                    let fullyInBounds = absRowEnd <= rowEndIdx && absColEnd <= colEndIdx
 
-                        if totalNvals = 0UL<nvals> then
+                    match nTree with
+                    | Leaf Dummy -> struct (Leaf Dummy, 0UL<nvals>)
+                    | Leaf(UserValue None) when fullyInBounds -> struct (Leaf(UserValue None), 0UL<nvals>)
+                    | Leaf(UserValue(Some v)) when fullyInBounds ->
+                        struct (Leaf(UserValue(Some v)), (uint64 targetSize) * (uint64 targetSize) * 1UL<nvals>)
+                    | _ ->
+                        if targetSize = 1UL<storageSize> then
                             struct (Leaf Dummy, 0UL<nvals>)
                         else
-                            struct (mkNode nwTree neTree swTree seTree, totalNvals)
+                            let half = targetSize / 2UL
+                            let halfRow = (uint64 half) * 1UL<rowindex>
+                            let halfCol = (uint64 half) * 1UL<colindex>
 
-        let struct (finalTree, finalNvals) =
-            buildNewTree
-                newSize
-                0UL<rowindex>
-                0UL<colindex>
-                0UL<rowindex>
-                0UL<colindex>
-                matrix.storage.size
-                matrix.storage.data
+                            let struct (nwTree, nwNvals) = buildNewTree half relRow relCol nRow nCol nSize nTree
 
-        Ok(SparseMatrix(newRows, newCols, finalNvals, Storage(newSize, finalTree)))
+                            let struct (neTree, neNvals) =
+                                buildNewTree half relRow (relCol + halfCol) nRow nCol nSize nTree
+
+                            let struct (swTree, swNvals) =
+                                buildNewTree half (relRow + halfRow) relCol nRow nCol nSize nTree
+
+                            let struct (seTree, seNvals) =
+                                buildNewTree half (relRow + halfRow) (relCol + halfCol) nRow nCol nSize nTree
+
+                            let totalNvals = nwNvals + neNvals + swNvals + seNvals
+
+                            if totalNvals = 0UL<nvals> then
+                                struct (Leaf Dummy, 0UL<nvals>)
+                            else
+                                struct (mkNode nwTree neTree swTree seTree, totalNvals)
+
+            let struct (finalTree, finalNvals) =
+                buildNewTree
+                    newSize
+                    0UL<rowindex>
+                    0UL<colindex>
+                    0UL<rowindex>
+                    0UL<colindex>
+                    matrix.storage.size
+                    matrix.storage.data
+
+            Ok(SparseMatrix(newRows, newCols, finalNvals, Storage(newSize, finalTree)))
 
 let foldQuadtree folder state size tree =
     let rec inner rowOffset colOffset currentSize subTree acc =
@@ -689,120 +692,121 @@ let kroneckerProduct
     let resultRows = (uint64 matrixA.nrows * rowsB) * 1UL<nrows>
     let resultCols = (uint64 matrixA.ncols * colsB) * 1UL<ncols>
 
-    let storageSize =
-        getNearestUpperPowerOfTwo (max (uint64 resultRows) (uint64 resultCols))
-        * 1UL<storageSize>
+    match getNearestUpperPowerOfTwo (max (uint64 resultRows) (uint64 resultCols)) with
+    | Error error -> Error(StorageSizeTooLarge error)
+    | Ok rawSize ->
+        let storageSize = rawSize * 1UL<storageSize>
 
-    let collectEntries (matrix: SparseMatrix<'T>) =
-        let result = ResizeArray<struct (uint64 * uint64 * 'T)>()
-        let maxRows = uint64 matrix.nrows
-        let maxCols = uint64 matrix.ncols
+        let collectEntries (matrix: SparseMatrix<'T>) =
+            let result = ResizeArray<struct (uint64 * uint64 * 'T)>()
+            let maxRows = uint64 matrix.nrows
+            let maxCols = uint64 matrix.ncols
 
-        let rec traverse (row: uint64) (col: uint64) (size: uint64) (tree: qtree<Option<'T>>) =
-            if row >= maxRows || col >= maxCols then
-                ()
+            let rec traverse (row: uint64) (col: uint64) (size: uint64) (tree: qtree<Option<'T>>) =
+                if row >= maxRows || col >= maxCols then
+                    ()
+                else
+                    match tree with
+                    | Leaf Dummy -> ()
+                    | Leaf(UserValue None) -> ()
+                    | Leaf(UserValue(Some value)) ->
+                        if size = 1UL then
+                            result.Add(struct (row, col, value))
+                        else
+                            let endRow = min (row + size) maxRows
+                            let endCol = min (col + size) maxCols
+
+                            for r in row .. endRow - 1UL do
+                                for c in col .. endCol - 1UL do
+                                    result.Add(struct (r, c, value))
+                    | Node(nw, ne, sw, se) ->
+                        let half = size / 2UL
+                        traverse row col half nw
+                        traverse row (col + half) half ne
+                        traverse (row + half) col half sw
+                        traverse (row + half) (col + half) half se
+
+            traverse 0UL 0UL (uint64 matrix.storage.size) matrix.storage.data
+            result.ToArray()
+
+        let entriesA = collectEntries matrixA
+        let entriesB = collectEntries matrixB
+
+        let maxNNZ = entriesA.Length * entriesB.Length
+        let buffer = Array.zeroCreate<struct (uint64 * uint64 * 'c)> (maxNNZ)
+        let mutable actualCount = 0
+
+        for i in 0 .. entriesA.Length - 1 do
+            let struct (rowA, colA, valueA) = entriesA.[i]
+            let baseRow = rowA * rowsB
+            let baseCol = colA * colsB
+
+            for j in 0 .. entriesB.Length - 1 do
+                let struct (rowB, colB, valueB) = entriesB.[j]
+
+                match combine valueA valueB with
+                | Some v ->
+                    buffer.[actualCount] <- struct (baseRow + rowB, baseCol + colB, v)
+                    actualCount <- actualCount + 1
+                | None -> ()
+
+        let partitionRow (array: struct (uint64 * uint64 * 'c)[]) (left: int) (right: int) (midRow: uint64) =
+            let mutable i = left
+
+            for j in left .. right - 1 do
+                let struct (r, _, _) = array.[j]
+
+                if r < midRow then
+                    let tmp = array.[i]
+                    array.[i] <- array.[j]
+                    array.[j] <- tmp
+                    i <- i + 1
+
+            i
+
+        let partitionCol (array: struct (uint64 * uint64 * 'c)[]) (left: int) (right: int) (midCol: uint64) =
+            let mutable i = left
+
+            for j in left .. right - 1 do
+                let struct (_, c, _) = array.[j]
+
+                if c < midCol then
+                    let tmp = array.[i]
+                    array.[i] <- array.[j]
+                    array.[j] <- tmp
+                    i <- i + 1
+
+            i
+
+        let rec buildTree
+            (array: struct (uint64 * uint64 * 'c)[])
+            (left: int)
+            (right: int)
+            (row: uint64)
+            (col: uint64)
+            (size: uint64)
+            : qtree<Option<'c>> =
+            if left >= right then
+                Leaf Dummy
+            elif size = 1UL then
+                let struct (_, _, value) = array.[left]
+                Leaf(UserValue(Some value))
             else
-                match tree with
-                | Leaf Dummy -> ()
-                | Leaf(UserValue None) -> ()
-                | Leaf(UserValue(Some value)) ->
-                    if size = 1UL then
-                        result.Add(struct (row, col, value))
-                    else
-                        let endRow = min (row + size) maxRows
-                        let endCol = min (col + size) maxCols
+                let half = size / 2UL
+                let midRow = row + half
+                let midCol = col + half
 
-                        for r in row .. endRow - 1UL do
-                            for c in col .. endCol - 1UL do
-                                result.Add(struct (r, c, value))
-                | Node(nw, ne, sw, se) ->
-                    let half = size / 2UL
-                    traverse row col half nw
-                    traverse row (col + half) half ne
-                    traverse (row + half) col half sw
-                    traverse (row + half) (col + half) half se
+                let topEnd = partitionRow array left right midRow
+                let nwEnd = partitionCol array left topEnd midCol
+                let swEnd = partitionCol array topEnd right midCol
 
-        traverse 0UL 0UL (uint64 matrix.storage.size) matrix.storage.data
-        result.ToArray()
+                let nwTree = buildTree array left nwEnd row col half
+                let neTree = buildTree array nwEnd topEnd row midCol half
+                let swTree = buildTree array topEnd swEnd midRow col half
+                let seTree = buildTree array swEnd right midRow midCol half
 
-    let entriesA = collectEntries matrixA
-    let entriesB = collectEntries matrixB
+                mkNode nwTree neTree swTree seTree
 
-    let maxNNZ = entriesA.Length * entriesB.Length
-    let buffer = Array.zeroCreate<struct (uint64 * uint64 * 'c)> (maxNNZ)
-    let mutable actualCount = 0
-
-    for i in 0 .. entriesA.Length - 1 do
-        let struct (rowA, colA, valueA) = entriesA.[i]
-        let baseRow = rowA * rowsB
-        let baseCol = colA * colsB
-
-        for j in 0 .. entriesB.Length - 1 do
-            let struct (rowB, colB, valueB) = entriesB.[j]
-
-            match combine valueA valueB with
-            | Some v ->
-                buffer.[actualCount] <- struct (baseRow + rowB, baseCol + colB, v)
-                actualCount <- actualCount + 1
-            | None -> ()
-
-    let partitionRow (array: struct (uint64 * uint64 * 'c)[]) (left: int) (right: int) (midRow: uint64) =
-        let mutable i = left
-
-        for j in left .. right - 1 do
-            let struct (r, _, _) = array.[j]
-
-            if r < midRow then
-                let tmp = array.[i]
-                array.[i] <- array.[j]
-                array.[j] <- tmp
-                i <- i + 1
-
-        i
-
-    let partitionCol (array: struct (uint64 * uint64 * 'c)[]) (left: int) (right: int) (midCol: uint64) =
-        let mutable i = left
-
-        for j in left .. right - 1 do
-            let struct (_, c, _) = array.[j]
-
-            if c < midCol then
-                let tmp = array.[i]
-                array.[i] <- array.[j]
-                array.[j] <- tmp
-                i <- i + 1
-
-        i
-
-    let rec buildTree
-        (array: struct (uint64 * uint64 * 'c)[])
-        (left: int)
-        (right: int)
-        (row: uint64)
-        (col: uint64)
-        (size: uint64)
-        : qtree<Option<'c>> =
-        if left >= right then
-            Leaf Dummy
-        elif size = 1UL then
-            let struct (_, _, value) = array.[left]
-            Leaf(UserValue(Some value))
-        else
-            let half = size / 2UL
-            let midRow = row + half
-            let midCol = col + half
-
-            let topEnd = partitionRow array left right midRow
-            let nwEnd = partitionCol array left topEnd midCol
-            let swEnd = partitionCol array topEnd right midCol
-
-            let nwTree = buildTree array left nwEnd row col half
-            let neTree = buildTree array nwEnd topEnd row midCol half
-            let swTree = buildTree array topEnd swEnd midRow col half
-            let seTree = buildTree array swEnd right midRow midCol half
-
-            mkNode nwTree neTree swTree seTree
-
-    let finalTree = buildTree buffer 0 actualCount 0UL 0UL (uint64 storageSize)
-    let finalNvals = uint64 actualCount * 1UL<nvals>
-    Ok(SparseMatrix(resultRows, resultCols, finalNvals, Storage(storageSize, finalTree)))
+        let finalTree = buildTree buffer 0 actualCount 0UL 0UL (uint64 storageSize)
+        let finalNvals = uint64 actualCount * 1UL<nvals>
+        Ok(SparseMatrix(resultRows, resultCols, finalNvals, Storage(storageSize, finalTree)))
