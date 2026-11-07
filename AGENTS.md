@@ -21,6 +21,9 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 - Set containers for algorithms reside in `Set`.
 - Main code must not use imperative or OOP constructions like `for`-loops or classes, implementation must be as functionally idiomatic as possible. Test and benchmarks aren't restricted by this rule.
 - OOP-style exceptions are prohibited. Use `Result<_, Error>` and `resultM { ... }` computation expression from `QuadTree/Result.fs`.
+- Errors are per-module unions (`Vector.Error`, `Matrix.Error`, `LinearAlgebra.Error`, one per `Graph.*` algorithm) rather than a shared union or strings; outer errors wrap inner ones (`VectorAdditionProblem of Vector.Error`, `MXMProblem of LinearAlgebra.Error`, ...).
+- Function and local binding names are camelCase; types and union cases are PascalCase. The deliberate exceptions are the `op_add`/`op_mult`/`op_min` semiring parameters and the `nw1_x_nw2`-style quadrant product names in `mxm`, where `_x_` marks the operand pair.
+- When an `Error` case is reported to a user, override `ToString()` on the union so `%O`/`sprintf` yields a readable message instead of the union case name. This is done in `Vector.Error`, `Matrix.Error` and `MaggsPlotkinMST.Error`; the strings there are the ones previously delivered by exceptions, so keep their wording stable.
 
 ## Implementation Notes
 (currently applies to quadtree representation)
