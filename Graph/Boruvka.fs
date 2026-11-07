@@ -13,6 +13,9 @@ type Error =
     | TreeSelectionProblem of Matrix.Error
     | IndexInnerCalculationProblem of Vector.Error
     | DataForUpgradeParentCalculationProblem of Vector.Error
+    | ParentInitProblem of Vector.Error
+    | EmptyVectorProblem of Vector.Error
+    | EmptyTreeProblem of Matrix.Error
 
 let mst (graph: Matrix.SparseMatrix<_>) =
 
