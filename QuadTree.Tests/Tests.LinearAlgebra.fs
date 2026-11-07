@@ -431,7 +431,7 @@ let ``Simple mxm`` () =
 
 [<Fact>]
 let ``Sparse mxm`` () =
-    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, Matrix.Error> =
         Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
     let d1 =
@@ -457,7 +457,7 @@ let ``Sparse mxm`` () =
         let! actual =
             match LinearAlgebra.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
-            | Error _ -> Error "mxm failed"
+            | Error _ -> Error Matrix.InconsistentSizeOfArguments
 
         Assert.Equal(Matrix.toCoordinateList expected, Matrix.toCoordinateList actual)
         return ()
@@ -469,7 +469,7 @@ let ``Shrinking mxm`` () =
     // 2 x 3
     // 1 0 2
     // 0 3 0
-    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, Matrix.Error> =
         Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
     let d1 =
@@ -504,7 +504,7 @@ let ``Shrinking mxm`` () =
         let! actual =
             match LinearAlgebra.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
-            | Error msg -> Error "mxm failed"
+            | Error _ -> Error Matrix.InconsistentSizeOfArguments
 
         let expectedList = Matrix.toCoordinateList expected
         let actualList = Matrix.toCoordinateList actual
@@ -524,7 +524,7 @@ let ``Expanding mxm`` () =
     // 1 0
     // 0 2
     // 3 0
-    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, string> =
+    let mkMatrix rows cols data : Result<Matrix.SparseMatrix<int>, Matrix.Error> =
         Matrix.fromCoordinateList (Matrix.CoordinateList(rows, cols, data))
 
     let d1 =
@@ -562,7 +562,7 @@ let ``Expanding mxm`` () =
         let! actual =
             match LinearAlgebra.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
-            | Error _ -> Error "mxm failed"
+            | Error _ -> Error Matrix.InconsistentSizeOfArguments
 
         let sortList (coo: Matrix.CoordinateList<int>) =
             coo.list |> List.sortBy (fun (r, c, _) -> (r, c))

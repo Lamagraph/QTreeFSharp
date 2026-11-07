@@ -19,8 +19,8 @@ let checkResult name actual expected =
     | x -> Assert.Fail(sprintf $"MST {name} failed: {x}")
 
 let runMstTest
-    (graphResult: Result<Matrix.SparseMatrix<_>, string>)
-    (expectedResult: Result<Matrix.SparseMatrix<_>, string>)
+    (graphResult: Result<Matrix.SparseMatrix<_>, Matrix.Error>)
+    (expectedResult: Result<Matrix.SparseMatrix<_>, Matrix.Error>)
     mstFunc
     =
     match graphResult, expectedResult with

@@ -46,6 +46,16 @@ type Error =
     | SliceBoundsInvalid
     | SliceRangeInvalid
 
+    override this.ToString() =
+        match this with
+        | InconsistentStructureOfStorages -> "Inconsistent structure of storages"
+        | InconsistentSizeOfArguments -> "Inconsistent size of arguments"
+        | CoordinatesOutOfRange -> "Coordinates out of range"
+        | StorageSizeTooLarge(Common.ArgumentTooLarge max) ->
+            sprintf "Argument is too large. Must be not greater then %A" max
+        | SliceBoundsInvalid -> "Slice index is out of range"
+        | SliceRangeInvalid -> "Start should be <= end"
+
 
 let mkNode x1 x2 x3 x4 =
     match (x1, x2, x3, x4) with
@@ -77,7 +87,7 @@ let private getQuadrantCoords (pr, pc) halfSize =
     (pr + halfSize * 1UL<rowindex>, pc), // SOUTH WEST
     (pr + halfSize * 1UL<rowindex>, pc + halfSize * 1UL<colindex>) // SOUTH EAST
 
-let fromCoordinateList (coo: CoordinateList<'a>) =
+let fromCoordinateList (coo: CoordinateList<'a>) : Result<SparseMatrix<'a>, Error> =
     let unique =
         coo.list
         |> List.groupBy (fun (i, j, _) -> (i, j))
@@ -89,7 +99,7 @@ let fromCoordinateList (coo: CoordinateList<'a>) =
         unique
         |> List.exists (fun (i, j, _) -> uint64 i >= uint64 coo.nrows || uint64 j >= uint64 coo.ncols)
     then
-        Error "Coordinates out of range"
+        Error CoordinatesOutOfRange
     else
         let nvals = (uint64 <| List.length unique) * 1UL<nvals>
         let nrows = coo.nrows
