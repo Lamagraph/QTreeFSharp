@@ -35,12 +35,11 @@ let mst (graph: Matrix.SparseMatrix<_>) =
         | _ -> None
 
     let fixPoint p =
-        let rec inner p iter =
+        let rec inner p =
             let p2 = Vector.gather p p
-            if p2 = p then p else inner p2 (iter + 1)
+            if p2 = p then p else inner p2
 
-        let res = inner p 0
-        res
+        inner p
 
     let treeFilter edges index =
         fun i j g ->
@@ -72,7 +71,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
 
-    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
+    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
 
         if graph.nvals > 0UL<nvals> then
 
@@ -179,7 +178,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 let graphFilter = graphFilter parent
                 let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
-                return! inner graph tree parent (iteration + 1)
+                return! inner graph tree parent
             }
         else
             Ok tree
@@ -187,5 +186,5 @@ let mst (graph: Matrix.SparseMatrix<_>) =
     resultM {
         let! parent = Vector.init length (fun i -> Some i) |> Result.mapError ParentInitProblem
         let! tree = Matrix.empty graph.nrows graph.ncols |> Result.mapError EmptyTreeProblem
-        return! inner graph tree parent 0
+        return! inner graph tree parent
     }
