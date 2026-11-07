@@ -72,8 +72,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
 
-    let parent = Vector.init length (fun i -> Some i)
-
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
 
         if graph.nvals > 0UL<nvals> then
@@ -186,4 +184,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
         else
             Ok tree
 
-    inner graph (Matrix.empty graph.nrows graph.ncols) parent 0
+    resultM {
+        let! parent = Vector.init length (fun i -> Some i) |> Result.mapError ParentInitProblem
+        return! inner graph (Matrix.empty graph.nrows graph.ncols) parent 0
+    }
