@@ -277,8 +277,12 @@ type CoordinateList<'value> =
     val data: (uint64<index> * 'value) list
     new(_length, _data) = { length = _length; data = _data }
 
-let update (vector: SparseVector<_>) i v op =
-    let rec inner vector (i: uint64<index>) size =
+let update (vector: SparseVector<'a>) i v op : Result<SparseVector<'a>, Error> =
+    let rec inner
+        (vector: btree<Option<'a>>)
+        (i: uint64<index>)
+        (size: uint64<storageSize>)
+        : Result<btree<Option<'a>> * int64, Error> =
         match vector with
         | Leaf(UserValue x) ->
             if size = 1UL<storageSize> then
@@ -290,35 +294,33 @@ let update (vector: SparseVector<_>) i v op =
                     | None, Some _ -> -1L
                     | _ -> 0
 
-                Leaf(UserValue(op x v)), deltaNNZ
+                Ok(Leaf(UserValue(op x v)), deltaNNZ)
             else
                 let halfSize = size / 2UL
 
                 if uint64 i < uint64 halfSize then
-                    let newVector, deltaNNZ = inner vector i halfSize
-                    (mkNode newVector vector), deltaNNZ
+                    inner vector i halfSize
+                    |> Result.map (fun (newVector, deltaNNZ) -> (mkNode newVector vector), deltaNNZ)
                 else
-                    let newVector, deltaNNZ =
-                        inner vector ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
-
-                    (mkNode vector newVector), deltaNNZ
+                    inner vector ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
+                    |> Result.map (fun (newVector, deltaNNZ) -> (mkNode vector newVector), deltaNNZ)
         | Node(x1, x2) ->
             let halfSize = size / 2UL
 
             if uint64 i < uint64 halfSize then
-                let newVector, deltaNNZ = inner x1 i halfSize
-                (mkNode newVector x2), deltaNNZ
+                inner x1 i halfSize
+                |> Result.map (fun (newVector, deltaNNZ) -> (mkNode newVector x2), deltaNNZ)
             else
-                let newVector, deltaNNZ =
-                    inner x2 ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
+                inner x2 ((uint64 i - uint64 halfSize) * 1UL<index>) halfSize
+                |> Result.map (fun (newVector, deltaNNZ) -> (mkNode x1 newVector), deltaNNZ)
+        | Leaf Dummy -> Error Error.InconsistentSizeOfArguments
 
-                (mkNode x1 newVector), deltaNNZ
-        | _ -> failwith "Unreachable. But seams that index out of range."
-
-    if uint64 i <= uint64 vector.length then
-        let storage, deltaNNZ = inner vector.storage.data i vector.storage.size
-        let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
-        Ok(SparseVector(vector.length, nvals, Storage(vector.storage.size, storage)))
+    if uint64 i < uint64 vector.length then
+        match inner vector.storage.data i vector.storage.size with
+        | Ok(storage, deltaNNZ) ->
+            let nvals = uint64 (int64 vector.nvals + deltaNNZ) * 1UL<nvals>
+            Ok(SparseVector(vector.length, nvals, Storage(vector.storage.size, storage)))
+        | Error error -> Error error
     else
         Error Error.InconsistentSizeOfArguments
 
