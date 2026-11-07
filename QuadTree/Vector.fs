@@ -371,16 +371,16 @@ let toCoordinateList (vector: SparseVector<'a>) =
         | Leaf Dummy
         | Leaf(UserValue(None)) -> accum
         | Leaf(UserValue(Some value)) ->
-            accum
-            @ [ for idx in 0UL .. uint64 (size - 1UL<index>) -> (pointer + idx * 1UL<index>, value) ]
+            [ for idx in 0UL .. uint64 (size - 1UL<index>) -> (pointer + idx * 1UL<index>, value) ]
+            |> List.fold (fun acc entry -> entry :: acc) accum
         | Node(left, right) ->
             let halfSize = size / 2UL
             let lAccum = traverse left accum pointer halfSize
-            let rAccum = traverse right lAccum (pointer + halfSize) halfSize
-            rAccum
+            traverse right lAccum (pointer + halfSize) halfSize
 
     let lst =
         traverse vector.storage.data [] 0UL<index> ((uint64 vector.storage.size) * 1UL<index>)
+        |> List.rev
 
     CoordinateList(length, lst)
 
@@ -388,11 +388,15 @@ let empty (length: uint64<dataLength>) : Result<SparseVector<'a>, Error> =
     fromCoordinateList (CoordinateList(length, []))
 
 let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state: 'b) =
+    let rec repeat acc value (count: uint64) =
+        if count = 0UL then
+            acc
+        else
+            repeat (f acc value) value (count - 1UL)
+
     let rec inner state (size: uint64<storageSize>) vector =
         match vector with
-        | Leaf(UserValue(Some v)) ->
-            let lst = List.replicate (int size) v
-            List.fold f state lst
+        | Leaf(UserValue(Some v)) -> repeat state v (uint64 size)
         | Node(x1, x2) ->
             let halfSize = size / 2UL
             inner (inner state halfSize x1) halfSize x2
@@ -492,12 +496,12 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
     let nvals = v.nvals
 
     // Extract values from tree
-    let rec extract tree =
+    let rec extract tree accum =
         match tree with
-        | Leaf Dummy -> []
-        | Leaf(UserValue None) -> []
-        | Leaf(UserValue v) -> [ v ]
-        | Node(l, r) -> extract l @ extract r
+        | Leaf Dummy -> accum
+        | Leaf(UserValue None) -> accum
+        | Leaf(UserValue v) -> v :: accum
+        | Node(l, r) -> extract r (extract l accum)
 
     // Place sorted values into original tree structure
     let rec place tree sortedVals =
@@ -511,7 +515,7 @@ let mergeSort (v: SparseVector<'a>) (compare: Option<'a> -> Option<'a> -> int) :
             let r', r2 = place r r1
             mkNode l' r', r2
 
-    let values = extract v.storage.data
+    let values = extract v.storage.data [] |> List.rev
     let sortedVals = List.sortWith (fun a b -> compare a b) values
     let newTree, _ = place v.storage.data sortedVals
 
