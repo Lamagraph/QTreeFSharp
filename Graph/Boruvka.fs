@@ -186,5 +186,6 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
     resultM {
         let! parent = Vector.init length (fun i -> Some i) |> Result.mapError ParentInitProblem
-        return! inner graph (Matrix.empty graph.nrows graph.ncols) parent 0
+        let! tree = Matrix.empty graph.nrows graph.ncols |> Result.mapError EmptyTreeProblem
+        return! inner graph tree parent 0
     }
