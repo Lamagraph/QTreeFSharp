@@ -533,7 +533,7 @@ let ``Vector.map2Values compressed to None`` () =
         let f a b = None
         let actual = Vector.map2Values v1 v2 f
 
-        let expected = Ok(Vector.empty dataLength)
+        let expected = Vector.empty dataLength
 
         Assert.Equal(expected, actual)
     | _ -> Assert.Fail()
@@ -614,7 +614,7 @@ let ``Vector.map2Values compressed both to None`` () =
         let f a b = None
         let actual = Vector.map2Values v1 v2 f
 
-        let expected = Ok(Vector.empty dataLength)
+        let expected = Vector.empty dataLength
 
         Assert.Equal(expected, actual)
     | _ -> Assert.Fail()
