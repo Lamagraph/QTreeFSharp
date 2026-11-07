@@ -681,7 +681,7 @@ let kroneckerProduct
     (matrixA: SparseMatrix<'a>)
     (matrixB: SparseMatrix<'b>)
     (combine: 'a -> 'b -> 'c option)
-    : Result<SparseMatrix<'c>, string> =
+    : Result<SparseMatrix<'c>, Error> =
 
     let rowsB = uint64 matrixB.nrows
     let colsB = uint64 matrixB.ncols
