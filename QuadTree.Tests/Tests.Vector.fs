@@ -913,7 +913,7 @@ let ``Init vector`` () =
         |> Vector.fromCoordinateList
 
     let actual = Vector.init 3UL<dataLength> (fun i -> Some(int i))
-    Assert.Equal(expected, Ok actual)
+    Assert.Equal(expected, actual)
 
 [<Fact>]
 let ``map on empty vector returns empty vector`` () =
