@@ -62,10 +62,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
         fun i j ->
             let i = uint64 i * 1UL<Vector.index>
             let j = uint64 j * 1UL<Vector.index>
-            let parent_i = Vector.unsafeGet parent i
-            let parent_j = Vector.unsafeGet parent j
+            let parentI = Vector.unsafeGet parent i
+            let parentJ = Vector.unsafeGet parent j
 
-            match parent_i, parent_j with
+            match parentI, parentJ with
             | Some v1, Some v2 when v1 <> v2 -> true
             | _ -> false
 
@@ -125,7 +125,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 // Compute new parent assignments.
                 // For selected canonical edge (u, v), if current selected
                 // representative is one endpoint, merge it with the other endpoint.
-                let! data_for_update_parent =
+                let! dataForUpdateParent =
                     Vector.map2i edges index (fun i e idx ->
                         match e, idx with
                         | Some(_w, u, v), Some selected when selected = i ->
@@ -139,11 +139,11 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                             match other with
                             | Some otherVertex ->
                                 let j = otherVertex * 1UL<Vector.index>
-                                let parent_i = Vector.unsafeGet parent i
-                                let parent_j = Vector.unsafeGet parent j
+                                let parentI = Vector.unsafeGet parent i
+                                let parentJ = Vector.unsafeGet parent j
 
-                                match parent_i, parent_j with
-                                | Some p_i, Some p_j -> if p_i < p_j then Some(j, p_i) else Some(i, p_j)
+                                match parentI, parentJ with
+                                | Some pI, Some pJ -> if pI < pJ then Some(j, pI) else Some(i, pJ)
                                 | _ -> None
 
                             | None -> None
@@ -152,9 +152,9 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError DataForUpgradeParentCalculationProblem
 
                 // Apply direct parent updates.
-                let! initial_parent_update =
+                let! initialParentUpdate =
                     Vector.foldValues
-                        data_for_update_parent
+                        dataForUpdateParent
                         (fun state (i, v) ->
                             match state with
                             | Ok state ->
@@ -168,7 +168,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError FoldValuesProblem
 
                 let! parent =
-                    Vector.scatter parent initial_parent_update parent op_min
+                    Vector.scatter parent initialParentUpdate parent op_min
                     |> Result.mapError ScatterProblem
 
                 // Path compression.
