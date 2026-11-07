@@ -86,8 +86,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError EdgesCalculationProblem
 
                 // Per-component cheapest edge.
+                let! emptyEdges = Vector.empty length |> Result.mapError EmptyVectorProblem
+
                 let! cedges =
-                    Vector.scatter (Vector.empty length) edges parent op_min
+                    Vector.scatter emptyEdges edges parent op_min
                     |> Result.mapError CEdgesCalculationProblem
 
                 // Propagate component's cheapest edge to all vertices.
@@ -103,8 +105,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError IndexInnerCalculationProblem
 
                 // Among marked vertices in a component, keep the smallest index.
+                let! emptyIndices = Vector.empty length |> Result.mapError EmptyVectorProblem
+
                 let! index =
-                    Vector.scatter (Vector.empty length) indexInner parent op_min
+                    Vector.scatter emptyIndices indexInner parent op_min
                     |> Result.mapError IndexCalculationProblem
 
                 // Now each vertex knows its component's representative.

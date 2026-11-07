@@ -379,12 +379,8 @@ let toCoordinateList (vector: SparseVector<'a>) =
 
     CoordinateList(length, lst)
 
-let empty length =
-    match fromCoordinateList (CoordinateList(length, [])) with
-    | Ok v -> v
-    | Error _ ->
-        let storageSize = (getNearestUpperPowerOfTwo <| uint64 length) * 1UL<storageSize>
-        SparseVector(length, 0UL<nvals>, Storage(storageSize, Leaf Dummy))
+let empty (length: uint64<dataLength>) : Result<SparseVector<'a>, Error> =
+    fromCoordinateList (CoordinateList(length, []))
 
 let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state: 'b) =
     let rec inner state (size: uint64<storageSize>) vector =
