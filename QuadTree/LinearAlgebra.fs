@@ -21,6 +21,28 @@ let rec multScalar op_add (x: uint64) y =
         let res = op_add v v
         if x % 2UL = 0UL then res else op_add res v
 
+/// Grow a vector's storage tree with empty right subtrees until it spans
+/// targetSize, which must be at least the current storage size.
+let private padStorageTo (targetSize: uint64<storageSize>) (storage: Vector.Storage<Option<'a>>) =
+    let rec increase storageData (currentSize: uint64<storageSize>) =
+        if currentSize = targetSize then
+            storageData
+        else
+            increase (Vector.btree.Node(storageData, Vector.btree.Leaf Dummy)) (currentSize * 2UL)
+
+    if storage.size < targetSize then
+        Vector.Storage(targetSize, increase storage.data storage.size)
+    else
+        storage
+
+/// The vxm/vxmi_values result: matrix.ncols long, reusing the matrix storage size.
+let private mkResultVector (matrix: Matrix.SparseMatrix<'b>) (storage: Vector.btree<Option<'c>>, nvals: uint64<nvals>) =
+    Vector.SparseVector(
+        (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
+        nvals,
+        Vector.Storage(matrix.storage.size, storage)
+    )
+
 
 let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
 
@@ -73,31 +95,11 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
 
     if uint64 vector.length = uint64 matrix.nrows then
-        let vector_storage =
-            if uint64 vector.storage.size < uint64 matrix.storage.size then
-                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
-                    if current_size = bound then
-                        storage_data
-                    else
-                        increaseStorage
-                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
-                            (current_size * 2UL)
-                            bound
-
-                let target_size = matrix.storage.size
-                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
-            else
-                vector.storage
+        let vector_storage = padStorageTo matrix.storage.size vector.storage
 
         match inner vector_storage.size vector_storage.data matrix.storage.data with
         | Error x -> Error x
-        | Ok(storage, nvals) ->
-            (Vector.SparseVector(
-                (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
-                nvals,
-                (Vector.Storage(matrix.storage.size, storage))
-            ))
-            |> Ok
+        | Ok result -> Ok(mkResultVector matrix result)
     else
         Error Error.InconsistentSizeOfArguments
 
@@ -194,21 +196,7 @@ let vxmi_values
         | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
 
     if uint64 vector.length = uint64 matrix.nrows then
-        let vector_storage =
-            if uint64 vector.storage.size < uint64 matrix.storage.size then
-                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
-                    if current_size = bound then
-                        storage_data
-                    else
-                        increaseStorage
-                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
-                            (current_size * 2UL)
-                            bound
-
-                let target_size = matrix.storage.size
-                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
-            else
-                vector.storage
+        let vector_storage = padStorageTo matrix.storage.size vector.storage
 
         match
             inner
@@ -220,13 +208,7 @@ let vxmi_values
                 0UL<Matrix.colindex>
         with
         | Error x -> Error x
-        | Ok(storage, nvals) ->
-            (Vector.SparseVector(
-                (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
-                nvals,
-                (Vector.Storage(matrix.storage.size, storage))
-            ))
-            |> Ok
+        | Ok result -> Ok(mkResultVector matrix result)
     else
         Error Error.InconsistentSizeOfArguments
 
