@@ -1894,7 +1894,7 @@ let ``kronecker product with rectangular and square matrixes`` () =
         | Result.Ok res ->
             let actual = Matrix.toCoordinateList res
             Assert.Equal(expected, actual)
-        | Result.Error msg -> Assert.Fail msg
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
