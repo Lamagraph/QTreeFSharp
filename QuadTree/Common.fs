@@ -47,7 +47,7 @@ let treeOfPowersOfTwo =
         )
     )
 
-let getNearestUpperPowerOfTwo (x: uint64) =
+let getNearestUpperPowerOfTwo (x: uint64) : Result<uint64, Error> =
     let MAX = 9223372036854776000UL
 
     let rec find tree rightBound =
@@ -59,8 +59,8 @@ let getNearestUpperPowerOfTwo (x: uint64) =
         | BinSearchTree.Leaf(v) -> if x <= v then v else rightBound
 
     if x = MAX then
-        MAX
+        Ok MAX
     elif x < MAX then
-        find treeOfPowersOfTwo 9223372036854776000UL
+        Ok(find treeOfPowersOfTwo 9223372036854776000UL)
     else
-        failwithf "Argument is too large. Must be not greater then %A" MAX
+        Error(ArgumentTooLarge MAX)
