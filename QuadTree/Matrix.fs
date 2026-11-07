@@ -231,12 +231,12 @@ let map (matrix: SparseMatrix<'a>) f =
 
 let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
     let rec inner (size: uint64<storageSize>) matrix1 matrix2 =
-        let _do x1 x2 x3 x4 y1 y2 y3 y4 =
-            let new_size = size / 2UL
+        let combine x1 x2 x3 x4 y1 y2 y3 y4 =
+            let halfSize = size / 2UL
 
-            match (inner new_size x1 y1), (inner new_size x2 y2), (inner new_size x3 y3), (inner new_size x4 y4) with
-            | Ok((new_t1, nvals1)), Ok((new_t2, nvals2)), Ok((new_t3, nvals3)), Ok((new_t4, nvals4)) ->
-                ((mkNode new_t1 new_t2 new_t3 new_t4), nvals1 + nvals2 + nvals3 + nvals4) |> Ok
+            match (inner halfSize x1 y1), (inner halfSize x2 y2), (inner halfSize x3 y3), (inner halfSize x4 y4) with
+            | Ok((newT1, nvals1)), Ok((newT2, nvals2)), Ok((newT3, nvals3)), Ok((newT4, nvals4)) ->
+                ((mkNode newT1 newT2 newT3 newT4), nvals1 + nvals2 + nvals3 + nvals4) |> Ok
             | Error(e), _, _, _
             | _, Error(e), _, _
             | _, _, Error(e), _
@@ -254,9 +254,9 @@ let map2 (matrix1: SparseMatrix<_>) (matrix2: SparseMatrix<_>) f =
 
             (Leaf(UserValue(res)), nnz) |> Ok
 
-        | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) -> _do x1 x2 x3 x4 y1 y2 y3 y4
-        | Node(x1, x2, x3, x4), Leaf(v) -> _do x1 x2 x3 x4 matrix2 matrix2 matrix2 matrix2
-        | Leaf(v), Node(x1, x2, x3, x4) -> _do matrix1 matrix1 matrix1 matrix1 x1 x2 x3 x4
+        | Node(x1, x2, x3, x4), Node(y1, y2, y3, y4) -> combine x1 x2 x3 x4 y1 y2 y3 y4
+        | Node(x1, x2, x3, x4), Leaf(v) -> combine x1 x2 x3 x4 matrix2 matrix2 matrix2 matrix2
+        | Leaf(v), Node(x1, x2, x3, x4) -> combine matrix1 matrix1 matrix1 matrix1 x1 x2 x3 x4
         | (x, y) -> Error Error.InconsistentStructureOfStorages
 
     if matrix1.nrows = matrix2.nrows && matrix1.ncols = matrix2.ncols then
@@ -341,7 +341,7 @@ let foldAssociative (folder: 'T option -> 'T option -> 'T option) (state: 'T opt
 
 let getLowerTriangle (matrix: SparseMatrix<_>) =
 
-    // returns tree, removed_nvals
+    // returns the tree and the number of removed nvals
     let rec makeNone tree (size: uint64<storageSize>) =
         match tree with
         | Leaf Dummy
@@ -349,12 +349,12 @@ let getLowerTriangle (matrix: SparseMatrix<_>) =
         | Leaf(UserValue(Some _)) -> Leaf(UserValue None), (uint64 <| size * size) * 1UL<nvals>
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
-            let nw_new, nw_removed = makeNone nw halfSize
-            let ne_new, ne_removed = makeNone ne halfSize
-            let sw_new, sw_removed = makeNone sw halfSize
-            let se_new, se_removed = makeNone se halfSize
+            let nwNew, nwRemoved = makeNone nw halfSize
+            let neNew, neRemoved = makeNone ne halfSize
+            let swNew, swRemoved = makeNone sw halfSize
+            let seNew, seRemoved = makeNone se halfSize
 
-            (mkNode nw_new ne_new sw_new se_new), nw_removed + ne_removed + sw_removed + se_removed
+            (mkNode nwNew neNew swNew seNew), nwRemoved + neRemoved + swRemoved + seRemoved
 
     let rec traverse tree size =
         match tree with
@@ -363,28 +363,28 @@ let getLowerTriangle (matrix: SparseMatrix<_>) =
         | Leaf _ ->
             let halfSize = size / 2UL
 
-            let nw, nw_removed = traverse tree halfSize
+            let nw, nwRemoved = traverse tree halfSize
 
-            let ne, ne_removed =
+            let ne, neRemoved =
                 Leaf <| UserValue None, (uint64 <| halfSize * halfSize) * 1UL<nvals>
 
-            let sw, sw_removed = tree, 0UL<nvals>
-            let se, se_removed = traverse tree halfSize
-            (mkNode nw ne sw se), nw_removed + ne_removed + sw_removed + se_removed
+            let sw, swRemoved = tree, 0UL<nvals>
+            let se, seRemoved = traverse tree halfSize
+            (mkNode nw ne sw se), nwRemoved + neRemoved + swRemoved + seRemoved
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
 
-            let nw_new, nw_removed = traverse nw halfSize
-            let ne_new, ne_removed = makeNone ne halfSize
-            let sw_new, sw_removed = sw, 0UL<nvals>
-            let se_new, se_removed = traverse se halfSize
+            let nwNew, nwRemoved = traverse nw halfSize
+            let neNew, neRemoved = makeNone ne halfSize
+            let swNew, swRemoved = sw, 0UL<nvals>
+            let seNew, seRemoved = traverse se halfSize
 
-            (mkNode nw_new ne_new sw_new se_new), nw_removed + ne_removed + sw_removed + se_removed
+            (mkNode nwNew neNew swNew seNew), nwRemoved + neRemoved + swRemoved + seRemoved
 
     let storageSize = matrix.storage.size
-    let tree, nvals_removed = traverse matrix.storage.data storageSize
+    let tree, nvalsRemoved = traverse matrix.storage.data storageSize
 
-    SparseMatrix(matrix.nrows, matrix.ncols, matrix.nvals - nvals_removed, Storage(storageSize, tree))
+    SparseMatrix(matrix.nrows, matrix.ncols, matrix.nvals - nvalsRemoved, Storage(storageSize, tree))
 
 let transpose (matrix: SparseMatrix<_>) =
     let rec traverse tree =

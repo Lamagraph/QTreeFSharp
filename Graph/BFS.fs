@@ -20,12 +20,12 @@ let bfs
     let rec inner (frontier: Vector.SparseVector<'c>) (visited: Vector.SparseVector<'c>) =
         if frontier.nvals > 0UL<nvals> then
             resultM {
-                let! new_frontier =
+                let! newFrontier =
                     LinearAlgebra.vxmi_values op_add op_mult frontier graph
                     |> Result.mapError NewFrontierCalculationProblem
 
                 let! frontier =
-                    Vector.mask new_frontier visited (fun x -> x.IsNone)
+                    Vector.mask newFrontier visited (fun x -> x.IsNone)
                     |> Result.mapError FrontierCalculationProblem
 
                 let! visited =
