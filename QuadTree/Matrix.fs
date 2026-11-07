@@ -145,24 +145,26 @@ let toCoordinateList (matrix: SparseMatrix<'a>) =
     let nrows = matrix.nrows
     let ncols = matrix.ncols
 
-    let rec traverse tree (pr, pc) size =
+    let rec traverse tree (pr, pc) size accum =
         match tree with
         | Leaf Dummy
-        | Leaf(UserValue None) -> []
+        | Leaf(UserValue None) -> accum
         | Leaf(UserValue(Some value)) ->
             [ for i in uint64 pr .. (uint64 pr) + size - 1UL do
                   for j in uint64 pc .. (uint64 pc) + size - 1UL -> (i * 1UL<rowindex>, j * 1UL<colindex>, value) ]
+            |> List.fold (fun acc entry -> entry :: acc) accum
         | Node(nw, ne, sw, se) ->
             let halfSize = size / 2UL
             let nwp, nep, swp, sep = getQuadrantCoords (pr, pc) halfSize
 
-            traverse nw nwp halfSize
-            @ traverse ne nep halfSize
-            @ traverse sw swp halfSize
-            @ traverse se sep halfSize
+            let acc = traverse nw nwp halfSize accum
+            let acc = traverse ne nep halfSize acc
+            let acc = traverse sw swp halfSize acc
+            traverse se sep halfSize acc
 
     let coo =
-        traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size)
+        traverse matrix.storage.data (0UL<rowindex>, 0UL<colindex>) (uint64 matrix.storage.size) []
+        |> List.rev
 
     let sorted = List.sort coo
     CoordinateList(nrows, ncols, sorted)
