@@ -52,7 +52,7 @@ type Error =
         | InconsistentSizeOfArguments -> "Inconsistent size of arguments"
         | CoordinatesOutOfRange -> "Coordinates out of range"
         | StorageSizeTooLarge(Common.ArgumentTooLarge max) ->
-            sprintf "Argument is too large. Must be not greater then %A" max
+            sprintf "Argument is too large. Must not be greater than %A" max
         | SliceBoundsInvalid -> "Slice index is out of range"
         | SliceRangeInvalid -> "Start should be <= end"
 
