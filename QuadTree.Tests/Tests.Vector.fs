@@ -1186,3 +1186,11 @@ let ``slice returns correct subvector when end of subvector equals to end of vec
             let coo = Vector.toCoordinateList result
             Assert.Equal(CoordinateList(5UL<dataLength>, [ (1UL<index>, 33); (4UL<index>, 20) ]), coo)
         | Result.Error msg -> Assert.Fail(msg.ToString())
+
+[<Fact>]
+let ``update at index equal to length returns error`` () =
+    match fromCoordinateList (CoordinateList(3UL<dataLength>, [ (0UL<index>, 1) ])) with
+    | Result.Error _ -> Assert.Fail()
+    | Result.Ok vec ->
+        let actual = update vec 3UL<index> (Some 5) (fun _ newValue -> newValue)
+        Assert.Equal(Error InconsistentSizeOfArguments, actual)
