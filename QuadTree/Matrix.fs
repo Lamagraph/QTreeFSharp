@@ -41,6 +41,10 @@ type SparseMatrix<'value> =
 type Error =
     | InconsistentStructureOfStorages
     | InconsistentSizeOfArguments
+    | CoordinatesOutOfRange
+    | StorageSizeTooLarge of Common.Error
+    | SliceBoundsInvalid
+    | SliceRangeInvalid
 
 
 let mkNode x1 x2 x3 x4 =
