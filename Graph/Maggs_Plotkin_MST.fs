@@ -35,6 +35,7 @@ let mst (graph: Matrix.SparseMatrix<'a>) =
                     [ for i in 0UL .. uint64 graph.nrows - 1UL -> (i * 1UL<rowindex>, i * 1UL<colindex>, zero) ]
                 )
             )
+            |> Result.mapError (fun e -> e.ToString())
 
         let! graph =
             match
