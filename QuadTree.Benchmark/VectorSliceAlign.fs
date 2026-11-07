@@ -36,7 +36,7 @@ type Benchmark() =
 
         match Vector.fromCoordinateList (CoordinateList(uint64 size * 1UL<dataLength>, coords)) with
         | Ok v -> v
-        | Error msg -> failwithf "Failed to create vector: %s" msg
+        | Error msg -> failwithf "Failed to create vector: %O" msg
 
     [<GlobalSetup>]
     member this.Setup() =
