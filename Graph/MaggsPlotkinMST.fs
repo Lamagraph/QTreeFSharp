@@ -1,4 +1,4 @@
-module Graph.Maggs_Plotkin_MST
+module Graph.MaggsPlotkinMST
 
 open Common
 open Result

@@ -957,7 +957,7 @@ let ``Boruvka MST 2 nodes.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 2 nodes.`` () =
     let graph, expected = ``test 2 nodes`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -968,7 +968,7 @@ let ``Boruvka MST 3 nodes line.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 3 nodes line.`` () =
     let graph, expected = ``test 3 nodes line`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -979,7 +979,7 @@ let ``Boruvka MST 4 nodes line.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 4 nodes line.`` () =
     let graph, expected = ``test 4 nodes line`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -990,7 +990,7 @@ let ``Boruvka MST square.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST square.`` () =
     let graph, expected = ``test square`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1001,7 +1001,7 @@ let ``Boruvka MST 5 nodes line.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 5 nodes line.`` () =
     let graph, expected = ``test 5 nodes line`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1012,7 +1012,7 @@ let ``Boruvka MST 5 nodes star.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 5 nodes star.`` () =
     let graph, expected = ``test 5 nodes star`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1023,7 +1023,7 @@ let ``Boruvka MST 5 nodes complete.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 5 nodes complete.`` () =
     let graph, expected = ``test 5 nodes complete`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1034,7 +1034,7 @@ let ``Boruvka MST two components.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST two components.`` () =
     let graph, expected = ``test two components`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1045,7 +1045,7 @@ let ``Boruvka MST cycle graph 6 nodes.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST cycle graph 6 nodes.`` () =
     let graph, expected = ``test cycle graph 6 nodes`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1056,7 +1056,7 @@ let ``Boruvka MST complete bipartite K3,3.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST complete bipartite K3,3.`` () =
     let graph, expected = ``test complete bipartite K3,3`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1067,7 +1067,7 @@ let ``Boruvka MST random weights.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST random weights.`` () =
     let graph, expected = ``test random weights`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1078,7 +1078,7 @@ let ``Boruvka MST 8 nodes grid.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 8 nodes grid.`` () =
     let graph, expected = ``test 8 nodes grid`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1089,7 +1089,7 @@ let ``Boruvka MST 10 nodes random.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST 10 nodes random.`` () =
     let graph, expected = ``test 10 nodes random`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1100,7 +1100,7 @@ let ``Boruvka MST simple triangle.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST simple triangle.`` () =
     let graph, expected = ``test simple triangle`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1111,7 +1111,7 @@ let ``Boruvka MST simple square.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST simple square.`` () =
     let graph, expected = ``test simple square`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1122,7 +1122,7 @@ let ``Boruvka MST simple square in two steps.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST simple square in two steps.`` () =
     let graph, expected = ``test simple square in two steps`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1133,7 +1133,7 @@ let ``Boruvka MST.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST.`` () =
     let graph, expected = ``test 7 nodes`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1144,7 +1144,7 @@ let ``Boruvka MST big.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST big.`` () =
     let graph, expected = ``test big`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1155,7 +1155,7 @@ let ``Boruvka MST complex line.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST complex line.`` () =
     let graph, expected = ``test complex line`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
 
 
 [<Fact>]
@@ -1166,4 +1166,4 @@ let ``Boruvka MST complex line 2.`` () =
 [<Fact>]
 let ``Maggs-Plotkin MST complex line 2.`` () =
     let graph, expected = ``test complex line 2`` ()
-    runMstTest graph expected Graph.Maggs_Plotkin_MST.mst
+    runMstTest graph expected Graph.MaggsPlotkinMST.mst
