@@ -383,57 +383,10 @@ let foldValues (vector: SparseVector<'a>) (f: 'b -> 'a -> 'b) (state: 'b) =
 
     inner state vector.storage.size vector.storage.data
 
-let map (vector: SparseVector<'a>) f =
-    let rec inner (size: uint64<storageSize>) vector =
-        match vector with
-        | Node(x1, x2) ->
-            let t1, nvals1 = inner (size / 2UL) x1
-            let t2, nvals2 = inner (size / 2UL) x2
-            (mkNode t1 t2), nvals1 + nvals2
-        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v)) ->
-            let res = f v
-
-            let nnz =
-                match res with
-                | None -> 0UL<nvals>
-                | _ -> (uint64 size) * 1UL<nvals>
-
-            Leaf(UserValue(res)), nnz
-
-    let storage, nvals = inner vector.storage.size vector.storage.data
-    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+let map (vector: SparseVector<'a>) f = mapInner vector (UnaryOp.AllCells f)
 
 let mapi (vector: SparseVector<'a>) f =
-    let rec inner (pointer: uint64<index>) (size: uint64<storageSize>) vector =
-        match vector with
-        | Node(x1, x2) ->
-            let halfSize = size / 2UL
-            let t1, nvals1 = inner pointer halfSize x1
-            let t2, nvals2 = inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize x2
-            (mkNode t1 t2), nvals1 + nvals2
-        | Leaf(Dummy) -> Leaf(Dummy), 0UL<nvals>
-        | Leaf(UserValue(v)) ->
-            if size = 1UL<storageSize> then
-                let res = f pointer v
-
-                let nnz =
-                    match res with
-                    | Some _ -> 1UL<nvals>
-                    | None -> 0UL<nvals>
-
-                Leaf(UserValue(res)), nnz
-            else
-                let halfSize = size / 2UL
-                let t1, nvals1 = inner pointer halfSize (Leaf(UserValue(v)))
-
-                let t2, nvals2 =
-                    inner (pointer + (uint64 halfSize) * 1UL<index>) halfSize (Leaf(UserValue(v)))
-
-                (mkNode t1 t2), nvals1 + nvals2
-
-    let storage, nvals = inner 0UL<index> vector.storage.size vector.storage.data
-    SparseVector(vector.length, nvals, (Storage(vector.storage.size, storage)))
+    mapInner vector (UnaryOp.AllCellsIndexed f)
 
 
 let init (length: uint64<dataLength>) (f: uint64<index> -> Option<'a>) : SparseVector<'a> =
@@ -481,14 +434,13 @@ let map2LeftValues (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 let mask (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2 vector1 vector2 (fun v1 v2 -> if f v2 then v1 else None)
 
-let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
-    map2Inner vector1 vector2 (BinaryOp.AllCellsIndexed f)
-
 let map2iValues (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2Inner vector1 vector2 (BinaryOp.ValuesOnlyIndexed f)
 
 let map2iAllCells (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2Inner vector1 vector2 (BinaryOp.AllCellsIndexed f)
+
+let map2i (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f = map2iAllCells vector1 vector2 f
 
 let map2iAtLeastOne (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
     map2Inner vector1 vector2 (BinaryOp.AtLeastOneValueIndexed f)
@@ -499,8 +451,6 @@ let map2iLeftValues (vector1: SparseVector<'a>) (vector2: SparseVector<'b>) f =
 
 /// Returns None if index out of range
 let unsafeGet (v: SparseVector<'a>) (index: uint64<index>) =
-    let originalIndex = index
-
     let rec getFromTree (tree: btree<Option<'a>>) (size: uint64<storageSize>) (index: uint64<index>) =
         match tree with
         | Leaf Dummy -> None
