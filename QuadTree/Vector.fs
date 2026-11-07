@@ -45,9 +45,9 @@ type Error =
         | CoordinatesOutOfRange -> "Index out of range"
         | StorageSizeTooLarge(Common.ArgumentTooLarge max) ->
             sprintf "Argument is too large. Must be not greater then %A" max
-        | SliceStartInvalid -> "Start is out of range"
-        | SliceEndInvalid -> "End is out of range"
-        | SliceRangeInvalid -> "Start is greater than end"
+        | SliceStartInvalid -> "Start index is out of range"
+        | SliceEndInvalid -> "End index is out of range"
+        | SliceRangeInvalid -> "End should be >= Start"
 
 
 let mkNode t1 t2 =
@@ -538,21 +538,21 @@ let scatter
             (Ok w)
     | Error x -> Error Error.InconsistentStructureOfStorages
 
-let slice (_start: int) (_end: int) (vector: SparseVector<'a>) : Result<SparseVector<'a>, string> =
-    if _start < 0 then
-        Error "Start should be >= 0"
-    elif _end < 0 then
-        Error "End should be >= 0"
-    elif _start > int vector.length - 1 then
-        Error "Start is out of Vector length"
-    elif _end > int vector.length - 1 then
-        Error "End is out of Vector length"
-    elif _start > _end then
-        Error "End should be >= Start"
+let slice (startIndex: int) (endIndex: int) (vector: SparseVector<'a>) : Result<SparseVector<'a>, Error> =
+    if startIndex < 0 then
+        Error SliceStartInvalid
+    elif endIndex < 0 then
+        Error SliceEndInvalid
+    elif startIndex > int vector.length - 1 then
+        Error SliceStartInvalid
+    elif endIndex > int vector.length - 1 then
+        Error SliceEndInvalid
+    elif startIndex > endIndex then
+        Error SliceRangeInvalid
     else
-        let startIdx = uint64 _start * 1UL<index>
-        let endIdx = uint64 _end * 1UL<index>
-        let newLength = uint64 (_end - _start + 1) * 1UL<dataLength>
+        let startIdx = uint64 startIndex * 1UL<index>
+        let endIdx = uint64 endIndex * 1UL<index>
+        let newLength = uint64 (endIndex - startIndex + 1) * 1UL<dataLength>
         let newSize = getNearestUpperPowerOfTwo (uint64 newLength) * 1UL<storageSize>
 
         let rec narrowOld
