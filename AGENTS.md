@@ -16,8 +16,7 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 ## Coding Conventions
 
 - Units of measure must be used for a clear distinction between dimensions and indices. They are usually of type `uint64`. Keep them on new APIs.
-- Graph algorithms are generic over `op_add`/`op_mult` (semiring-style).
-- Algorithm modules live under `Graph.*`, while `AVLSet` uses the `QuadTree.AVLSet` namespace with a parallel variant in `ParallelAVLSet.fs`.
+- Graph algorithms and basic linear algebra operations are generic over `op_add`/`op_mult` (semiring-style).
 - Main code must not use imperative or OOP constructions like `for`-loops or classes, implementation must be as functionally idiomatic as possible. Test and benchmarks aren't restricted by this rule.
 - OOP-style exceptions are prohibited. Use `Result<_, Error>` and `resultM { ... }` computation expression from `QuadTree/Result.fs`.
 
@@ -26,6 +25,7 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 
 - `Matrix` is a 2D quad-tree and `Vector` a 1D binary tree. Storage is padded to the next power of two independently of the logical dimensions.
 - Preserve the `Leaf Dummy` vs `Leaf (UserValue None)` distinction: `Dummy` means an entirely empty/out-of-range subtree, `UserValue None` an in-range empty cell. Several algorithms branch on this.
+- Algorithm modules live under `Graph.*`, while `AVLSet` uses the `QuadTree.AVLSet` namespace with a parallel variant in `ParallelAVLSet.fs`.
 
 
 ## Projects
