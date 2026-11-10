@@ -1,8 +1,8 @@
-﻿namespace QuadTree.Benchmarks.AVLSet
+﻿namespace Set.Benchmarks.AVLSet
 
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Configs
-open Utils.AVLSet
+open Set.AVLSet
 open System.Collections.Generic
 
 [<GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)>]
