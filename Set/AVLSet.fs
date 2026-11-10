@@ -1,4 +1,4 @@
-﻿namespace Utils.AVLSet
+﻿namespace Set.AVLSet
 
 open Result
 

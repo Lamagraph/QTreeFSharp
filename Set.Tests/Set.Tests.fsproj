@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\Set\Set.fsproj" />
   </ItemGroup>
 
 </Project>
