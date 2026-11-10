@@ -1,9 +1,9 @@
-namespace Utils.Tests.AVLSet
+namespace Set.Tests.AVLSet
 
 open Xunit
 open FsUnit.Xunit
 open FsCheck.Xunit
-open Utils.AVLSet
+open Set.AVLSet
 
 module SetTests =
     let rec isSetValid n mn mx =
