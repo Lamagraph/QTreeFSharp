@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Backend.fs" />
+        <Compile Include="BFS.fs" />
+        <Compile Include="SSSP.fs" />
+        <Compile Include="TriangleCount.fs" />
+        <Compile Include="QuadTreeBackend.fs" />
+        <Compile Include="QuadTree.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+        <ProjectReference Include="..\Decoupling.Common\Decoupling.Common.fsproj" />
+    </ItemGroup>
+
+</Project>
