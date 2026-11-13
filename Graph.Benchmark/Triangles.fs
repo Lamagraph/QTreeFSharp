@@ -2,6 +2,7 @@ namespace Graph.Benchmarks.Triangles
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open Graph.Impl.Default.TriangleCount
 
 [<Config(typeof<MyConfig>)>]
 type Benchmark() =
@@ -19,5 +20,4 @@ type Benchmark() =
             | Error msg -> failwith $"Failed to load matrix {this.MatrixName}: {msg}"
 
     [<Benchmark>]
-    member this.TriangleCount() =
-        Graph.TriangleCount.triangleCount matrix
+    member this.TriangleCount() = triangleCount matrix

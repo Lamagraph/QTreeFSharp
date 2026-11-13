@@ -6,6 +6,7 @@ open Xunit
 open Matrix
 open Vector
 open Common
+open Graph.Impl.Default.SSSP
 
 (*
 1,N,N,N
@@ -56,7 +57,7 @@ let ``Simple SSSP.`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
-    let actual = Graph.SSSP.sssp graph 0UL
+    let actual = sssp graph 0UL
 
     Assert.Equal(expected, actual)
 
@@ -95,7 +96,7 @@ let ``SSSP with recalculation`` () =
 
     match Matrix.fromCoordinateList clist, Vector.fromCoordinateList expectedClist with
     | Ok graph, Ok expected ->
-        match Graph.SSSP.sssp graph 0UL with
+        match sssp graph 0UL with
         | Ok actual -> Assert.Equal(expected, actual)
         | Error msg -> Assert.Fail $"SSSP failed: {msg}"
     | Error msg, _ -> Assert.Fail $"Matrix creation failed: {msg}"

@@ -1,15 +1,41 @@
+/// Generic single-source shortest paths (Bellman-Ford style over `float` weights),
+/// independent of the vector/matrix representation.
+/// Representation-specific operations are supplied via `SsspOps`; concrete
+/// specializations live under `Graph.Impl.*` (e.g. `Graph.Impl.QuadTree.SSSP`).
 module Graph.SSSP
 
 open Common
 open Result
 
-type Error =
-    | NewFrontierCalculationProblem of LinearAlgebra.Error
-    | FrontierCalculationProblem of Vector.Error
-    | VisitedCalculationProblem of Vector.Error
-    | FrontierInitProblem of Vector.Error
+type Error<'vErr, 'laErr> =
+    | NewFrontierCalculationProblem of 'laErr
+    | FrontierCalculationProblem of 'vErr
+    | VisitedCalculationProblem of 'vErr
+    | FrontierInitProblem of 'vErr
 
-let sssp graph (startVertex: uint64) =
+/// Everything SSSP requires from a representation.
+/// `'vec`/`'mat` are the concrete `float` vector/matrix types, `'vErr`/`'laErr` their errors.
+type SsspOps<'vec, 'mat, 'vErr, 'laErr> =
+    {
+        nvals: 'vec -> uint64<nvals>
+        length: 'vec -> uint64<Vector.dataLength>
+        ncols: 'mat -> uint64<Matrix.ncols>
+        /// Builds a vector of the given length from (index, value) pairs.
+        fromCoordinates: uint64<Vector.dataLength> -> (uint64<Vector.index> * float) list -> Result<'vec, 'vErr>
+        map2: 'vec -> 'vec -> (float option -> float option -> float option) -> Result<'vec, 'vErr>
+        vxm:
+            (float option -> float option -> float option)
+                -> (float option -> float option -> float option)
+                -> 'vec
+                -> 'mat
+                -> Result<'vec, 'laErr>
+    }
+
+let sssp
+    (ops: SsspOps<'vec, 'mat, 'vErr, 'laErr>)
+    (graph: 'mat)
+    (startVertex: uint64)
+    : Result<'vec, Error<'vErr, 'laErr>> =
     let op_add x y =
         match (x, y) with
         | Some(u), Some(v) -> Some(min u v)
@@ -22,11 +48,11 @@ let sssp graph (startVertex: uint64) =
         | Some(u), Some(v) -> Some(u + v)
         | _ -> None
 
-    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iterNum =
-        if frontier.nvals > 0UL<nvals> && iterNum <= int frontier.length then
+    let rec inner (frontier: 'vec) (visited: 'vec) iterNum =
+        if ops.nvals frontier > 0UL<nvals> && iterNum <= int (ops.length frontier) then
             resultM {
                 let! newFrontier =
-                    LinearAlgebra.vxm op_add op_mult frontier graph
+                    ops.vxm op_add op_mult frontier graph
                     |> Result.mapError NewFrontierCalculationProblem
 
                 let op_min x y =
@@ -36,21 +62,22 @@ let sssp graph (startVertex: uint64) =
                     | _ -> None
 
                 let! frontier =
-                    Vector.map2 newFrontier visited op_min
+                    ops.map2 newFrontier visited op_min
                     |> Result.mapError FrontierCalculationProblem
 
-                let! visited = Vector.map2 visited frontier op_add |> Result.mapError VisitedCalculationProblem
+                let! visited = ops.map2 visited frontier op_add |> Result.mapError VisitedCalculationProblem
 
                 return! inner frontier visited (iterNum + 1)
             }
         else
             Ok visited
 
-    let frontierResult =
-        Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
-        |> Vector.fromCoordinateList
-
     resultM {
-        let! frontier = frontierResult |> Result.mapError FrontierInitProblem
+        let! frontier =
+            ops.fromCoordinates
+                ((uint64 (ops.ncols graph)) * 1UL<Vector.dataLength>)
+                [ (startVertex * 1UL<Vector.index>, 0.0) ]
+            |> Result.mapError FrontierInitProblem
+
         return! inner frontier frontier 0
     }
