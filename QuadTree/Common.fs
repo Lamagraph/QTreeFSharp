@@ -14,86 +14,7 @@ type BinSearchTree<'value> =
     | Leaf of 'value
     | Node of BinSearchTree<'value> * 'value * BinSearchTree<'value>
 
-let powersOfTwo =
-    [ 1UL
-      2UL
-      4UL
-      8UL
-      16UL
-      32UL
-      64UL
-
-      128UL
-
-      256UL
-      512UL
-      1024UL
-      2048UL
-      4096UL
-      8192UL
-      16384UL
-
-      32768UL
-
-      65536UL
-      131072UL
-      262144UL
-      524288UL
-      1048576UL
-      2097152UL
-      4194304UL
-
-      8388608UL
-
-      16777216UL
-      33554432UL
-      67108864UL
-      134217728UL
-      268435456UL
-      536870912UL
-      1073741824UL
-
-      2147483648UL
-
-      4294967296UL
-      8589934592UL
-      17179869184UL
-      34359738368UL
-      68719476736UL
-      137438953472UL
-      274877906944UL
-
-      549755813888UL
-
-      1099511627776UL
-      2199023255552UL
-      4398046511104UL
-      8796093022208UL
-      17592186044416UL
-      35184372088832UL
-      70368744177664UL
-
-      140737488355328UL
-
-      281474976710656UL
-      562949953421312UL
-      1125899906842624UL
-      2251799813685248UL
-      4503599627370496UL
-      9007199254740992UL
-      18014398509481984UL
-
-      36028797018963970UL
-
-      72057594037927940UL
-      144115188075855870UL
-      288230376151711740UL
-      576460752303423500UL
-      1152921504606847000UL
-      2305843009213694000UL
-      4611686018427388000UL
-
-      9223372036854776000UL ]
+type Error = ArgumentTooLarge of max: uint64
 
 let treeOfPowersOfTwo =
     BinSearchTree.Node(
@@ -126,7 +47,7 @@ let treeOfPowersOfTwo =
         )
     )
 
-let getNearestUpperPowerOfTwo (x: uint64) =
+let getNearestUpperPowerOfTwo (x: uint64) : Result<uint64, Error> =
     let MAX = 9223372036854776000UL
 
     let rec find tree rightBound =
@@ -138,8 +59,8 @@ let getNearestUpperPowerOfTwo (x: uint64) =
         | BinSearchTree.Leaf(v) -> if x <= v then v else rightBound
 
     if x = MAX then
-        MAX
+        Ok MAX
     elif x < MAX then
-        find treeOfPowersOfTwo 9223372036854776000UL
+        Ok(find treeOfPowersOfTwo 9223372036854776000UL)
     else
-        failwithf "Argument is too large. Must be not greater then %A" MAX
+        Error(ArgumentTooLarge MAX)

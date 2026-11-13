@@ -953,7 +953,7 @@ let ``slice returns error when row start is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m -1 4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -969,7 +969,7 @@ let ``slice returns error when row end is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 -4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End row should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -985,7 +985,7 @@ let ``slice returns error when col start is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 -2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1001,7 +1001,7 @@ let ``slice returns error when col end is negative`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 2 -3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End column should be >= 0", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1017,7 +1017,7 @@ let ``slice returns error when row start is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 6 4 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1033,7 +1033,7 @@ let ``slice returns error when row end is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 10 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End row is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1049,7 +1049,7 @@ let ``slice returns error when col start is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 4 10 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1065,7 +1065,7 @@ let ``slice returns error when col end is out of range`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 2 2 10 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("End column is out of matrix length", msg)
+        | Result.Error msg -> Assert.Equal(SliceBoundsInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1081,7 +1081,7 @@ let ``slice returns error when row end is less than row start`` () =
     | Result.Ok m ->
         match Matrix.slice m 2 1 2 3 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start row should be <= end row", msg)
+        | Result.Error msg -> Assert.Equal(SliceRangeInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1097,7 +1097,7 @@ let ``slice returns error when col end is less than col start`` () =
     | Result.Ok m ->
         match Matrix.slice m 1 2 3 2 with
         | Result.Ok _ -> Assert.Fail()
-        | Result.Error msg -> Assert.Equal("Start column should be <= end column", msg)
+        | Result.Error msg -> Assert.Equal(SliceRangeInvalid, msg)
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1311,8 +1311,8 @@ let ``slice returns single column`` () =
                 CoordinateList(6UL<nrows>, 1UL<ncols>, [ (1UL<rowindex>, 0UL<colindex>, 2) ]),
                 Matrix.toCoordinateList res
             )
-        | Result.Error msg -> Assert.Fail(msg)
-    | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice returns single row`` () =
@@ -1333,8 +1333,8 @@ let ``slice returns single row`` () =
                 CoordinateList(1UL<nrows>, 7UL<ncols>, [ (0UL<rowindex>, 4UL<colindex>, 3) ]),
                 Matrix.toCoordinateList res
             )
-        | Result.Error msg -> Assert.Fail(msg)
-    | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``slice middle of dense matrix returns correct values`` () =
@@ -1420,7 +1420,7 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (1UL<Vector.index>, 20) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceRows sum on square not power of two matrix`` () =
@@ -1455,7 +1455,7 @@ let ``reduceRows sum on square not power of two matrix`` () =
             ),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceRows mul on square not power of two matrix`` () =
@@ -1490,7 +1490,7 @@ let ``reduceRows mul on square not power of two matrix`` () =
             ),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceRows sum on rectangular matrix`` () =
@@ -1520,7 +1520,7 @@ let ``reduceRows sum on rectangular matrix`` () =
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceRows sum on empty matrix`` () =
@@ -1535,7 +1535,7 @@ let ``reduceRows sum on empty matrix`` () =
 
         let res = Matrix.reduceRows sum m
         Assert.Equal(Vector.CoordinateList(2UL<Vector.dataLength>, []), Vector.toCoordinateList res)
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceRows mul on single matrix`` () =
@@ -1556,7 +1556,7 @@ let ``reduceRows mul on single matrix`` () =
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols sum on square power of two matrix`` () =
@@ -1585,7 +1585,7 @@ let ``reduceCols sum on square power of two matrix`` () =
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 29); (1UL<Vector.index>, 18) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols sum on square power of two matrix with empty col`` () =
@@ -1611,7 +1611,7 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
             Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 20) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols sum on square not power of two matrix`` () =
@@ -1646,7 +1646,7 @@ let ``reduceCols sum on square not power of two matrix`` () =
             ),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols mul on square not power of two matrix`` () =
@@ -1681,7 +1681,7 @@ let ``reduceCols mul on square not power of two matrix`` () =
             ),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols sum on rectangular matrix`` () =
@@ -1714,7 +1714,7 @@ let ``reduceCols sum on rectangular matrix`` () =
             ),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols sum on empty matrix`` () =
@@ -1729,7 +1729,7 @@ let ``reduceCols sum on empty matrix`` () =
 
         let res = Matrix.reduceCols sum m
         Assert.Equal(Vector.CoordinateList(3UL<Vector.dataLength>, []), Vector.toCoordinateList res)
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``reduceCols mul on single matrix`` () =
@@ -1750,7 +1750,7 @@ let ``reduceCols mul on single matrix`` () =
             Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
             Vector.toCoordinateList res
         )
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``kronecker product with square power of two x square power of two matrixes`` () =
@@ -1802,7 +1802,7 @@ let ``kronecker product with square power of two x square power of two matrixes`
         | Result.Ok res ->
             let actual = Matrix.toCoordinateList res
             Assert.Equal(expected, actual)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1841,7 +1841,7 @@ let ``kronecker product with square not power of two x square not power of two m
     | Result.Ok a, Result.Ok b ->
         match Matrix.kroneckerProduct a b (fun a b -> Some(a * b)) with
         | Result.Ok res -> Assert.Equal(9UL<nrows>, (Matrix.toCoordinateList res).nrows)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1894,7 +1894,7 @@ let ``kronecker product with rectangular and square matrixes`` () =
         | Result.Ok res ->
             let actual = Matrix.toCoordinateList res
             Assert.Equal(expected, actual)
-        | Result.Error msg -> Assert.Fail msg
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -1969,7 +1969,7 @@ let ``kronecker product with square and rectangular matrixes`` () =
                 coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
             )
 
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
 
     | _ -> Assert.Fail()
 
@@ -1991,7 +1991,7 @@ let ``kronecker product of matrix with empty matrix`` () =
     | Result.Ok a, Result.Ok empty ->
         match Matrix.kroneckerProduct a empty (fun a b -> Some(a * b)) with
         | Result.Ok res -> Assert.Equal(CoordinateList(4UL<nrows>, 4UL<ncols>, []), Matrix.toCoordinateList res)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2005,7 +2005,7 @@ let ``kronecker product of empty matrix with matrix`` () =
     | Result.Ok empty, Result.Ok b ->
         match Matrix.kroneckerProduct empty b (fun a b -> Some(a * b)) with
         | Result.Ok res -> Assert.Equal(CoordinateList(4UL<nrows>, 4UL<ncols>, []), Matrix.toCoordinateList res)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2027,7 +2027,7 @@ let ``kronecker product of matrix with zeros`` () =
                 (Matrix.toCoordinateList res).list |> List.sortBy (fun (r, c, _) -> (r, c))
 
             Assert.Equal<(uint64<rowindex> * uint64<colindex> * int) list>(expected, actual)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2039,10 +2039,10 @@ let ``kronecker product resulting entirely in explicit zeros`` () =
         CoordinateList(1UL<nrows>, 1UL<ncols>, [ (0UL<rowindex>, 0UL<colindex>, 5) ])
 
     match Matrix.fromCoordinateList cooA with
-    | Result.Error msg -> Assert.Fail(msg)
+    | Result.Error msg -> Assert.Fail(msg.ToString())
     | Result.Ok a ->
         match Matrix.fromCoordinateList cooB with
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
         | Result.Ok b ->
             match Matrix.kroneckerProduct a b (fun a b -> Some(a * b)) with
             | Result.Ok res ->
@@ -2059,7 +2059,7 @@ let ``kronecker product resulting entirely in explicit zeros`` () =
                     expectedElements,
                     coo.list |> List.sortBy (fun (r, c, _) -> (r, c))
                 )
-            | Result.Error msg -> Assert.Fail(msg)
+            | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
 let ``kronecker product of square matrix with matrix 1x1`` () =
@@ -2091,7 +2091,7 @@ let ``kronecker product of square matrix with matrix 1x1`` () =
                 )
 
             Assert.Equal(expected, Matrix.toCoordinateList res)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2124,7 +2124,7 @@ let ``kronecker product of matrix 1x1 with square matrix`` () =
                 )
 
             Assert.Equal(expected, Matrix.toCoordinateList res)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2141,7 +2141,7 @@ let ``kronecker dimension check`` () =
         | Result.Ok res ->
             Assert.Equal(6UL<nrows>, res.nrows)
             Assert.Equal(20UL<ncols>, res.ncols)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2184,7 +2184,7 @@ let ``kronecker product with sparse matrix on dense matrix`` () =
                 )
 
             Assert.Equal(expected, Matrix.toCoordinateList res)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()
 
 [<Fact>]
@@ -2219,5 +2219,5 @@ let ``kronecker product with filtering (only even results)`` () =
             let coo = Matrix.toCoordinateList res
             Assert.True(coo.list |> List.forall (fun (_, _, v) -> v % 2 = 0))
             Assert.True(List.length coo.list < 16)
-        | Result.Error msg -> Assert.Fail(msg)
+        | Result.Error msg -> Assert.Fail(msg.ToString())
     | _ -> Assert.Fail()

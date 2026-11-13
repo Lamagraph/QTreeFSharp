@@ -13,6 +13,9 @@ type Error =
     | TreeSelectionProblem of Matrix.Error
     | IndexInnerCalculationProblem of Vector.Error
     | DataForUpgradeParentCalculationProblem of Vector.Error
+    | ParentInitProblem of Vector.Error
+    | EmptyVectorProblem of Vector.Error
+    | EmptyTreeProblem of Matrix.Error
 
 let mst (graph: Matrix.SparseMatrix<_>) =
 
@@ -32,12 +35,11 @@ let mst (graph: Matrix.SparseMatrix<_>) =
         | _ -> None
 
     let fixPoint p =
-        let rec inner p iter =
+        let rec inner p =
             let p2 = Vector.gather p p
-            if p2 = p then p else inner p2 (iter + 1)
+            if p2 = p then p else inner p2
 
-        let res = inner p 0
-        res
+        inner p
 
     let treeFilter edges index =
         fun i j g ->
@@ -60,18 +62,16 @@ let mst (graph: Matrix.SparseMatrix<_>) =
         fun i j ->
             let i = uint64 i * 1UL<Vector.index>
             let j = uint64 j * 1UL<Vector.index>
-            let parent_i = Vector.unsafeGet parent i
-            let parent_j = Vector.unsafeGet parent j
+            let parentI = Vector.unsafeGet parent i
+            let parentJ = Vector.unsafeGet parent j
 
-            match parent_i, parent_j with
+            match parentI, parentJ with
             | Some v1, Some v2 when v1 <> v2 -> true
             | _ -> false
 
     let length = uint64 graph.nrows * 1UL<Vector.dataLength>
 
-    let parent = Vector.init length (fun i -> Some i)
-
-    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent iteration =
+    let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
 
         if graph.nvals > 0UL<nvals> then
 
@@ -83,8 +83,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError EdgesCalculationProblem
 
                 // Per-component cheapest edge.
+                let! emptyEdges = Vector.empty length |> Result.mapError EmptyVectorProblem
+
                 let! cedges =
-                    Vector.scatter (Vector.empty length) edges parent op_min
+                    Vector.scatter emptyEdges edges parent op_min
                     |> Result.mapError CEdgesCalculationProblem
 
                 // Propagate component's cheapest edge to all vertices.
@@ -100,8 +102,10 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError IndexInnerCalculationProblem
 
                 // Among marked vertices in a component, keep the smallest index.
+                let! emptyIndices = Vector.empty length |> Result.mapError EmptyVectorProblem
+
                 let! index =
-                    Vector.scatter (Vector.empty length) indexInner parent op_min
+                    Vector.scatter emptyIndices indexInner parent op_min
                     |> Result.mapError IndexCalculationProblem
 
                 // Now each vertex knows its component's representative.
@@ -121,7 +125,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 // Compute new parent assignments.
                 // For selected canonical edge (u, v), if current selected
                 // representative is one endpoint, merge it with the other endpoint.
-                let! data_for_update_parent =
+                let! dataForUpdateParent =
                     Vector.map2i edges index (fun i e idx ->
                         match e, idx with
                         | Some(_w, u, v), Some selected when selected = i ->
@@ -135,11 +139,11 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                             match other with
                             | Some otherVertex ->
                                 let j = otherVertex * 1UL<Vector.index>
-                                let parent_i = Vector.unsafeGet parent i
-                                let parent_j = Vector.unsafeGet parent j
+                                let parentI = Vector.unsafeGet parent i
+                                let parentJ = Vector.unsafeGet parent j
 
-                                match parent_i, parent_j with
-                                | Some p_i, Some p_j -> if p_i < p_j then Some(j, p_i) else Some(i, p_j)
+                                match parentI, parentJ with
+                                | Some pI, Some pJ -> if pI < pJ then Some(j, pI) else Some(i, pJ)
                                 | _ -> None
 
                             | None -> None
@@ -148,9 +152,9 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError DataForUpgradeParentCalculationProblem
 
                 // Apply direct parent updates.
-                let! initial_parent_update =
+                let! initialParentUpdate =
                     Vector.foldValues
-                        data_for_update_parent
+                        dataForUpdateParent
                         (fun state (i, v) ->
                             match state with
                             | Ok state ->
@@ -164,7 +168,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                     |> Result.mapError FoldValuesProblem
 
                 let! parent =
-                    Vector.scatter parent initial_parent_update parent op_min
+                    Vector.scatter parent initialParentUpdate parent op_min
                     |> Result.mapError ScatterProblem
 
                 // Path compression.
@@ -174,9 +178,13 @@ let mst (graph: Matrix.SparseMatrix<_>) =
                 let graphFilter = graphFilter parent
                 let graph = Matrix.mapi graph (fun i j v -> if graphFilter i j then v else None)
 
-                return! inner graph tree parent (iteration + 1)
+                return! inner graph tree parent
             }
         else
             Ok tree
 
-    inner graph (Matrix.empty graph.nrows graph.ncols) parent 0
+    resultM {
+        let! parent = Vector.init length (fun i -> Some i) |> Result.mapError ParentInitProblem
+        let! tree = Matrix.empty graph.nrows graph.ncols |> Result.mapError EmptyTreeProblem
+        return! inner graph tree parent
+    }

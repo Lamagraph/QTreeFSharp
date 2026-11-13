@@ -21,20 +21,42 @@ let rec multScalar op_add (x: uint64) y =
         let res = op_add v v
         if x % 2UL = 0UL then res else op_add res v
 
+/// Grow a vector's storage tree with empty right subtrees until it spans
+/// targetSize, which must be at least the current storage size.
+let private padStorageTo (targetSize: uint64<storageSize>) (storage: Vector.Storage<Option<'a>>) =
+    let rec increase storageData (currentSize: uint64<storageSize>) =
+        if currentSize = targetSize then
+            storageData
+        else
+            increase (Vector.btree.Node(storageData, Vector.btree.Leaf Dummy)) (currentSize * 2UL)
+
+    if storage.size < targetSize then
+        Vector.Storage(targetSize, increase storage.data storage.size)
+    else
+        storage
+
+/// The vxm/vxmi_values result: matrix.ncols long, reusing the matrix storage size.
+let private mkResultVector (matrix: Matrix.SparseMatrix<'b>) (storage: Vector.btree<Option<'c>>, nvals: uint64<nvals>) =
+    Vector.SparseVector(
+        (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
+        nvals,
+        Vector.Storage(matrix.storage.size, storage)
+    )
+
 
 let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
 
     let rec inner (size: uint64<storageSize>) vector matrix =
-        let _do x1 x2 y1 y2 y3 y4 =
-            let new_size = size / 2UL
+        let combine x1 x2 y1 y2 y3 y4 =
+            let halfSize = size / 2UL
 
-            match (inner new_size x1 y1), (inner new_size x1 y2), (inner new_size x2 y3), (inner new_size x2 y4) with
+            match (inner halfSize x1 y1), (inner halfSize x1 y2), (inner halfSize x2 y3), (inner halfSize x2 y4) with
             | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
-                let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
-                let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
-                let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
-                let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
-                let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
+                let dataLength = (uint64 halfSize) * 1UL<Vector.dataLength>
+                let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
+                let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
+                let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
+                let v4 = Vector.SparseVector(dataLength, nvals4, (Vector.Storage(halfSize, t4)))
 
                 let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
                     match v1.storage.data, v2.storage.data with
@@ -65,39 +87,19 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
 
             Ok(Vector.btree.Leaf(UserValue(res)), nnz)
 
-        | Vector.btree.Leaf(UserValue(_)), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
-        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(_)) -> _do x1 x2 matrix matrix matrix matrix
-        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
+        | Vector.btree.Leaf(UserValue(_)), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(_)) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> combine x1 x2 y1 y2 y3 y4
 
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
 
     if uint64 vector.length = uint64 matrix.nrows then
-        let vector_storage =
-            if uint64 vector.storage.size < uint64 matrix.storage.size then
-                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
-                    if current_size = bound then
-                        storage_data
-                    else
-                        increaseStorage
-                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
-                            (current_size * 2UL)
-                            bound
+        let vectorStorage = padStorageTo matrix.storage.size vector.storage
 
-                let target_size = matrix.storage.size
-                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
-            else
-                vector.storage
-
-        match inner vector_storage.size vector_storage.data matrix.storage.data with
+        match inner vectorStorage.size vectorStorage.data matrix.storage.data with
         | Error x -> Error x
-        | Ok(storage, nvals) ->
-            (Vector.SparseVector(
-                (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
-                nvals,
-                (Vector.Storage(matrix.storage.size, storage))
-            ))
-            |> Ok
+        | Ok result -> Ok(mkResultVector matrix result)
     else
         Error Error.InconsistentSizeOfArguments
 
@@ -116,33 +118,33 @@ let vxmi_values
         (rowIdx: uint64<Matrix.rowindex>)
         (colIdx: uint64<Matrix.colindex>)
         =
-        let _do x1 x2 y1 y2 y3 y4 =
-            let new_size = size / 2UL
+        let combine x1 x2 y1 y2 y3 y4 =
+            let halfSize = size / 2UL
 
             match
-                (inner new_size x1 vectorIdx y1 rowIdx colIdx),
-                (inner new_size x1 vectorIdx y2 rowIdx (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>)),
+                (inner halfSize x1 vectorIdx y1 rowIdx colIdx),
+                (inner halfSize x1 vectorIdx y2 rowIdx (colIdx + (uint64 halfSize) * 1UL<Matrix.colindex>)),
                 (inner
-                    new_size
+                    halfSize
                     x2
-                    (vectorIdx + (uint64 new_size) * 1UL<Vector.index>)
+                    (vectorIdx + (uint64 halfSize) * 1UL<Vector.index>)
                     y3
-                    (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>)
+                    (rowIdx + (uint64 halfSize) * 1UL<Matrix.rowindex>)
                     colIdx),
                 (inner
-                    new_size
+                    halfSize
                     x2
-                    (vectorIdx + (uint64 new_size) * 1UL<Vector.index>)
+                    (vectorIdx + (uint64 halfSize) * 1UL<Vector.index>)
                     y4
-                    (rowIdx + (uint64 new_size) * 1UL<Matrix.rowindex>)
-                    (colIdx + (uint64 new_size) * 1UL<Matrix.colindex>))
+                    (rowIdx + (uint64 halfSize) * 1UL<Matrix.rowindex>)
+                    (colIdx + (uint64 halfSize) * 1UL<Matrix.colindex>))
             with
             | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
-                let data_length = (uint64 new_size) * 1UL<Vector.dataLength>
-                let v1 = Vector.SparseVector(data_length, nvals1, (Vector.Storage(new_size, t1)))
-                let v2 = Vector.SparseVector(data_length, nvals2, (Vector.Storage(new_size, t2)))
-                let v3 = Vector.SparseVector(data_length, nvals3, (Vector.Storage(new_size, t3)))
-                let v4 = Vector.SparseVector(data_length, nvals4, (Vector.Storage(new_size, t4)))
+                let dataLength = (uint64 halfSize) * 1UL<Vector.dataLength>
+                let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
+                let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
+                let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
+                let v4 = Vector.SparseVector(dataLength, nvals4, (Vector.Storage(halfSize, t4)))
 
                 let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
                     match v1.storage.data, v2.storage.data with
@@ -182,11 +184,11 @@ let vxmi_values
                     rowIdx
                     colIdx
 
-        | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
-        | Vector.btree.Leaf(UserValue(None)), Matrix.qtree.Node(y1, y2, y3, y4) -> _do vector vector y1 y2 y3 y4
-        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> _do x1 x2 matrix matrix matrix matrix
-        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(None)) -> _do x1 x2 matrix matrix matrix matrix
-        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> _do x1 x2 y1 y2 y3 y4
+        | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Leaf(UserValue(None)), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(None)) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> combine x1 x2 y1 y2 y3 y4
         | Vector.btree.Leaf(Dummy), _
         | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
 
@@ -194,39 +196,19 @@ let vxmi_values
         | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
 
     if uint64 vector.length = uint64 matrix.nrows then
-        let vector_storage =
-            if uint64 vector.storage.size < uint64 matrix.storage.size then
-                let rec increaseStorage storage_data (current_size: uint64<storageSize>) bound =
-                    if current_size = bound then
-                        storage_data
-                    else
-                        increaseStorage
-                            (Vector.btree.Node(storage_data, Vector.btree.Leaf(Dummy)))
-                            (current_size * 2UL)
-                            bound
-
-                let target_size = matrix.storage.size
-                Vector.Storage(target_size, increaseStorage vector.storage.data vector.storage.size target_size)
-            else
-                vector.storage
+        let vectorStorage = padStorageTo matrix.storage.size vector.storage
 
         match
             inner
-                vector_storage.size
-                vector_storage.data
+                vectorStorage.size
+                vectorStorage.data
                 0UL<Vector.index>
                 matrix.storage.data
                 0UL<Matrix.rowindex>
                 0UL<Matrix.colindex>
         with
         | Error x -> Error x
-        | Ok(storage, nvals) ->
-            (Vector.SparseVector(
-                (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
-                nvals,
-                (Vector.Storage(matrix.storage.size, storage))
-            ))
-            |> Ok
+        | Ok result -> Ok(mkResultVector matrix result)
     else
         Error Error.InconsistentSizeOfArguments
 
@@ -255,7 +237,8 @@ let mxm
         let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
             let halfSize = size / 2UL
 
-            // Double check this code
+            // C_nw = A_nw*B_nw + A_ne*B_sw    C_ne = A_nw*B_ne + A_ne*B_se
+            // C_sw = A_sw*B_nw + A_se*B_sw    C_se = A_sw*B_ne + A_se*B_se
             let nw1_x_nw2, ne1_x_sw2, nw1_x_ne2, ne1_x_se2, sw1_x_nw2, se1_x_sw2, sw1_x_ne2, se1_x_se2 =
                 (multiply halfSize nw1 nw2),
                 (multiply halfSize ne1 sw2),
@@ -357,7 +340,7 @@ let mxm
         let ncols = m2.ncols
         let storageSize = max m1.storage.size m2.storage.size
 
-        let m1_tree, m2_tree =
+        let m1Tree, m2Tree =
             if m1.storage.size < m2.storage.size then
                 expand (m1.storage.data) (m2.storage.size / (uint64 m1.storage.size)), m2.storage.data
             elif m1.storage.size > m2.storage.size then
@@ -365,7 +348,7 @@ let mxm
             else
                 m1.storage.data, m2.storage.data
 
-        match multiply storageSize m1_tree m2_tree with
+        match multiply storageSize m1Tree m2Tree with
         | Ok(tree, nvals) ->
             // in case the resulting storageSize can be smaller
             // e.g. (2x3) * (3x2) matrices

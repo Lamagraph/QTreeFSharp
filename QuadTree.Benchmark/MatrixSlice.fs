@@ -39,7 +39,7 @@ type Benchmark() =
             )
         with
         | Ok m -> m
-        | Error msg -> failwithf "Failed to create matrix: %s" msg
+        | Error msg -> failwithf "Failed to create matrix: %O" msg
 
     [<GlobalSetup>]
     member this.Setup() =
@@ -53,7 +53,7 @@ type Benchmark() =
 
         match Matrix.slice m start last start last with
         | Ok res -> res
-        | Error msg -> failwithf "Slice failed: %s" msg
+        | Error msg -> failwithf "Slice failed: %O" msg
 
     [<Benchmark>]
     member this.Slice() = this.SliceMiddle(this.Matrix) |> ignore

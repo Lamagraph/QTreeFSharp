@@ -1,8 +1,5 @@
 module Result
 
-module Error =
-    let map (f: 'a -> 'b) (err: 'a) : 'b = f err
-
 let mapError (f: 'e1 -> 'e2) (result: Result<'ok, 'e1>) : Result<'ok, 'e2> =
     match result with
     | Ok ok -> Ok ok

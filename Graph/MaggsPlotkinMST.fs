@@ -1,4 +1,4 @@
-module Graph.Maggs_Plotkin_MST
+module Graph.MaggsPlotkinMST
 
 open Common
 open Result
@@ -10,14 +10,20 @@ type Error =
     | MSTComputationProblem of Matrix.Error
     | ClosureComputationProblem of LinearAlgebra.Error
 
-let mst (graph: Matrix.SparseMatrix<'a>) =
+    override this.ToString() =
+        match this with
+        | DiagAdditionProblem e -> sprintf "DiagAdditionProblem: %O" e
+        | MSTComputationProblem e -> sprintf "MSTComputationProblem: %O" e
+        | ClosureComputationProblem e -> sprintf "ClosureComputationProblem: %O" e
 
-    let _max x y =
+let mst (graph: Matrix.SparseMatrix<'a>) : Result<SparseMatrix<'a>, Error> =
+
+    let op_max x y =
         match (x, y) with
         | Some x, Some y -> max x y |> Some
         | _ -> None
 
-    let _min x y =
+    let op_min x y =
         match (x, y) with
         | Some x, Some y -> min x y |> Some
         | Some x, None
@@ -35,16 +41,14 @@ let mst (graph: Matrix.SparseMatrix<'a>) =
                     [ for i in 0UL .. uint64 graph.nrows - 1UL -> (i * 1UL<rowindex>, i * 1UL<colindex>, zero) ]
                 )
             )
+            |> Result.mapError DiagAdditionProblem
 
         let! graph =
-            match
-                Matrix.map2 graph diag (fun x y ->
-                    match y with
-                    | None -> x
-                    | _ -> y)
-            with
-            | Ok g -> Ok g
-            | Error e -> Error(sprintf "DiagAdditionProblem: %A" e)
+            Matrix.map2 graph diag (fun x y ->
+                match y with
+                | None -> x
+                | _ -> y)
+            |> Result.mapError DiagAdditionProblem
 
         let graph =
             Matrix.mapi graph (fun i j v ->
@@ -56,7 +60,7 @@ let mst (graph: Matrix.SparseMatrix<'a>) =
 
                 resultM {
 
-                    let! step = LinearAlgebra.mxm _min _max matrix matrix
+                    let! step = LinearAlgebra.mxm op_min op_max matrix matrix
 
                     if nnz = step.nvals && matrix.storage = step.storage then
                         return step
@@ -64,24 +68,17 @@ let mst (graph: Matrix.SparseMatrix<'a>) =
                         return! compute step
                 }
 
-            match compute graph with
-            | Ok c -> Ok c
-            | Error e -> Error(sprintf "ClosureComputationProblem: %A" e)
+            compute graph |> Result.mapError ClosureComputationProblem
 
-        let! mst =
-            match
-                Matrix.map2i graph closure (fun i j x y ->
-                    if uint64 i = uint64 j then
-                        None
-                    elif x = y then
-                        match x with
-                        | Some(w, _, _) -> Some(w)
-                        | _ -> None
-                    else
-                        None)
-            with
-            | Ok m -> Ok m
-            | Error e -> Error(sprintf "MSTComputationProblem: %A" e)
-
-        return mst
+        return!
+            Matrix.map2i graph closure (fun i j x y ->
+                if uint64 i = uint64 j then
+                    None
+                elif x = y then
+                    match x with
+                    | Some(w, _, _) -> Some(w)
+                    | _ -> None
+                else
+                    None)
+            |> Result.mapError MSTComputationProblem
     }

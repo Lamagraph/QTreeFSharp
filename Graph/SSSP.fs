@@ -7,6 +7,7 @@ type Error =
     | NewFrontierCalculationProblem of LinearAlgebra.Error
     | FrontierCalculationProblem of Vector.Error
     | VisitedCalculationProblem of Vector.Error
+    | FrontierInitProblem of Vector.Error
 
 let sssp graph (startVertex: uint64) =
     let op_add x y =
@@ -21,10 +22,10 @@ let sssp graph (startVertex: uint64) =
         | Some(u), Some(v) -> Some(u + v)
         | _ -> None
 
-    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iter_num =
-        if frontier.nvals > 0UL<nvals> && iter_num <= int frontier.length then
+    let rec inner (frontier: Vector.SparseVector<_>) (visited: Vector.SparseVector<_>) iterNum =
+        if frontier.nvals > 0UL<nvals> && iterNum <= int frontier.length then
             resultM {
-                let! new_frontier =
+                let! newFrontier =
                     LinearAlgebra.vxm op_add op_mult frontier graph
                     |> Result.mapError NewFrontierCalculationProblem
 
@@ -35,12 +36,12 @@ let sssp graph (startVertex: uint64) =
                     | _ -> None
 
                 let! frontier =
-                    Vector.map2 new_frontier visited op_min
+                    Vector.map2 newFrontier visited op_min
                     |> Result.mapError FrontierCalculationProblem
 
                 let! visited = Vector.map2 visited frontier op_add |> Result.mapError VisitedCalculationProblem
 
-                return! inner frontier visited (iter_num + 1)
+                return! inner frontier visited (iterNum + 1)
             }
         else
             Ok visited
@@ -49,9 +50,7 @@ let sssp graph (startVertex: uint64) =
         Vector.CoordinateList((uint64 graph.ncols) * 1UL<Vector.dataLength>, [ startVertex * 1UL<Vector.index>, 0.0 ])
         |> Vector.fromCoordinateList
 
-    let frontier =
-        match frontierResult with
-        | Ok v -> v
-        | Error _ -> Vector.empty ((uint64 graph.ncols) * 1UL<Vector.dataLength>)
-
-    inner frontier frontier 0
+    resultM {
+        let! frontier = frontierResult |> Result.mapError FrontierInitProblem
+        return! inner frontier frontier 0
+    }
