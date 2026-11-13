@@ -15,10 +15,13 @@ For performance testing details and instructions on how to run them, see the [Be
 * Triangles counting
 * Boruvka MSF
 * Maggs-Plotkin MSF
+
+## Data Structures
+
 * AVLSet
 
 ## TODO
 * [ ] Multiple-source level BFS
 * [ ] Multiple-source parent BFS
-* [ ] PageRank 
+* [ ] PageRank
 * [ ] Single-source RPQ reachability

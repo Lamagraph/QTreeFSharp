@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="AVLSet.fs"/>
     <Compile Include="ReduceComparison.fs"/>
     <Compile Include="VectorSlice.fs"/>
     <Compile Include="MatrixSlice.fs"/>
