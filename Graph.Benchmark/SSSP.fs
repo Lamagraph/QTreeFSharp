@@ -2,6 +2,7 @@ namespace Graph.Benchmarks.SSSP
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open Graph.Impl.Default.SSSP
 
 [<Config(typeof<MyConfig>)>]
 type Benchmark() =
@@ -18,4 +19,4 @@ type Benchmark() =
             | Error e -> failwith $"Failed to load matrix {this.MatrixName}: {e}"
 
     [<Benchmark>]
-    member this.SSSP() = Graph.SSSP.sssp matrix 0UL
+    member this.SSSP() = sssp matrix 0UL

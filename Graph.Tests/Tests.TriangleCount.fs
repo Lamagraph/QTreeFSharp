@@ -5,7 +5,7 @@ open Xunit
 
 open Common
 open Matrix
-open Graph.TriangleCount
+open Graph.Impl.Default.TriangleCount
 
 [<Fact>]
 let ``7V Triangle count`` () =

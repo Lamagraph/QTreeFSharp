@@ -8,6 +8,10 @@
         <Compile Include="BFS.fs" />
         <Compile Include="TriangleCount.fs" />
         <Compile Include="SSSP.fs" />
+        <Compile Include="Impl/QuadTree/BFS.fs" />
+        <Compile Include="Impl/QuadTree/TriangleCount.fs" />
+        <Compile Include="Impl/QuadTree/SSSP.fs" />
+        <Compile Include="Impl/Default.fs" />
         <Compile Include="Boruvka.fs" />
         <Compile Include="MaggsPlotkinMST.fs" />
     </ItemGroup>
