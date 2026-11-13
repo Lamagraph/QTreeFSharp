@@ -1,4 +1,4 @@
-module QuadTree.Benchmarks.Utils
+module Benchmark.Common.Utils
 
 open System.IO
 open BenchmarkDotNet.Configs
@@ -6,7 +6,11 @@ open BenchmarkDotNet.Configs
 type MyConfig() =
     inherit ManualConfig()
 
-let DIR_WITH_MATRICES = "../../../../../../../data/"
+// BenchmarkDotNet runs each benchmark in a child process whose working directory is
+// <project>/bin/<config>/<tfm>/<Assembly>-<Job>-N/bin/<config>/<tfm>, i.e. eight levels
+// below the repo root for any top-level project. The path below therefore reaches the
+// shared data/ folder at the repo root from both QuadTree.Benchmark and Graph.Benchmark.
+let DIR_WITH_MATRICES = "../../../../../../../../data/"
 
 let readMtx path directed =
     let getCooList (linewords: seq<string array>) =
