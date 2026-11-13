@@ -6,6 +6,7 @@ open Xunit
 open Matrix
 open Vector
 open Common
+open Graph.Impl.Default.BFS
 
 let singleStart (n: uint64) (s: uint64) =
     Vector.CoordinateList(n * 1UL<Vector.dataLength>, [ s * 1UL<Vector.index>, 1UL ])
@@ -79,7 +80,7 @@ let ``Simple level bfs.`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
-    let actual = Graph.BFS.bfsLevel graph startVertices
+    let actual = bfsLevel graph startVertices
 
     Assert.Equal(expected, actual)
 
@@ -132,7 +133,7 @@ let ``Simple parent bfs.`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
-    let actual = Graph.BFS.bfsParent graph startVertices
+    let actual = bfsParent graph startVertices
 
     Assert.Equal(expected, actual)
 
@@ -152,19 +153,19 @@ let private line3graph =
 
 [<Fact>]
 let ``Level bfs 3 node line start 0`` () =
-    runTest line3graph (singleStart 3UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 2UL ]
+    runTest line3graph (singleStart 3UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 2UL ]
 
 [<Fact>]
 let ``Parent bfs 3 node line start 0`` () =
-    runTest line3graph (singleStart 3UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 1UL ]
+    runTest line3graph (singleStart 3UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 1UL ]
 
 [<Fact>]
 let ``Level bfs 3 node line start 1`` () =
-    runTest line3graph (singleStart 3UL 1UL) Graph.BFS.bfsLevel [ Some 1UL; Some 0UL; Some 1UL ]
+    runTest line3graph (singleStart 3UL 1UL) bfsLevel [ Some 1UL; Some 0UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 3 node line start 1`` () =
-    runTest line3graph (singleStart 3UL 1UL) Graph.BFS.bfsParent [ Some 1UL; Some 1UL; Some 1UL ]
+    runTest line3graph (singleStart 3UL 1UL) bfsParent [ Some 1UL; Some 1UL; Some 1UL ]
 
 // ============== 5-node star (center 0) ==============
 
@@ -186,19 +187,19 @@ let private star5graph =
 
 [<Fact>]
 let ``Level bfs 5 node star start center`` () =
-    runTest star5graph (singleStart 5UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 1UL; Some 1UL; Some 1UL ]
+    runTest star5graph (singleStart 5UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 1UL; Some 1UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node star start center`` () =
-    runTest star5graph (singleStart 5UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 0UL; Some 0UL; Some 0UL ]
+    runTest star5graph (singleStart 5UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 0UL; Some 0UL; Some 0UL ]
 
 [<Fact>]
 let ``Level bfs 5 node star start leaf`` () =
-    runTest star5graph (singleStart 5UL 1UL) Graph.BFS.bfsLevel [ Some 1UL; Some 0UL; Some 2UL; Some 2UL; Some 2UL ]
+    runTest star5graph (singleStart 5UL 1UL) bfsLevel [ Some 1UL; Some 0UL; Some 2UL; Some 2UL; Some 2UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node star start leaf`` () =
-    runTest star5graph (singleStart 5UL 1UL) Graph.BFS.bfsParent [ Some 1UL; Some 1UL; Some 0UL; Some 0UL; Some 0UL ]
+    runTest star5graph (singleStart 5UL 1UL) bfsParent [ Some 1UL; Some 1UL; Some 0UL; Some 0UL; Some 0UL ]
 
 // ============== Two components ==============
 
@@ -225,11 +226,11 @@ let private twoCompGraph =
 
 [<Fact>]
 let ``Level bfs two components start 0`` () =
-    runTest twoCompGraph (singleStart 6UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 1UL; None; None; None ]
+    runTest twoCompGraph (singleStart 6UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 1UL; None; None; None ]
 
 [<Fact>]
 let ``Parent bfs two components start 0`` () =
-    runTest twoCompGraph (singleStart 6UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 0UL; None; None; None ]
+    runTest twoCompGraph (singleStart 6UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 0UL; None; None; None ]
 
 // ============== Square (4-cycle) ==============
 
@@ -251,11 +252,11 @@ let private squareGraph =
 
 [<Fact>]
 let ``Level bfs square start 0`` () =
-    runTest squareGraph (singleStart 4UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 1UL ]
+    runTest squareGraph (singleStart 4UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs square start 0`` () =
-    runTest squareGraph (singleStart 4UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 0UL ]
+    runTest squareGraph (singleStart 4UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 0UL ]
 
 // ============== 6-cycle ==============
 
@@ -281,19 +282,11 @@ let private cycle6graph =
 
 [<Fact>]
 let ``Level bfs 6 cycle start 0`` () =
-    runTest
-        cycle6graph
-        (singleStart 6UL 0UL)
-        Graph.BFS.bfsLevel
-        [ Some 0UL; Some 1UL; Some 2UL; Some 3UL; Some 2UL; Some 1UL ]
+    runTest cycle6graph (singleStart 6UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 3UL; Some 2UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 6 cycle start 0`` () =
-    runTest
-        cycle6graph
-        (singleStart 6UL 0UL)
-        Graph.BFS.bfsParent
-        [ Some 0UL; Some 0UL; Some 1UL; Some 2UL; Some 5UL; Some 0UL ]
+    runTest cycle6graph (singleStart 6UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 2UL; Some 5UL; Some 0UL ]
 
 // ============== 2 nodes ==============
 
@@ -308,19 +301,19 @@ let private graph2 =
 
 [<Fact>]
 let ``Level bfs 2 nodes start 0`` () =
-    runTest graph2 (singleStart 2UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL ]
+    runTest graph2 (singleStart 2UL 0UL) bfsLevel [ Some 0UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 2 nodes start 0`` () =
-    runTest graph2 (singleStart 2UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL ]
+    runTest graph2 (singleStart 2UL 0UL) bfsParent [ Some 0UL; Some 0UL ]
 
 [<Fact>]
 let ``Level bfs 2 nodes start 1`` () =
-    runTest graph2 (singleStart 2UL 1UL) Graph.BFS.bfsLevel [ Some 1UL; Some 0UL ]
+    runTest graph2 (singleStart 2UL 1UL) bfsLevel [ Some 1UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs 2 nodes start 1`` () =
-    runTest graph2 (singleStart 2UL 1UL) Graph.BFS.bfsParent [ Some 1UL; Some 1UL ]
+    runTest graph2 (singleStart 2UL 1UL) bfsParent [ Some 1UL; Some 1UL ]
 
 // ============== 4-node line ==============
 
@@ -340,19 +333,19 @@ let private line4graph =
 
 [<Fact>]
 let ``Level bfs 4 node line start 0`` () =
-    runTest line4graph (singleStart 4UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 3UL ]
+    runTest line4graph (singleStart 4UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 3UL ]
 
 [<Fact>]
 let ``Parent bfs 4 node line start 0`` () =
-    runTest line4graph (singleStart 4UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 2UL ]
+    runTest line4graph (singleStart 4UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 2UL ]
 
 [<Fact>]
 let ``Level bfs 4 node line start 3`` () =
-    runTest line4graph (singleStart 4UL 3UL) Graph.BFS.bfsLevel [ Some 3UL; Some 2UL; Some 1UL; Some 0UL ]
+    runTest line4graph (singleStart 4UL 3UL) bfsLevel [ Some 3UL; Some 2UL; Some 1UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs 4 node line start 3`` () =
-    runTest line4graph (singleStart 4UL 3UL) Graph.BFS.bfsParent [ Some 1UL; Some 2UL; Some 3UL; Some 3UL ]
+    runTest line4graph (singleStart 4UL 3UL) bfsParent [ Some 1UL; Some 2UL; Some 3UL; Some 3UL ]
 
 // ============== 5-node line ==============
 
@@ -374,27 +367,27 @@ let private line5graph =
 
 [<Fact>]
 let ``Level bfs 5 node line start 0`` () =
-    runTest line5graph (singleStart 5UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 3UL; Some 4UL ]
+    runTest line5graph (singleStart 5UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 2UL; Some 3UL; Some 4UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node line start 0`` () =
-    runTest line5graph (singleStart 5UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 2UL; Some 3UL ]
+    runTest line5graph (singleStart 5UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 1UL; Some 2UL; Some 3UL ]
 
 [<Fact>]
 let ``Level bfs 5 node line start 4`` () =
-    runTest line5graph (singleStart 5UL 4UL) Graph.BFS.bfsLevel [ Some 4UL; Some 3UL; Some 2UL; Some 1UL; Some 0UL ]
+    runTest line5graph (singleStart 5UL 4UL) bfsLevel [ Some 4UL; Some 3UL; Some 2UL; Some 1UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node line start 4`` () =
-    runTest line5graph (singleStart 5UL 4UL) Graph.BFS.bfsParent [ Some 1UL; Some 2UL; Some 3UL; Some 4UL; Some 4UL ]
+    runTest line5graph (singleStart 5UL 4UL) bfsParent [ Some 1UL; Some 2UL; Some 3UL; Some 4UL; Some 4UL ]
 
 [<Fact>]
 let ``Level bfs 5 node line start 2`` () =
-    runTest line5graph (singleStart 5UL 2UL) Graph.BFS.bfsLevel [ Some 2UL; Some 1UL; Some 0UL; Some 1UL; Some 2UL ]
+    runTest line5graph (singleStart 5UL 2UL) bfsLevel [ Some 2UL; Some 1UL; Some 0UL; Some 1UL; Some 2UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node line start 2`` () =
-    runTest line5graph (singleStart 5UL 2UL) Graph.BFS.bfsParent [ Some 1UL; Some 2UL; Some 2UL; Some 2UL; Some 3UL ]
+    runTest line5graph (singleStart 5UL 2UL) bfsParent [ Some 1UL; Some 2UL; Some 2UL; Some 2UL; Some 3UL ]
 
 // ============== Simple triangle ==============
 
@@ -414,19 +407,19 @@ let private triangleGraph =
 
 [<Fact>]
 let ``Level bfs triangle start 0`` () =
-    runTest triangleGraph (singleStart 3UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 1UL ]
+    runTest triangleGraph (singleStart 3UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs triangle start 0`` () =
-    runTest triangleGraph (singleStart 3UL 0UL) Graph.BFS.bfsParent [ Some 0UL; Some 0UL; Some 0UL ]
+    runTest triangleGraph (singleStart 3UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 0UL ]
 
 [<Fact>]
 let ``Level bfs triangle start 2`` () =
-    runTest triangleGraph (singleStart 3UL 2UL) Graph.BFS.bfsLevel [ Some 1UL; Some 1UL; Some 0UL ]
+    runTest triangleGraph (singleStart 3UL 2UL) bfsLevel [ Some 1UL; Some 1UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs triangle start 2`` () =
-    runTest triangleGraph (singleStart 3UL 2UL) Graph.BFS.bfsParent [ Some 2UL; Some 2UL; Some 2UL ]
+    runTest triangleGraph (singleStart 3UL 2UL) bfsParent [ Some 2UL; Some 2UL; Some 2UL ]
 
 // ============== 5-node complete graph ==============
 
@@ -460,39 +453,27 @@ let private complete5graph =
 
 [<Fact>]
 let ``Level bfs 5 node complete start 0`` () =
-    runTest complete5graph (singleStart 5UL 0UL) Graph.BFS.bfsLevel [ Some 0UL; Some 1UL; Some 1UL; Some 1UL; Some 1UL ]
+    runTest complete5graph (singleStart 5UL 0UL) bfsLevel [ Some 0UL; Some 1UL; Some 1UL; Some 1UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node complete start 0`` () =
-    runTest
-        complete5graph
-        (singleStart 5UL 0UL)
-        Graph.BFS.bfsParent
-        [ Some 0UL; Some 0UL; Some 0UL; Some 0UL; Some 0UL ]
+    runTest complete5graph (singleStart 5UL 0UL) bfsParent [ Some 0UL; Some 0UL; Some 0UL; Some 0UL; Some 0UL ]
 
 [<Fact>]
 let ``Level bfs 5 node complete start 4`` () =
-    runTest complete5graph (singleStart 5UL 4UL) Graph.BFS.bfsLevel [ Some 1UL; Some 1UL; Some 1UL; Some 1UL; Some 0UL ]
+    runTest complete5graph (singleStart 5UL 4UL) bfsLevel [ Some 1UL; Some 1UL; Some 1UL; Some 1UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node complete start 4`` () =
-    runTest
-        complete5graph
-        (singleStart 5UL 4UL)
-        Graph.BFS.bfsParent
-        [ Some 4UL; Some 4UL; Some 4UL; Some 4UL; Some 4UL ]
+    runTest complete5graph (singleStart 5UL 4UL) bfsParent [ Some 4UL; Some 4UL; Some 4UL; Some 4UL; Some 4UL ]
 
 [<Fact>]
 let ``Level bfs 5 node complete start 2`` () =
-    runTest complete5graph (singleStart 5UL 2UL) Graph.BFS.bfsLevel [ Some 1UL; Some 1UL; Some 0UL; Some 1UL; Some 1UL ]
+    runTest complete5graph (singleStart 5UL 2UL) bfsLevel [ Some 1UL; Some 1UL; Some 0UL; Some 1UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs 5 node complete start 2`` () =
-    runTest
-        complete5graph
-        (singleStart 5UL 2UL)
-        Graph.BFS.bfsParent
-        [ Some 2UL; Some 2UL; Some 2UL; Some 2UL; Some 2UL ]
+    runTest complete5graph (singleStart 5UL 2UL) bfsParent [ Some 2UL; Some 2UL; Some 2UL; Some 2UL; Some 2UL ]
 
 // ============== K3,3 bipartite ==============
 
@@ -524,51 +505,27 @@ let private k33graph =
 
 [<Fact>]
 let ``Level bfs K3 3 start 0`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 0UL)
-        Graph.BFS.bfsLevel
-        [ Some 0UL; Some 2UL; Some 2UL; Some 1UL; Some 1UL; Some 1UL ]
+    runTest k33graph (singleStart 6UL 0UL) bfsLevel [ Some 0UL; Some 2UL; Some 2UL; Some 1UL; Some 1UL; Some 1UL ]
 
 [<Fact>]
 let ``Parent bfs K3 3 start 0`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 0UL)
-        Graph.BFS.bfsParent
-        [ Some 0UL; Some 3UL; Some 3UL; Some 0UL; Some 0UL; Some 0UL ]
+    runTest k33graph (singleStart 6UL 0UL) bfsParent [ Some 0UL; Some 3UL; Some 3UL; Some 0UL; Some 0UL; Some 0UL ]
 
 [<Fact>]
 let ``Level bfs K3 3 start 5`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 5UL)
-        Graph.BFS.bfsLevel
-        [ Some 1UL; Some 1UL; Some 1UL; Some 2UL; Some 2UL; Some 0UL ]
+    runTest k33graph (singleStart 6UL 5UL) bfsLevel [ Some 1UL; Some 1UL; Some 1UL; Some 2UL; Some 2UL; Some 0UL ]
 
 [<Fact>]
 let ``Parent bfs K3 3 start 5`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 5UL)
-        Graph.BFS.bfsParent
-        [ Some 5UL; Some 5UL; Some 5UL; Some 0UL; Some 0UL; Some 5UL ]
+    runTest k33graph (singleStart 6UL 5UL) bfsParent [ Some 5UL; Some 5UL; Some 5UL; Some 0UL; Some 0UL; Some 5UL ]
 
 [<Fact>]
 let ``Level bfs K3 3 start 3`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 3UL)
-        Graph.BFS.bfsLevel
-        [ Some 1UL; Some 1UL; Some 1UL; Some 0UL; Some 2UL; Some 2UL ]
+    runTest k33graph (singleStart 6UL 3UL) bfsLevel [ Some 1UL; Some 1UL; Some 1UL; Some 0UL; Some 2UL; Some 2UL ]
 
 [<Fact>]
 let ``Parent bfs K3 3 start 3`` () =
-    runTest
-        k33graph
-        (singleStart 6UL 3UL)
-        Graph.BFS.bfsParent
-        [ Some 3UL; Some 3UL; Some 3UL; Some 3UL; Some 0UL; Some 0UL ]
+    runTest k33graph (singleStart 6UL 3UL) bfsParent [ Some 3UL; Some 3UL; Some 3UL; Some 3UL; Some 0UL; Some 0UL ]
 
 // ============== 8 nodes random weights ==============
 
@@ -611,7 +568,7 @@ let ``Level bfs 8 node random start 0`` () =
     runTest
         random8graph
         (singleStart 8UL 0UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 0UL
           Some 1UL
           Some 1UL
@@ -626,7 +583,7 @@ let ``Parent bfs 8 node random start 0`` () =
     runTest
         random8graph
         (singleStart 8UL 0UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 0UL
           Some 0UL
           Some 0UL
@@ -641,7 +598,7 @@ let ``Level bfs 8 node random start 7`` () =
     runTest
         random8graph
         (singleStart 8UL 7UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 3UL
           Some 3UL
           Some 3UL
@@ -656,7 +613,7 @@ let ``Parent bfs 8 node random start 7`` () =
     runTest
         random8graph
         (singleStart 8UL 7UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 3UL
           Some 3UL
           Some 3UL
@@ -671,7 +628,7 @@ let ``Level bfs 8 node random start 4`` () =
     runTest
         random8graph
         (singleStart 8UL 4UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 2UL
           Some 2UL
           Some 2UL
@@ -686,7 +643,7 @@ let ``Parent bfs 8 node random start 4`` () =
     runTest
         random8graph
         (singleStart 8UL 4UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 3UL
           Some 3UL
           Some 3UL
@@ -731,7 +688,7 @@ let ``Level bfs 8 node grid start 0`` () =
     runTest
         grid8graph
         (singleStart 8UL 0UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 0UL
           Some 1UL
           Some 2UL
@@ -746,7 +703,7 @@ let ``Parent bfs 8 node grid start 0`` () =
     runTest
         grid8graph
         (singleStart 8UL 0UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 0UL
           Some 0UL
           Some 1UL
@@ -761,7 +718,7 @@ let ``Level bfs 8 node grid start 7`` () =
     runTest
         grid8graph
         (singleStart 8UL 7UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 4UL
           Some 3UL
           Some 2UL
@@ -776,7 +733,7 @@ let ``Parent bfs 8 node grid start 7`` () =
     runTest
         grid8graph
         (singleStart 8UL 7UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 1UL
           Some 2UL
           Some 3UL
@@ -791,7 +748,7 @@ let ``Level bfs 8 node grid start 4`` () =
     runTest
         grid8graph
         (singleStart 8UL 4UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 1UL
           Some 2UL
           Some 3UL
@@ -806,7 +763,7 @@ let ``Parent bfs 8 node grid start 4`` () =
     runTest
         grid8graph
         (singleStart 8UL 4UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 4UL
           Some 0UL
           Some 1UL
@@ -857,7 +814,7 @@ let ``Level bfs 10 node random start 0`` () =
     runTest
         random10graph
         (singleStart 10UL 0UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 0UL
           Some 1UL
           Some 2UL
@@ -874,7 +831,7 @@ let ``Parent bfs 10 node random start 0`` () =
     runTest
         random10graph
         (singleStart 10UL 0UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 0UL
           Some 0UL
           Some 1UL
@@ -891,7 +848,7 @@ let ``Level bfs 10 node random start 9`` () =
     runTest
         random10graph
         (singleStart 10UL 9UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 5UL
           Some 4UL
           Some 3UL
@@ -908,7 +865,7 @@ let ``Parent bfs 10 node random start 9`` () =
     runTest
         random10graph
         (singleStart 10UL 9UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 1UL
           Some 2UL
           Some 3UL
@@ -925,7 +882,7 @@ let ``Level bfs 10 node random start 5`` () =
     runTest
         random10graph
         (singleStart 10UL 5UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 1UL
           Some 2UL
           Some 3UL
@@ -942,7 +899,7 @@ let ``Parent bfs 10 node random start 5`` () =
     runTest
         random10graph
         (singleStart 10UL 5UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 5UL
           Some 0UL
           Some 1UL
@@ -1005,7 +962,7 @@ let ``Level bfs 12 node big start 0`` () =
     runTest
         big12graph
         (singleStart 12UL 0UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 0UL
           Some 1UL
           Some 2UL
@@ -1024,7 +981,7 @@ let ``Parent bfs 12 node big start 0`` () =
     runTest
         big12graph
         (singleStart 12UL 0UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 0UL
           Some 0UL
           Some 1UL
@@ -1043,7 +1000,7 @@ let ``Level bfs 12 node big start 11`` () =
     runTest
         big12graph
         (singleStart 12UL 11UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 1UL
           Some 1UL
           Some 2UL
@@ -1062,7 +1019,7 @@ let ``Parent bfs 12 node big start 11`` () =
     runTest
         big12graph
         (singleStart 12UL 11UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 11UL
           Some 11UL
           Some 1UL
@@ -1081,7 +1038,7 @@ let ``Level bfs 12 node big start 6`` () =
     runTest
         big12graph
         (singleStart 12UL 6UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 4UL
           Some 4UL
           Some 3UL
@@ -1100,7 +1057,7 @@ let ``Parent bfs 12 node big start 6`` () =
     runTest
         big12graph
         (singleStart 12UL 6UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 11UL
           Some 2UL
           Some 4UL
@@ -1147,7 +1104,7 @@ let ``Level bfs 10 node complex line start 0`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 0UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 0UL
           Some 1UL
           Some 2UL
@@ -1164,7 +1121,7 @@ let ``Parent bfs 10 node complex line start 0`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 0UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 0UL
           Some 0UL
           Some 1UL
@@ -1181,7 +1138,7 @@ let ``Level bfs 10 node complex line start 9`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 9UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 9UL
           Some 8UL
           Some 7UL
@@ -1198,7 +1155,7 @@ let ``Parent bfs 10 node complex line start 9`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 9UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 1UL
           Some 2UL
           Some 3UL
@@ -1215,7 +1172,7 @@ let ``Level bfs 10 node complex line start 5`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 5UL)
-        Graph.BFS.bfsLevel
+        bfsLevel
         [ Some 5UL
           Some 4UL
           Some 3UL
@@ -1232,7 +1189,7 @@ let ``Parent bfs 10 node complex line start 5`` () =
     runTest
         complexLine10graph
         (singleStart 10UL 5UL)
-        Graph.BFS.bfsParent
+        bfsParent
         [ Some 1UL
           Some 2UL
           Some 3UL
