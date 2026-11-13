@@ -2,6 +2,7 @@ namespace Graph.Benchmarks.BFS
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open Graph.Impl.Default.BFS
 
 [<Config(typeof<MyConfig>)>]
 type Benchmark() =
@@ -29,4 +30,4 @@ type Benchmark() =
             | Ok v -> v
             | Error msg -> failwith $"Failed to create start vertices: {msg}"
 
-        Graph.BFS.bfsLevel matrix startVertices
+        bfsLevel matrix startVertices
