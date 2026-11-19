@@ -3,9 +3,11 @@ module Graph.SSSP.Tests
 open System
 open Xunit
 
-open Matrix
-open Vector
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
+open LinearAlgebra.QuadTree.Vector
 open Graph.Impl.Default.SSSP
 
 (*

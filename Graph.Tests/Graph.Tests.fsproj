@@ -10,6 +10,7 @@
     <Compile Include="Tests.TriangleCount.fs" />
     <Compile Include="Tests.SSSP.fs" />
     <Compile Include="Tests.MST.fs" />
+    <Compile Include="Tests.COO.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,7 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Graph\Graph.fsproj" />
-    <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+    <ProjectReference Include="..\LinearAlgebra\LinearAlgebra.fsproj" />
   </ItemGroup>
 
 </Project>

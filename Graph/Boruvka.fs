@@ -1,11 +1,13 @@
 module Graph.Boruvka
 
-open Common
-open Result
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.Result
+open LinearAlgebra.QuadTree
 
 
 type Error =
-    | EdgesCalculationProblem of LinearAlgebra.Error
+    | EdgesCalculationProblem of Operations.Error
     | CEdgesCalculationProblem of Vector.Error
     | IndexCalculationProblem of Vector.Error
     | ScatterProblem of Vector.Error
@@ -46,7 +48,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
             let row = uint64 i
             let col = uint64 j
 
-            let i = row * 1UL<Vector.index>
+            let i = row * 1UL<index>
 
             let edge = Vector.unsafeGet edges i
             let idx = Vector.unsafeGet index i
@@ -60,8 +62,8 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
     let graphFilter parent =
         fun i j ->
-            let i = uint64 i * 1UL<Vector.index>
-            let j = uint64 j * 1UL<Vector.index>
+            let i = uint64 i * 1UL<index>
+            let j = uint64 j * 1UL<index>
             let parentI = Vector.unsafeGet parent i
             let parentJ = Vector.unsafeGet parent j
 
@@ -69,7 +71,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
             | Some v1, Some v2 when v1 <> v2 -> true
             | _ -> false
 
-    let length = uint64 graph.nrows * 1UL<Vector.dataLength>
+    let length = uint64 graph.nrows * 1UL<dataLength>
 
     let rec inner (graph: Matrix.SparseMatrix<_>) (tree: Matrix.SparseMatrix<_>) parent =
 
@@ -79,7 +81,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
             // Edge is stored canonically as (weight, minEndpoint, maxEndpoint).
             resultM {
                 let! edges =
-                    LinearAlgebra.vxmi_values op_min op_mult parent graph
+                    Operations.vxmi_values op_min op_mult parent graph
                     |> Result.mapError EdgesCalculationProblem
 
                 // Per-component cheapest edge.
@@ -138,7 +140,7 @@ let mst (graph: Matrix.SparseMatrix<_>) =
 
                             match other with
                             | Some otherVertex ->
-                                let j = otherVertex * 1UL<Vector.index>
+                                let j = otherVertex * 1UL<index>
                                 let parentI = Vector.unsafeGet parent i
                                 let parentJ = Vector.unsafeGet parent j
 

@@ -2,6 +2,8 @@ namespace Graph.Benchmarks.BFS
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree
 open Graph.Impl.Default.BFS
 
 [<Config(typeof<MyConfig>)>]
@@ -22,7 +24,7 @@ type Benchmark() =
     [<Benchmark>]
     member this.BFS() =
         let startVerticesResult =
-            Vector.CoordinateList((uint64 matrix.ncols) * 1UL<Vector.dataLength>, [ 0UL<Vector.index>, 1UL ])
+            Vector.CoordinateList((uint64 matrix.ncols) * 1UL<dataLength>, [ 0UL<index>, 1UL ])
             |> Vector.fromCoordinateList
 
         let startVertices =

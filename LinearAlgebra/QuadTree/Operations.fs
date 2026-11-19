@@ -1,0 +1,350 @@
+module LinearAlgebra.QuadTree.Operations
+
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+
+type MXMError =
+    | InconsistentSizeOfArguments
+    | MatrixAdditionProblem of Matrix.Error
+
+type Error =
+    | InconsistentStructureOfStorages
+    | InconsistentSizeOfArguments
+    | VectorAdditionProblem of Vector.Error
+    | MXMError of MXMError
+
+
+let rec multScalar op_add (x: uint64) y =
+    if x = 1UL then
+        y
+    else
+        let v = multScalar op_add (x / 2UL) y
+        let res = op_add v v
+        if x % 2UL = 0UL then res else op_add res v
+
+/// Grow a vector's storage tree with empty right subtrees until it spans
+/// targetSize, which must be at least the current storage size.
+let private padStorageTo (targetSize: uint64<storageSize>) (storage: Vector.Storage<Option<'a>>) =
+    let rec increase storageData (currentSize: uint64<storageSize>) =
+        if currentSize = targetSize then
+            storageData
+        else
+            increase (Vector.btree.Node(storageData, Vector.btree.Leaf Dummy)) (currentSize * 2UL)
+
+    if storage.size < targetSize then
+        Vector.Storage(targetSize, increase storage.data storage.size)
+    else
+        storage
+
+/// The vxm/vxmi_values result: matrix.ncols long, reusing the matrix storage size.
+let private mkResultVector (matrix: Matrix.SparseMatrix<'b>) (storage: Vector.btree<Option<'c>>, nvals: uint64<nvals>) =
+    Vector.SparseVector((uint64 matrix.ncols) * 1UL<dataLength>, nvals, Vector.Storage(matrix.storage.size, storage))
+
+
+let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
+
+    let rec inner (size: uint64<storageSize>) vector matrix =
+        let combine x1 x2 y1 y2 y3 y4 =
+            let halfSize = size / 2UL
+
+            match (inner halfSize x1 y1), (inner halfSize x1 y2), (inner halfSize x2 y3), (inner halfSize x2 y4) with
+            | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
+                let dataLength = (uint64 halfSize) * 1UL<dataLength>
+                let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
+                let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
+                let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
+                let v4 = Vector.SparseVector(dataLength, nvals4, (Vector.Storage(halfSize, t4)))
+
+                let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
+                    match v1.storage.data, v2.storage.data with
+                    | _, Vector.Leaf(Dummy) -> Ok(v1)
+                    | _ -> Vector.map2 v1 v2 op_add
+
+                let z1 = vAdd v1 v3
+                let z2 = vAdd v2 v4
+
+                match (z1, z2) with
+                | Ok(v1), Ok(v2) -> Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                | Error(e), _
+                | _, Error(e) -> Error(VectorAdditionProblem(e))
+
+            | Error(e), _, _, _
+            | _, Error(e), _, _
+            | _, _, Error(e), _
+            | _, _, _, Error(e) -> Error(e)
+
+        match (vector, matrix) with
+        | Vector.btree.Leaf(UserValue(v1)), Matrix.qtree.Leaf(UserValue(v2)) ->
+            let res = multScalar op_add (uint64 size) (op_mult v1 v2)
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 size) * 1UL<nvals>
+
+            Ok(Vector.btree.Leaf(UserValue(res)), nnz)
+
+        | Vector.btree.Leaf(UserValue(_)), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(_)) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> combine x1 x2 y1 y2 y3 y4
+
+        | Vector.btree.Leaf(Dummy), _
+        | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
+
+    if uint64 vector.length = uint64 matrix.nrows then
+        let vectorStorage = padStorageTo matrix.storage.size vector.storage
+
+        match inner vectorStorage.size vectorStorage.data matrix.storage.data with
+        | Error x -> Error x
+        | Ok result -> Ok(mkResultVector matrix result)
+    else
+        Error Error.InconsistentSizeOfArguments
+
+let vxmi_values
+    (op_add: 'c option -> 'c option -> 'c option)
+    (op_mult: uint64<index> * 'a -> uint64<rowindex> * uint64<colindex> * 'b -> Option<'c>)
+    (vector: Vector.SparseVector<'a>)
+    (matrix: Matrix.SparseMatrix<'b>)
+    =
+
+    let rec inner
+        (size: uint64<storageSize>)
+        vector
+        (vectorIdx: uint64<index>)
+        matrix
+        (rowIdx: uint64<rowindex>)
+        (colIdx: uint64<colindex>)
+        =
+        let combine x1 x2 y1 y2 y3 y4 =
+            let halfSize = size / 2UL
+
+            match
+                (inner halfSize x1 vectorIdx y1 rowIdx colIdx),
+                (inner halfSize x1 vectorIdx y2 rowIdx (colIdx + (uint64 halfSize) * 1UL<colindex>)),
+                (inner
+                    halfSize
+                    x2
+                    (vectorIdx + (uint64 halfSize) * 1UL<index>)
+                    y3
+                    (rowIdx + (uint64 halfSize) * 1UL<rowindex>)
+                    colIdx),
+                (inner
+                    halfSize
+                    x2
+                    (vectorIdx + (uint64 halfSize) * 1UL<index>)
+                    y4
+                    (rowIdx + (uint64 halfSize) * 1UL<rowindex>)
+                    (colIdx + (uint64 halfSize) * 1UL<colindex>))
+            with
+            | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
+                let dataLength = (uint64 halfSize) * 1UL<dataLength>
+                let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
+                let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
+                let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
+                let v4 = Vector.SparseVector(dataLength, nvals4, (Vector.Storage(halfSize, t4)))
+
+                let vAdd (v1: Vector.SparseVector<_>) (v2: Vector.SparseVector<_>) =
+                    match v1.storage.data, v2.storage.data with
+                    | _, Vector.Leaf(Dummy) -> Ok(v1)
+                    | _ -> Vector.map2 v1 v2 op_add
+
+                let z1 = vAdd v1 v3
+                let z2 = vAdd v2 v4
+
+                match (z1, z2) with
+                | Ok(v1), Ok(v2) -> Ok((Vector.mkNode v1.storage.data v2.storage.data), v1.nvals + v2.nvals)
+                | Error(e), _
+                | _, Error(e) -> Error(VectorAdditionProblem(e))
+
+            | Error(e), _, _, _
+            | _, Error(e), _, _
+            | _, _, Error(e), _
+            | _, _, _, Error(e) -> Error(e)
+
+        match (vector, matrix) with
+        | Vector.btree.Leaf(UserValue(Some(v1))), Matrix.qtree.Leaf(UserValue(Some(v2))) ->
+            if size = 1UL<storageSize> then
+                let res = op_mult (vectorIdx, v1) (rowIdx, colIdx, v2)
+
+                let nnz =
+                    match res with
+                    | None -> 0UL<nvals>
+                    | _ -> 1UL<nvals>
+
+                Ok(Vector.btree.Leaf(UserValue(res)), nnz)
+            else
+                inner
+                    size
+                    (Vector.btree.Node(vector, vector))
+                    vectorIdx
+                    (Matrix.qtree.Node(matrix, matrix, matrix, matrix))
+                    rowIdx
+                    colIdx
+
+        | Vector.btree.Leaf(UserValue(Some(_))), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Leaf(UserValue(None)), Matrix.qtree.Node(y1, y2, y3, y4) -> combine vector vector y1 y2 y3 y4
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(Some(_))) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Leaf(UserValue(None)) -> combine x1 x2 matrix matrix matrix matrix
+        | Vector.btree.Node(x1, x2), Matrix.qtree.Node(y1, y2, y3, y4) -> combine x1 x2 y1 y2 y3 y4
+        | Vector.btree.Leaf(Dummy), _
+        | _, Matrix.qtree.Leaf(Dummy) -> Ok(Vector.btree.Leaf(Dummy), 0UL<nvals>)
+
+        | Vector.btree.Leaf(UserValue(None)), _
+        | _, Matrix.qtree.Leaf(UserValue(None)) -> Ok(Vector.btree.Leaf(UserValue(None)), 0UL<nvals>)
+
+    if uint64 vector.length = uint64 matrix.nrows then
+        let vectorStorage = padStorageTo matrix.storage.size vector.storage
+
+        match
+            inner vectorStorage.size vectorStorage.data 0UL<index> matrix.storage.data 0UL<rowindex> 0UL<colindex>
+        with
+        | Error x -> Error x
+        | Ok result -> Ok(mkResultVector matrix result)
+    else
+        Error Error.InconsistentSizeOfArguments
+
+
+let mxm
+    (op_add: 'c option -> 'c option -> 'c option)
+    (op_mult: 'a option -> 'b option -> 'c option)
+    (m1: Matrix.SparseMatrix<'a>)
+    (m2: Matrix.SparseMatrix<'b>)
+    =
+
+    let rec shrink tree (size: uint64<storageSize>) =
+        match tree with
+        | Matrix.qtree.Node(nw, ne, sw, _) when ne = sw && ne = Matrix.qtree.Leaf Dummy -> shrink nw (size / 2UL)
+        | _ -> tree, size
+
+    let rec expand tree expandRatio =
+        match expandRatio with
+        | 1UL<storageSize> -> tree
+        | _ ->
+            expand
+                (Matrix.mkNode tree (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy) (Matrix.qtree.Leaf Dummy))
+                (expandRatio / 2UL)
+
+    let rec multiply (size: uint64<storageSize>) m1 m2 =
+        let divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2) =
+            let halfSize = size / 2UL
+
+            // C_nw = A_nw*B_nw + A_ne*B_sw    C_ne = A_nw*B_ne + A_ne*B_se
+            // C_sw = A_sw*B_nw + A_se*B_sw    C_se = A_sw*B_ne + A_se*B_se
+            let nw1_x_nw2, ne1_x_sw2, nw1_x_ne2, ne1_x_se2, sw1_x_nw2, se1_x_sw2, sw1_x_ne2, se1_x_se2 =
+                (multiply halfSize nw1 nw2),
+                (multiply halfSize ne1 sw2),
+                (multiply halfSize nw1 ne2),
+                (multiply halfSize ne1 se2),
+                (multiply halfSize sw1 nw2),
+                (multiply halfSize se1 sw2),
+                (multiply halfSize sw1 ne2),
+                (multiply halfSize se1 se2)
+
+            match nw1_x_nw2, ne1_x_sw2, nw1_x_ne2, ne1_x_se2, sw1_x_nw2, se1_x_sw2, sw1_x_ne2, se1_x_se2 with
+            | Ok(tnw1_x_nw2, nvals_nw1_x_nw2),
+              Ok(tne1_x_sw2, nvals_ne1_x_sw2),
+              Ok(tnw1_x_ne2, nvals_nw1_x_ne2),
+              Ok(tne1_x_se2, nvals_ne1_x_se2),
+              Ok(tsw1_x_nw2, nvals_sw1_x_nw2),
+              Ok(tse1_x_sw2, nvals_se1_x_sw2),
+              Ok(tsw1_x_ne2, nvals_sw1_x_ne2),
+              Ok(tse1_x_se2, nvals_se1_x_se2) ->
+                let nrows = (uint64 halfSize) * 1UL<nrows>
+                let ncols = (uint64 halfSize) * 1UL<ncols>
+                let storageSize = halfSize
+
+                let nw1_x_nw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_nw1_x_nw2, Matrix.Storage(storageSize, tnw1_x_nw2))
+
+                let ne1_x_sw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_ne1_x_sw2, Matrix.Storage(storageSize, tne1_x_sw2))
+
+                let nw1_x_ne2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_nw1_x_ne2, Matrix.Storage(storageSize, tnw1_x_ne2))
+
+                let ne1_x_se2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_ne1_x_se2, Matrix.Storage(storageSize, tne1_x_se2))
+
+                let sw1_x_nw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_sw1_x_nw2, Matrix.Storage(storageSize, tsw1_x_nw2))
+
+                let se1_x_sw2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_se1_x_sw2, Matrix.Storage(storageSize, tse1_x_sw2))
+
+                let sw1_x_ne2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_sw1_x_ne2, Matrix.Storage(storageSize, tsw1_x_ne2))
+
+                let se1_x_se2 =
+                    Matrix.SparseMatrix(nrows, ncols, nvals_se1_x_se2, Matrix.Storage(storageSize, tse1_x_se2))
+
+                let mAdd m1 (m2: Matrix.SparseMatrix<_>) =
+                    match m2.storage.data with
+                    | Matrix.qtree.Leaf Dummy -> Ok m1
+                    | _ -> Matrix.map2 m1 m2 op_add
+
+                let rnw = mAdd nw1_x_nw2 ne1_x_sw2
+                let rne = mAdd nw1_x_ne2 ne1_x_se2
+                let rsw = mAdd sw1_x_nw2 se1_x_sw2
+                let rse = mAdd sw1_x_ne2 se1_x_se2
+
+                match rnw, rne, rsw, rse with
+                | Ok(nw), Ok(ne), Ok(sw), Ok(se) ->
+                    Ok(
+                        Matrix.mkNode nw.storage.data ne.storage.data sw.storage.data se.storage.data,
+                        nw.nvals + ne.nvals + sw.nvals + se.nvals
+                    )
+                | Error(e), _, _, _
+                | _, Error(e), _, _
+                | _, _, Error(e), _
+                | _, _, _, Error(e) -> Error(Error.MXMError(MXMError.MatrixAdditionProblem(e)))
+
+            | Error(e), _, _, _, _, _, _, _
+            | _, Error(e), _, _, _, _, _, _
+            | _, _, Error(e), _, _, _, _, _
+            | _, _, _, Error(e), _, _, _, _
+            | _, _, _, _, Error(e), _, _, _
+            | _, _, _, _, _, Error(e), _, _
+            | _, _, _, _, _, _, Error(e), _
+            | _, _, _, _, _, _, _, Error(e) -> Error(e)
+
+        match m1, m2 with
+        | Matrix.qtree.Leaf(UserValue v1), Matrix.qtree.Leaf(UserValue v2) ->
+            let res = multScalar op_add (uint64 size) (op_mult v1 v2)
+
+            let nnz =
+                match res with
+                | None -> 0UL<nvals>
+                | _ -> (uint64 <| size * size) * 1UL<nvals>
+
+            Ok(Matrix.qtree.Leaf(UserValue res), nnz)
+        | Matrix.qtree.Leaf(UserValue(_)), Matrix.qtree.Node(nw2, ne2, sw2, se2) ->
+            divided (m1, m1, m1, m1) (nw2, ne2, sw2, se2)
+        | Matrix.qtree.Node(nw1, ne1, sw1, se1), Matrix.qtree.Leaf(UserValue(_)) ->
+            divided (nw1, ne1, sw1, se1) (m2, m2, m2, m2)
+        | Matrix.qtree.Node(nw1, ne1, sw1, se1), Matrix.qtree.Node(nw2, ne2, sw2, se2) ->
+            divided (nw1, ne1, sw1, se1) (nw2, ne2, sw2, se2)
+        | Matrix.qtree.Leaf Dummy, _
+        | _, Matrix.qtree.Leaf Dummy -> Ok(Matrix.qtree.Leaf Dummy, 0UL<nvals>)
+
+    if uint64 m1.ncols = uint64 m2.nrows then
+        let nrows = m1.nrows
+        let ncols = m2.ncols
+        let storageSize = max m1.storage.size m2.storage.size
+
+        let m1Tree, m2Tree =
+            if m1.storage.size < m2.storage.size then
+                expand (m1.storage.data) (m2.storage.size / (uint64 m1.storage.size)), m2.storage.data
+            elif m1.storage.size > m2.storage.size then
+                m1.storage.data, expand (m2.storage.data) (m1.storage.size / (uint64 m2.storage.size))
+            else
+                m1.storage.data, m2.storage.data
+
+        match multiply storageSize m1Tree m2Tree with
+        | Ok(tree, nvals) ->
+            // in case the resulting storageSize can be smaller
+            // e.g. (2x3) * (3x2) matrices
+            let tree, storageSize = shrink tree storageSize
+            Ok(Matrix.SparseMatrix(nrows, ncols, nvals, Matrix.Storage(storageSize, tree)))
+        | Error(e) -> Error(e)
+    else
+        Error(Error.MXMError MXMError.InconsistentSizeOfArguments)

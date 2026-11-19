@@ -1,7 +1,10 @@
 module Graph.Boruvka.Tests
 
 open Xunit
-open Matrix
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
 
 let checkResult name actual expected =
     match actual with

@@ -4,8 +4,8 @@
 /// specializations live under `Graph.Impl.*` (e.g. `Graph.Impl.QuadTree.SSSP`).
 module Graph.SSSP
 
-open Common
-open Result
+open LinearAlgebra.Common
+open LinearAlgebra.Result
 
 type Error<'vErr, 'laErr> =
     | NewFrontierCalculationProblem of 'laErr
@@ -18,10 +18,10 @@ type Error<'vErr, 'laErr> =
 type SsspOps<'vec, 'mat, 'vErr, 'laErr> =
     {
         nvals: 'vec -> uint64<nvals>
-        length: 'vec -> uint64<Vector.dataLength>
-        ncols: 'mat -> uint64<Matrix.ncols>
+        length: 'vec -> uint64<dataLength>
+        ncols: 'mat -> uint64<ncols>
         /// Builds a vector of the given length from (index, value) pairs.
-        fromCoordinates: uint64<Vector.dataLength> -> (uint64<Vector.index> * float) list -> Result<'vec, 'vErr>
+        fromCoordinates: uint64<dataLength> -> (uint64<index> * float) list -> Result<'vec, 'vErr>
         map2: 'vec -> 'vec -> (float option -> float option -> float option) -> Result<'vec, 'vErr>
         vxm:
             (float option -> float option -> float option)
@@ -74,9 +74,7 @@ let sssp
 
     resultM {
         let! frontier =
-            ops.fromCoordinates
-                ((uint64 (ops.ncols graph)) * 1UL<Vector.dataLength>)
-                [ (startVertex * 1UL<Vector.index>, 0.0) ]
+            ops.fromCoordinates ((uint64 (ops.ncols graph)) * 1UL<dataLength>) [ (startVertex * 1UL<index>, 0.0) ]
             |> Result.mapError FrontierInitProblem
 
         return! inner frontier frontier 0

@@ -11,13 +11,16 @@
         <Compile Include="Impl/QuadTree/BFS.fs" />
         <Compile Include="Impl/QuadTree/TriangleCount.fs" />
         <Compile Include="Impl/QuadTree/SSSP.fs" />
+        <Compile Include="Impl/COO/BFS.fs" />
+        <Compile Include="Impl/COO/TriangleCount.fs" />
+        <Compile Include="Impl/COO/SSSP.fs" />
         <Compile Include="Impl/Default.fs" />
         <Compile Include="Boruvka.fs" />
         <Compile Include="MaggsPlotkinMST.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+        <ProjectReference Include="..\LinearAlgebra\LinearAlgebra.fsproj" />
     </ItemGroup>
 
 </Project>

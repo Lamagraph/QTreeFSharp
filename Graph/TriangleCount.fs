@@ -3,7 +3,7 @@
 /// specializations live under `Graph.Impl.*` (e.g. `Graph.Impl.QuadTree.TriangleCount`).
 module Graph.TriangleCount
 
-open Result
+open LinearAlgebra.Result
 
 type Error<'laErr, 'mErr> =
     | MXMProblem of 'laErr

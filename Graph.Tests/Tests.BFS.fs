@@ -3,17 +3,19 @@ module Graph.BFS.Tests
 open System
 open Xunit
 
-open Matrix
-open Vector
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
+open LinearAlgebra.QuadTree.Vector
 open Graph.Impl.Default.BFS
 
 let singleStart (n: uint64) (s: uint64) =
-    Vector.CoordinateList(n * 1UL<Vector.dataLength>, [ s * 1UL<Vector.index>, 1UL ])
+    Vector.CoordinateList(n * 1UL<dataLength>, [ s * 1UL<index>, 1UL ])
     |> Vector.fromCoordinateList
 
 let unsafes (n: uint64) (v: Vector.SparseVector<_>) =
-    List.init (int n) (fun i -> Vector.unsafeGet v (uint64 i * 1UL<Vector.index>))
+    List.init (int n) (fun i -> Vector.unsafeGet v (uint64 i * 1UL<index>))
 
 let runTest
     (graphResult: Result<Matrix.SparseMatrix<uint64>, Matrix.Error>)

@@ -3,8 +3,8 @@
 /// specializations live under `Graph.Impl.*` (e.g. `Graph.Impl.QuadTree.BFS`).
 module Graph.BFS
 
-open Common
-open Result
+open LinearAlgebra.Common
+open LinearAlgebra.Result
 
 type Error<'vErr, 'laErr> =
     | NewFrontierCalculationProblem of 'laErr
@@ -14,14 +14,14 @@ type Error<'vErr, 'laErr> =
 /// Indexed semiring multiplication used by `vxmiValues`:
 /// (frontier index, frontier value) × (row, column, edge value) → new frontier value.
 type IndexedMult<'vertex, 'edge> =
-    uint64<Vector.index> * 'vertex -> uint64<Matrix.rowindex> * uint64<Matrix.colindex> * 'edge -> 'vertex option
+    uint64<index> * 'vertex -> uint64<rowindex> * uint64<colindex> * 'edge -> 'vertex option
 
 /// Everything BFS requires from a representation.
 /// `'edge` is the edge value type, `'vertex` the frontier/visited value type,
 /// `'vec`/`'mat` the concrete vector/matrix types, `'vErr`/`'laErr` their errors.
 type BfsOps<'edge, 'vertex, 'vec, 'mat, 'vErr, 'laErr> =
     { nvals: 'vec -> uint64<nvals>
-      mapi: 'vec -> (uint64<Vector.index> -> 'vertex option -> 'vertex option) -> 'vec
+      mapi: 'vec -> (uint64<index> -> 'vertex option -> 'vertex option) -> 'vec
       map2: 'vec -> 'vec -> ('vertex option -> 'vertex option -> 'vertex option) -> Result<'vec, 'vErr>
       mask: 'vec -> 'vec -> ('vertex option -> bool) -> Result<'vec, 'vErr>
       vxmiValues:
@@ -35,7 +35,7 @@ let bfs
     (ops: BfsOps<'edge, 'vertex, 'vec, 'mat, 'vErr, 'laErr>)
     (op_add: 'vertex option -> 'vertex option -> 'vertex option)
     (op_mult: IndexedMult<'vertex, 'edge>)
-    (initVisited: uint64<Vector.index> -> 'vertex option -> 'vertex option)
+    (initVisited: uint64<index> -> 'vertex option -> 'vertex option)
     (graph: 'mat)
     (startVertices: 'vec)
     : Result<'vec, Error<'vErr, 'laErr>> =

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Common.fs" />
+        <Compile Include="Result.fs" />
+        <Compile Include="QuadTree/Common.fs" />
+        <Compile Include="QuadTree/Vector.fs" />
+        <Compile Include="QuadTree/Matrix.fs" />
+        <Compile Include="QuadTree/Operations.fs" />
+        <Compile Include="COO/Common.fs" />
+        <Compile Include="COO/Vector.fs" />
+        <Compile Include="COO/Matrix.fs" />
+        <Compile Include="COO/Operations.fs" />
+    </ItemGroup>
+
+</Project>

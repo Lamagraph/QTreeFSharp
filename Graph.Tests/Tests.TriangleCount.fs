@@ -3,8 +3,10 @@ module Graph.TriangleCount.Tests
 open System
 open Xunit
 
-open Common
-open Matrix
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
 open Graph.Impl.Default.TriangleCount
 
 [<Fact>]

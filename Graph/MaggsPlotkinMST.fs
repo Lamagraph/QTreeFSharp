@@ -1,14 +1,16 @@
 module Graph.MaggsPlotkinMST
 
-open Common
-open Result
-open Matrix
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.Result
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
 
 
 type Error =
     | DiagAdditionProblem of Matrix.Error
     | MSTComputationProblem of Matrix.Error
-    | ClosureComputationProblem of LinearAlgebra.Error
+    | ClosureComputationProblem of Operations.Error
 
     override this.ToString() =
         match this with
@@ -60,7 +62,7 @@ let mst (graph: Matrix.SparseMatrix<'a>) : Result<SparseMatrix<'a>, Error> =
 
                 resultM {
 
-                    let! step = LinearAlgebra.mxm op_min op_max matrix matrix
+                    let! step = Operations.mxm op_min op_max matrix matrix
 
                     if nnz = step.nvals && matrix.storage = step.storage then
                         return step
