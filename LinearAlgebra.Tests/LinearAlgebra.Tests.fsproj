@@ -10,6 +10,10 @@
     <Compile Include="QuadTree/Tests.Vector.fs" />
     <Compile Include="QuadTree/Tests.Matrix.fs" />
     <Compile Include="QuadTree/Tests.Operations.fs" />
+    <Compile Include="COO/Helpers.fs" />
+    <Compile Include="COO/Tests.Vector.fs" />
+    <Compile Include="COO/Tests.Matrix.fs" />
+    <Compile Include="COO/Tests.Operations.fs" />
   </ItemGroup>
 
   <ItemGroup>

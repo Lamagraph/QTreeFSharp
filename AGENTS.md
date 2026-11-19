@@ -19,7 +19,7 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 - Graph algorithms are generic over `op_add`/`op_mult` (semiring-style).
 - Algorithm modules live under `Graph.*`.
   Algorithms should be generic over the representation: `Graph/<Alg>.fs` defines a `<Alg>Ops` record with exactly the representation operations the algorithm needs (one record per algorithm) and takes it as the first argument. Semiring operators usually stay in the algorithm, not in the ops record. Algorithm `Error` unions are generic over the inner error types. Ops records and generic algorithms must not name representation-specific types (`Vector.SparseVector`, `Vector.CoordinateList`, `Vector.Error`, ...); use neutral fields instead, e.g. `SsspOps.fromCoordinates` takes a plain `(index * value) list`. Units of measure (`index`, `ncols`, `nvals`, ...) come from the representation-neutral `LinearAlgebra.Common`; `Graph` also keeps its `LinearAlgebra` project reference because `Boruvka`/`MaggsPlotkinMST` are not decoupled yet.
-- Representation specializations live in `Graph/Impl/<Repr>/<Alg>.fs` as modules `Graph.Impl.<Repr>.<Alg>` (e.g. `Graph.Impl.QuadTree.BFS`) and provide the ops instance plus the algorithm functions with ops applied. `Graph/Impl/Default.fs` (`namespace Graph.Impl.Default`) re-exports the default representation under the same module names. User code picks a representation per algorithm via the `open` and calls bare names: `open Graph.Impl.Default.BFS` (or `open Graph.Impl.QuadTree.BFS`), then `bfsLevel graph start`. The explicit `open` shadows the generic functions, which take an ops record first. F# module abbreviations are private to their declaration group and unreachable through `open`, so `Default.fs` re-exports each value by hand: when adding a public function or ops value to `Graph/Impl/<Repr>/<Alg>.fs`, add it to `Default.fs` too, and do not "simplify" `Default.fs` into `module X = ...` abbreviations.
+- Representation specializations live in `Graph/Impl/<Repr>/<Alg>.fs` as modules `Graph.Impl.<Repr>.<Alg>` (e.g. `Graph.Impl.QuadTree.BFS`) and provide the ops instance plus the algorithm functions with ops applied. `Graph/Impl/Default.fs` (`namespace Graph.Impl.Default`) re-exports the default representation under the same module names. User code picks a representation per algorithm via the `open` and calls bare names: `open Graph.Impl.Default.BFS` (or `open Graph.Impl.QuadTree.BFS`, `open Graph.Impl.COO.BFS`), then `bfsLevel graph start`. The explicit `open` shadows the generic functions, which take an ops record first. F# module abbreviations are private to their declaration group and unreachable through `open`, so `Default.fs` re-exports each value by hand: when adding a public function or ops value to `Graph/Impl/<Repr>/<Alg>.fs`, add it to `Default.fs` too, and do not "simplify" `Default.fs` into `module X = ...` abbreviations.
 - Type parameters in `Graph.*` algorithms and their ops records are descriptive camelCase names saying what the type holds (`'edge`, `'vertex`, `'graphMat`, `'countMat`, `'vec`, `'mat`, `'vErr`, `'laErr`), not single letters like `'a`/`'b`/`'c`. If a long function type then breaks Fantomas ("leads to invalid F# code", e.g. inside a record field), name it with a documented type abbreviation such as `Graph.BFS.IndexedMult` instead of shortening the parameter names.
 - Set containers for algorithms reside in `Set`.
 - Main code must not use imperative or OOP constructions like `for`-loops or classes, implementation must be as functionally idiomatic as possible. Test and benchmarks aren't restricted by this rule.
@@ -29,17 +29,28 @@ A F# sparse linear algebra suite used as a prototype for further translation to 
 - When an `Error` case is reported to a user, override `ToString()` on the union so `%O`/`sprintf` yields a readable message instead of the union case name. This is done in `Vector.Error`, `Matrix.Error` and `MaggsPlotkinMST.Error`; the strings there are the ones previously delivered by exceptions, so keep their wording stable.
 
 ## Implementation Notes
-(currently applies to quadtree representation)
+
+### Quad-tree (`LinearAlgebra/QuadTree/`)
 
 - `Matrix` is a 2D quad-tree and `Vector` a 1D binary tree. Storage is padded to the next power of two independently of the logical dimensions.
 - Preserve the `Leaf Dummy` vs `Leaf (UserValue None)` distinction: `Dummy` means an entirely empty/out-of-range subtree, `UserValue None` an in-range empty cell. Several algorithms branch on this.
+
+### COO (`LinearAlgebra/COO/`)
+
+- Immutable F# lists of `(index, value)` / `(row, col, value)`; only present values are stored (no `Dummy`, no stored `Option`). Records are built through `fromCoordinateList`, which sorts, keeps the last duplicate and range-checks.
+- Every operation has a sorted form (inputs and output sorted by key, row-major for matrices) and an `...Unsorted` twin (any order, keys still unique) for hand-made fusion; `sort` converts back. Both forms share one type, so the compiler does not catch misuse:
+  - a sorted operation fed unsorted data silently produces duplicate keys and wrong values (`mergeUnion` assumes order);
+  - `...Unsorted` reductions (`vxm`, `vxmi_values`, `mxm`, `foldAssociative`) fold in list order, so `op_add` must be associative and commutative; `bfsParent`'s first-wins `op_add` yields a different (still valid) parent;
+  - never compare unsorted values with `=`; `sort` first.
+- Sorted `vxm`/`vxmi_values`/`mxm` reduce each output cell in ascending inner index, like the quad-tree, so results match it exactly even for non-commutative `op_add`. Keep this when changing them; `Tests.Operations.fs` pins it.
+- Sparse semantics: `op_mult` is applied only where both operands are stored (equal to the quad-tree when `op_mult` annihilates `None`); `map2`/`mask` visit only stored keys unless `f None None` is `Some`, in which case they fall back to all cells; `mapi` visits every index.
 
 ## Projects
 
 - `LinearAlgebra/` — core library; see `LinearAlgebra.fsproj` for compile order. Everything lives under the `LinearAlgebra` namespace:
   - `Common.fs` (`LinearAlgebra.Common`) — representation-neutral units of measure (`nvals`, `dataLength`, `index`, `nrows`, `ncols`, `rowindex`, `colindex`). Always use them; never redefine units inside a representation.
   - `Result.fs` (`LinearAlgebra.Result`) — `resultM`.
-  - `<Repr>/` — one directory per representation, each with `Common.fs` (representation-specific helpers), `Vector.fs`, `Matrix.fs` and `Operations.fs` (`vxm`, `mxm`, ...), as modules `LinearAlgebra.<Repr>.<Module>`. Currently: `QuadTree/`.
+  - `<Repr>/` — one directory per representation, each with `Common.fs` (representation-specific helpers), `Vector.fs`, `Matrix.fs` and `Operations.fs` (`vxm`, `mxm`, ...), as modules `LinearAlgebra.<Repr>.<Module>`. Currently: `QuadTree/` and `COO/`.
   - Open fully qualified (`open LinearAlgebra.QuadTree`, then `Vector.SparseVector`): inside `Graph.Impl.QuadTree.*` a bare `QuadTree`, and inside `Benchmark.Common.*` a bare `Common`, resolve to the enclosing namespace.
 - `LinearAlgebra.Tests/` — xUnit + FsUnit + FsCheck tests for the core library, one subdirectory per representation.
 - `LinearAlgebra.Benchmark/` — BenchmarkDotNet console app for the core library.

@@ -11,6 +11,10 @@
         <Compile Include="QuadTree/Vector.fs" />
         <Compile Include="QuadTree/Matrix.fs" />
         <Compile Include="QuadTree/Operations.fs" />
+        <Compile Include="COO/Common.fs" />
+        <Compile Include="COO/Vector.fs" />
+        <Compile Include="COO/Matrix.fs" />
+        <Compile Include="COO/Operations.fs" />
     </ItemGroup>
 
 </Project>
