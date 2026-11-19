@@ -1,6 +1,6 @@
 # Benchmarks
 
-Benchmarking infrastructure for the core [QuadTree](../QuadTree/) library:
+Benchmarking infrastructure for the core [LinearAlgebra](../LinearAlgebra/) library:
 * [AVLSet](AVLSet.fs)
 * [ReduceComparison](ReduceComparison.fs)
 * [VectorSlice](VectorSlice.fs) / [MatrixSlice](MatrixSlice.fs)
@@ -18,5 +18,5 @@ Graph algorithm benchmarks (BFS, SSSP, Triangles counting) live in the separate 
     member val MatrixName = "" with get, set
    ```
 3. Ensure the matrix reader is correctly configured. In ```LoadMatrix ()``` , you can pass a boolean flag to ```readMtx``` indicating whether the matrix should be treated as a directed or undirected graph.
-4. Run evaluation: ```dotnet run -c Release --project QuadTree.Benchmark -- --filter '*.AVLSet.*'``` You can use ```--filter``` to specify particular benchmarks. Use ```--filter '*'``` to run all available benchmarks.
+4. Run evaluation: ```dotnet run -c Release --project LinearAlgebra.Benchmark -- --filter '*.Kronecker.*'``` You can use ```--filter``` to specify particular benchmarks. Use ```--filter '*'``` to run all available benchmarks.
 5. Raw benchmarking results are saved in ```BenchmarkDotNet.Artifacts/results/*.csv```.

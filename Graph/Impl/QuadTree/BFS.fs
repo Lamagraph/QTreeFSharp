@@ -2,7 +2,9 @@
 /// Usage: `open Graph.Impl.QuadTree.BFS`, then call e.g. `bfsLevel` without an ops record.
 module Graph.Impl.QuadTree.BFS
 
-type Error = Graph.BFS.Error<Vector.Error, LinearAlgebra.Error>
+open LinearAlgebra.QuadTree
+
+type Error = Graph.BFS.Error<Vector.Error, Operations.Error>
 
 let bfsOps<'edge, 'vertex when 'vertex: equality>
     : Graph.BFS.BfsOps<
@@ -11,13 +13,13 @@ let bfsOps<'edge, 'vertex when 'vertex: equality>
           Vector.SparseVector<'vertex>,
           Matrix.SparseMatrix<'edge>,
           Vector.Error,
-          LinearAlgebra.Error
+          Operations.Error
        > =
     { nvals = fun v -> v.nvals
       mapi = Vector.mapi
       map2 = Vector.map2
       mask = Vector.mask
-      vxmiValues = LinearAlgebra.vxmi_values }
+      vxmiValues = Operations.vxmi_values }
 
 let bfs op_add op_mult initVisited (graph: Matrix.SparseMatrix<'edge>) (startVertices: Vector.SparseVector<'vertex>) =
     Graph.BFS.bfs bfsOps op_add op_mult initVisited graph startVertices

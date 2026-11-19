@@ -1,10 +1,12 @@
-module Matrix.Tests
+module LinearAlgebra.QuadTree.Matrix.Tests
 
 open System
 open Xunit
 
-open Matrix
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
 
 let printMatrix (matrix: SparseMatrix<_>) =
     printfn "Matrix:"
@@ -1392,7 +1394,7 @@ let ``reduceRows sum on square power of two matrix`` () =
         let vectorCoordinates = Vector.toCoordinateList result
 
         let expected =
-            Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 27); (1UL<Vector.index>, 20) ])
+            Vector.CoordinateList(2UL<dataLength>, [ (0UL<index>, 27); (1UL<index>, 20) ])
 
         Assert.Equal(expected, vectorCoordinates)
 
@@ -1416,10 +1418,7 @@ let ``reduceRows sum on square power of two matrix with empty row`` () =
 
         let res = Matrix.reduceRows add m
 
-        Assert.Equal(
-            Vector.CoordinateList(2UL<Vector.dataLength>, [ (1UL<Vector.index>, 20) ]),
-            Vector.toCoordinateList res
-        )
+        Assert.Equal(Vector.CoordinateList(2UL<dataLength>, [ (1UL<index>, 20) ]), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
@@ -1449,10 +1448,7 @@ let ``reduceRows sum on square not power of two matrix`` () =
         let res = Matrix.reduceRows add m
 
         Assert.Equal(
-            Vector.CoordinateList(
-                3UL<Vector.dataLength>,
-                [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24); (2UL<Vector.index>, 32) ]
-            ),
+            Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 21); (1UL<index>, 24); (2UL<index>, 32) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1484,10 +1480,7 @@ let ``reduceRows mul on square not power of two matrix`` () =
         let res = Matrix.reduceRows mul m
 
         Assert.Equal(
-            Vector.CoordinateList(
-                3UL<Vector.dataLength>,
-                [ (0UL<Vector.index>, 315); (1UL<Vector.index>, 143); (2UL<Vector.index>, 255) ]
-            ),
+            Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 315); (1UL<index>, 143); (2UL<index>, 255) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1517,7 +1510,7 @@ let ``reduceRows sum on rectangular matrix`` () =
         let res = Matrix.reduceRows sum m
 
         Assert.Equal(
-            Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 21); (1UL<Vector.index>, 24) ]),
+            Vector.CoordinateList(2UL<dataLength>, [ (0UL<index>, 21); (1UL<index>, 24) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1534,7 +1527,7 @@ let ``reduceRows sum on empty matrix`` () =
             | _ -> None
 
         let res = Matrix.reduceRows sum m
-        Assert.Equal(Vector.CoordinateList(2UL<Vector.dataLength>, []), Vector.toCoordinateList res)
+        Assert.Equal(Vector.CoordinateList(2UL<dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
@@ -1552,10 +1545,7 @@ let ``reduceRows mul on single matrix`` () =
 
         let res = Matrix.reduceRows mul m
 
-        Assert.Equal(
-            Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
-            Vector.toCoordinateList res
-        )
+        Assert.Equal(Vector.CoordinateList(1UL<dataLength>, [ (0UL<index>, 33) ]), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
@@ -1582,7 +1572,7 @@ let ``reduceCols sum on square power of two matrix`` () =
         let res = Matrix.reduceCols add m
 
         Assert.Equal(
-            Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 29); (1UL<Vector.index>, 18) ]),
+            Vector.CoordinateList(2UL<dataLength>, [ (0UL<index>, 29); (1UL<index>, 18) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1607,10 +1597,7 @@ let ``reduceCols sum on square power of two matrix with empty col`` () =
 
         let res = Matrix.reduceCols add m
 
-        Assert.Equal(
-            Vector.CoordinateList(2UL<Vector.dataLength>, [ (0UL<Vector.index>, 20) ]),
-            Vector.toCoordinateList res
-        )
+        Assert.Equal(Vector.CoordinateList(2UL<dataLength>, [ (0UL<index>, 20) ]), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
@@ -1640,10 +1627,7 @@ let ``reduceCols sum on square not power of two matrix`` () =
         let res = Matrix.reduceCols add m
 
         Assert.Equal(
-            Vector.CoordinateList(
-                3UL<Vector.dataLength>,
-                [ (0UL<Vector.index>, 20); (1UL<Vector.index>, 35); (2UL<Vector.index>, 22) ]
-            ),
+            Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 20); (1UL<index>, 35); (2UL<index>, 22) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1675,10 +1659,7 @@ let ``reduceCols mul on square not power of two matrix`` () =
         let res = Matrix.reduceCols mul m
 
         Assert.Equal(
-            Vector.CoordinateList(
-                3UL<Vector.dataLength>,
-                [ (0UL<Vector.index>, 75); (1UL<Vector.index>, 1309); (2UL<Vector.index>, 117) ]
-            ),
+            Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 75); (1UL<index>, 1309); (2UL<index>, 117) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1708,10 +1689,7 @@ let ``reduceCols sum on rectangular matrix`` () =
         let res = Matrix.reduceCols sum m
 
         Assert.Equal(
-            Vector.CoordinateList(
-                3UL<Vector.dataLength>,
-                [ (0UL<Vector.index>, 5); (1UL<Vector.index>, 18); (2UL<Vector.index>, 22) ]
-            ),
+            Vector.CoordinateList(3UL<dataLength>, [ (0UL<index>, 5); (1UL<index>, 18); (2UL<index>, 22) ]),
             Vector.toCoordinateList res
         )
     | Result.Error msg -> Assert.Fail(msg.ToString())
@@ -1728,7 +1706,7 @@ let ``reduceCols sum on empty matrix`` () =
             | _ -> None
 
         let res = Matrix.reduceCols sum m
-        Assert.Equal(Vector.CoordinateList(3UL<Vector.dataLength>, []), Vector.toCoordinateList res)
+        Assert.Equal(Vector.CoordinateList(3UL<dataLength>, []), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]
@@ -1746,10 +1724,7 @@ let ``reduceCols mul on single matrix`` () =
 
         let res = Matrix.reduceCols mul m
 
-        Assert.Equal(
-            Vector.CoordinateList(1UL<Vector.dataLength>, [ (0UL<Vector.index>, 33) ]),
-            Vector.toCoordinateList res
-        )
+        Assert.Equal(Vector.CoordinateList(1UL<dataLength>, [ (0UL<index>, 33) ]), Vector.toCoordinateList res)
     | Result.Error msg -> Assert.Fail(msg.ToString())
 
 [<Fact>]

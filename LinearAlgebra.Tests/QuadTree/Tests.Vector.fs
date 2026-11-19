@@ -1,10 +1,12 @@
-module Vector.Tests
+module LinearAlgebra.QuadTree.Vector.Tests
 
 open Xunit
 open System
 
-open Vector
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Vector
 
 let printVector (vector: SparseVector<_>) =
     printfn "Vector:"

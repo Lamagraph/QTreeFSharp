@@ -1,9 +1,9 @@
-﻿module Tests
+module LinearAlgebra.QuadTree.Tests
 
 open System
 open Xunit
 
-open Common
+open LinearAlgebra.QuadTree.Common
 
 [<Fact>]
 let ``Power of two for 1`` () =

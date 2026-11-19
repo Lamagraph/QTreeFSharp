@@ -1,6 +1,6 @@
-﻿namespace Set.AVLSet
+namespace Set.AVLSet
 
-open Result
+open LinearAlgebra.Result
 
 type AVLSet<'Value> =
     | Empty

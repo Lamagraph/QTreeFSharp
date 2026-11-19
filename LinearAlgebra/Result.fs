@@ -1,4 +1,4 @@
-module Result
+module LinearAlgebra.Result
 
 let mapError (f: 'e1 -> 'e2) (result: Result<'ok, 'e1>) : Result<'ok, 'e2> =
     match result with

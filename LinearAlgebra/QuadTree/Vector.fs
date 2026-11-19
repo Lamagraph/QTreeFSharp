@@ -1,16 +1,11 @@
-module Vector
+module LinearAlgebra.QuadTree.Vector
 
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
 
 type 'value btree =
     | Leaf of 'value treeValue
     | Node of 'value btree * 'value btree
-
-[<Measure>]
-type dataLength
-
-[<Measure>]
-type index
 
 [<Struct>]
 type Storage<'value> =

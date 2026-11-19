@@ -1,6 +1,7 @@
-﻿module Matrix
+module LinearAlgebra.QuadTree.Matrix
 
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
 
 (*
 | x1 | x2 |
@@ -10,12 +11,6 @@ open Common
 type qtree<'value> =
     | Node of qtree<'value> * qtree<'value> * qtree<'value> * qtree<'value>
     | Leaf of treeValue<'value>
-
-[<Measure>]
-type ncols
-
-[<Measure>]
-type nrows
 
 [<Struct>]
 type Storage<'value> =
@@ -61,12 +56,6 @@ let mkNode x1 x2 x3 x4 =
     match (x1, x2, x3, x4) with
     | Leaf(v1), Leaf(v2), Leaf(v3), Leaf(v4) when v1 = v2 && v2 = v3 && v3 = v4 -> Leaf(v1)
     | _ -> Node(x1, x2, x3, x4)
-
-[<Measure>]
-type rowindex
-
-[<Measure>]
-type colindex
 
 type COOEntry<'value> = uint64<rowindex> * uint64<colindex> * 'value
 
@@ -575,7 +564,7 @@ let foldQuadtree folder state size tree =
 
 let reduceRows (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'a>) : Vector.SparseVector<'a> =
     let nRows = int matrix.nrows
-    let length = uint64 nRows * 1UL<Vector.dataLength>
+    let length = uint64 nRows * 1UL<dataLength>
 
     let buckets = Array.init nRows (fun _ -> ResizeArray<'a>())
 
@@ -598,7 +587,7 @@ let reduceRows (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'
                 for i in 1 .. bucket.Count - 1 do
                     acc <- op acc (Some bucket.[i])
 
-                Some(uint64 idx * 1UL<Vector.index>, acc.Value))
+                Some(uint64 idx * 1UL<index>, acc.Value))
         |> Array.choose id
         |> Array.toList
 
@@ -608,7 +597,7 @@ let reduceRows (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'
 
 let reduceCols (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'a>) : Vector.SparseVector<'a> =
     let nCols = int matrix.ncols
-    let length = uint64 nCols * 1UL<Vector.dataLength>
+    let length = uint64 nCols * 1UL<dataLength>
 
     let buckets = Array.init nCols (fun _ -> ResizeArray<'a>())
 
@@ -631,7 +620,7 @@ let reduceCols (op: 'a option -> 'a option -> 'a option) (matrix: SparseMatrix<'
                 for i in 1 .. bucket.Count - 1 do
                     acc <- op acc (Some bucket.[i])
 
-                Some(uint64 idx * 1UL<Vector.index>, acc.Value))
+                Some(uint64 idx * 1UL<index>, acc.Value))
         |> Array.choose id
         |> Array.toList
 

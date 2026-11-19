@@ -1,6 +1,7 @@
-module LinearAlgebra
+module LinearAlgebra.QuadTree.Operations
 
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
 
 type MXMError =
     | InconsistentSizeOfArguments
@@ -37,11 +38,7 @@ let private padStorageTo (targetSize: uint64<storageSize>) (storage: Vector.Stor
 
 /// The vxm/vxmi_values result: matrix.ncols long, reusing the matrix storage size.
 let private mkResultVector (matrix: Matrix.SparseMatrix<'b>) (storage: Vector.btree<Option<'c>>, nvals: uint64<nvals>) =
-    Vector.SparseVector(
-        (uint64 matrix.ncols) * 1UL<Vector.dataLength>,
-        nvals,
-        Vector.Storage(matrix.storage.size, storage)
-    )
+    Vector.SparseVector((uint64 matrix.ncols) * 1UL<dataLength>, nvals, Vector.Storage(matrix.storage.size, storage))
 
 
 let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseMatrix<'b>) =
@@ -52,7 +49,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
 
             match (inner halfSize x1 y1), (inner halfSize x1 y2), (inner halfSize x2 y3), (inner halfSize x2 y4) with
             | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
-                let dataLength = (uint64 halfSize) * 1UL<Vector.dataLength>
+                let dataLength = (uint64 halfSize) * 1UL<dataLength>
                 let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
                 let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
                 let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
@@ -105,7 +102,7 @@ let vxm op_add op_mult (vector: Vector.SparseVector<'a>) (matrix: Matrix.SparseM
 
 let vxmi_values
     (op_add: 'c option -> 'c option -> 'c option)
-    (op_mult: uint64<Vector.index> * 'a -> uint64<Matrix.rowindex> * uint64<Matrix.colindex> * 'b -> Option<'c>)
+    (op_mult: uint64<index> * 'a -> uint64<rowindex> * uint64<colindex> * 'b -> Option<'c>)
     (vector: Vector.SparseVector<'a>)
     (matrix: Matrix.SparseMatrix<'b>)
     =
@@ -113,34 +110,34 @@ let vxmi_values
     let rec inner
         (size: uint64<storageSize>)
         vector
-        (vectorIdx: uint64<Vector.index>)
+        (vectorIdx: uint64<index>)
         matrix
-        (rowIdx: uint64<Matrix.rowindex>)
-        (colIdx: uint64<Matrix.colindex>)
+        (rowIdx: uint64<rowindex>)
+        (colIdx: uint64<colindex>)
         =
         let combine x1 x2 y1 y2 y3 y4 =
             let halfSize = size / 2UL
 
             match
                 (inner halfSize x1 vectorIdx y1 rowIdx colIdx),
-                (inner halfSize x1 vectorIdx y2 rowIdx (colIdx + (uint64 halfSize) * 1UL<Matrix.colindex>)),
+                (inner halfSize x1 vectorIdx y2 rowIdx (colIdx + (uint64 halfSize) * 1UL<colindex>)),
                 (inner
                     halfSize
                     x2
-                    (vectorIdx + (uint64 halfSize) * 1UL<Vector.index>)
+                    (vectorIdx + (uint64 halfSize) * 1UL<index>)
                     y3
-                    (rowIdx + (uint64 halfSize) * 1UL<Matrix.rowindex>)
+                    (rowIdx + (uint64 halfSize) * 1UL<rowindex>)
                     colIdx),
                 (inner
                     halfSize
                     x2
-                    (vectorIdx + (uint64 halfSize) * 1UL<Vector.index>)
+                    (vectorIdx + (uint64 halfSize) * 1UL<index>)
                     y4
-                    (rowIdx + (uint64 halfSize) * 1UL<Matrix.rowindex>)
-                    (colIdx + (uint64 halfSize) * 1UL<Matrix.colindex>))
+                    (rowIdx + (uint64 halfSize) * 1UL<rowindex>)
+                    (colIdx + (uint64 halfSize) * 1UL<colindex>))
             with
             | Ok((t1, nvals1)), Ok((t2, nvals2)), Ok((t3, nvals3)), Ok((t4, nvals4)) ->
-                let dataLength = (uint64 halfSize) * 1UL<Vector.dataLength>
+                let dataLength = (uint64 halfSize) * 1UL<dataLength>
                 let v1 = Vector.SparseVector(dataLength, nvals1, (Vector.Storage(halfSize, t1)))
                 let v2 = Vector.SparseVector(dataLength, nvals2, (Vector.Storage(halfSize, t2)))
                 let v3 = Vector.SparseVector(dataLength, nvals3, (Vector.Storage(halfSize, t3)))
@@ -199,13 +196,7 @@ let vxmi_values
         let vectorStorage = padStorageTo matrix.storage.size vector.storage
 
         match
-            inner
-                vectorStorage.size
-                vectorStorage.data
-                0UL<Vector.index>
-                matrix.storage.data
-                0UL<Matrix.rowindex>
-                0UL<Matrix.colindex>
+            inner vectorStorage.size vectorStorage.data 0UL<index> matrix.storage.data 0UL<rowindex> 0UL<colindex>
         with
         | Error x -> Error x
         | Ok result -> Ok(mkResultVector matrix result)
@@ -258,8 +249,8 @@ let mxm
               Ok(tse1_x_sw2, nvals_se1_x_sw2),
               Ok(tsw1_x_ne2, nvals_sw1_x_ne2),
               Ok(tse1_x_se2, nvals_se1_x_se2) ->
-                let nrows = (uint64 halfSize) * 1UL<Matrix.nrows>
-                let ncols = (uint64 halfSize) * 1UL<Matrix.ncols>
+                let nrows = (uint64 halfSize) * 1UL<nrows>
+                let ncols = (uint64 halfSize) * 1UL<ncols>
                 let storageSize = halfSize
 
                 let nw1_x_nw2 =

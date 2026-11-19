@@ -1,10 +1,13 @@
-namespace QuadTree.Benchmarks.VectorSlice
+namespace LinearAlgebra.Benchmarks.VectorSlice
 
 open System
 open BenchmarkDotNet.Attributes
 open BenchmarkDotNet.Configs
 open BenchmarkDotNet.Jobs
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
 
 type RealConfig() =
     inherit ManualConfig()
@@ -30,9 +33,9 @@ type Benchmark() =
             [ for i in 0 .. size - 1 do
                   if rng.NextDouble() < density then
                       let value = double (rng.Next(1, 4))
-                      yield (uint64 i * 1UL<Vector.index>, value) ]
+                      yield (uint64 i * 1UL<index>, value) ]
 
-        match Vector.fromCoordinateList (Vector.CoordinateList(uint64 size * 1UL<Vector.dataLength>, coords)) with
+        match Vector.fromCoordinateList (Vector.CoordinateList(uint64 size * 1UL<dataLength>, coords)) with
         | Ok v -> v
         | Error msg -> failwithf "Failed to create vector: %O" msg
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Tests.fs" />
-    <Compile Include="Tests.Vector.fs" />
-    <Compile Include="Tests.Matrix.fs" />
-    <Compile Include="Tests.LinearAlgebra.fs" />
+    <Compile Include="QuadTree/Tests.fs" />
+    <Compile Include="QuadTree/Tests.Vector.fs" />
+    <Compile Include="QuadTree/Tests.Matrix.fs" />
+    <Compile Include="QuadTree/Tests.Operations.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+    <ProjectReference Include="..\LinearAlgebra\LinearAlgebra.fsproj" />
   </ItemGroup>
 
 </Project>

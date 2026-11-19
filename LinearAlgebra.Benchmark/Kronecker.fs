@@ -1,8 +1,11 @@
-namespace QuadTree.Benchmarks.Kronecker
+namespace LinearAlgebra.Benchmarks.Kronecker
 
 open System
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
 
 [<Config(typeof<MyConfig>)>]
 [<MemoryDiagnoser>]
@@ -29,11 +32,11 @@ type Benchmark() =
                   for j in 0 .. size - 1 do
                       if rng.NextDouble() < density then
                           let value = double (rng.Next(1, 4))
-                          yield (uint64 i * 1UL<Matrix.rowindex>, uint64 j * 1UL<Matrix.colindex>, value) ]
+                          yield (uint64 i * 1UL<rowindex>, uint64 j * 1UL<colindex>, value) ]
 
         match
             Matrix.fromCoordinateList (
-                Matrix.CoordinateList(uint64 size * 1UL<Matrix.nrows>, uint64 size * 1UL<Matrix.ncols>, coords)
+                Matrix.CoordinateList(uint64 size * 1UL<nrows>, uint64 size * 1UL<ncols>, coords)
             )
         with
         | Ok m -> m

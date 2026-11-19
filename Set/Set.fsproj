@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\QuadTree\QuadTree.fsproj" />
+        <ProjectReference Include="..\LinearAlgebra\LinearAlgebra.fsproj" />
     </ItemGroup>
 
 </Project>

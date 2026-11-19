@@ -2,6 +2,8 @@ namespace Graph.Benchmarks.SSSP
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree
 open Graph.Impl.Default.SSSP
 
 [<Config(typeof<MyConfig>)>]

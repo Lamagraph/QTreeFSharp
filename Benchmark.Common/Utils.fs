@@ -2,6 +2,8 @@ module Benchmark.Common.Utils
 
 open System.IO
 open BenchmarkDotNet.Configs
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree
 
 type MyConfig() =
     inherit ManualConfig()
@@ -19,10 +21,10 @@ let readMtx path directed =
             ((uint64 x.[0]) - 1UL), ((uint64 x.[1]) - 1UL), (if x.Length = 2 then 1.0 else double x.[2]))
         |> Seq.collect (fun (i, j, v) ->
             if not directed then
-                [ (i * 1UL<Matrix.rowindex>, j * 1UL<Matrix.colindex>, v)
-                  (j * 1UL<Matrix.rowindex>, i * 1UL<Matrix.colindex>, v) ]
+                [ (i * 1UL<rowindex>, j * 1UL<colindex>, v)
+                  (j * 1UL<rowindex>, i * 1UL<colindex>, v) ]
             else
-                [ (i * 1UL<Matrix.rowindex>, j * 1UL<Matrix.colindex>, v) ])
+                [ (i * 1UL<rowindex>, j * 1UL<colindex>, v) ])
         |> List.ofSeq
 
     let lines = File.ReadLines(path)
@@ -39,5 +41,5 @@ let readMtx path directed =
     if (directed && nnz <> lst.Length) || ((not directed) && nnz * 2 <> lst.Length) then
         failwithf "Incorrect matrix reading. Path: %A expected nnz: %A actual nnz: %A" path (nnz * 2) lst.Length
 
-    Matrix.CoordinateList(nrows * 1UL<Matrix.nrows>, nrows * 1UL<Matrix.ncols>, lst)
+    Matrix.CoordinateList(nrows * 1UL<nrows>, nrows * 1UL<ncols>, lst)
     |> Matrix.fromCoordinateList

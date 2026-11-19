@@ -1,12 +1,14 @@
-module LinearAlgebra.Tests
+module LinearAlgebra.QuadTree.Operations.Tests
 
 open System
 open Xunit
 
-open Matrix
-open Vector
-open Common
-open Result
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Matrix
+open LinearAlgebra.QuadTree.Vector
+open LinearAlgebra.Result
 
 (*
 2,2,2,2
@@ -78,7 +80,7 @@ let ``Simple vxm. All sizes are power of two.`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxm op_add op_mult v m
+    let actual = Operations.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
 
@@ -118,7 +120,7 @@ let ``Simple vxm. 3 * (3x4)`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(4UL<dataLength>, 4UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxm op_add op_mult v m
+    let actual = Operations.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
 
@@ -160,7 +162,7 @@ let ``Simple vxm. 4 * (4x3).`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxm op_add op_mult v m
+    let actual = Operations.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
 
@@ -219,7 +221,7 @@ let ``Simple vxm. 3 * (3x5)`` () =
         let store = Vector.Storage(8UL<storageSize>, tree)
         Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxm op_add op_mult v m
+    let actual = Operations.vxm op_add op_mult v m
 
     Assert.Equal(expected, actual)
 
@@ -273,19 +275,16 @@ let ``Simple vxmi_values. 3 * (3x5)`` () =
             Vector.btree.Node(
                 Vector.btree.Node(
                     Vector.btree.Node(
-                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
-                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                        vleaf_v (1UL<index>, 1UL<rowindex>, 0UL<colindex>),
+                        vleaf_v (0UL<index>, 0UL<rowindex>, 1UL<colindex>)
                     ),
                     Vector.btree.Node(
-                        vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>),
-                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 3UL<Matrix.colindex>)
+                        vleaf_v (0UL<index>, 0UL<rowindex>, 2UL<colindex>),
+                        vleaf_v (1UL<index>, 1UL<rowindex>, 3UL<colindex>)
                     )
                 ),
                 Vector.btree.Node(
-                    Vector.btree.Node(
-                        vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 4UL<Matrix.colindex>),
-                        vleaf_d ()
-                    ),
+                    Vector.btree.Node(vleaf_v (1UL<index>, 1UL<rowindex>, 4UL<colindex>), vleaf_d ()),
                     vleaf_d ()
                 )
             )
@@ -293,7 +292,7 @@ let ``Simple vxmi_values. 3 * (3x5)`` () =
         let store = Vector.Storage(8UL<storageSize>, tree)
         Ok(SparseVector(5UL<dataLength>, 5UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
+    let actual = Operations.vxmi_values op_add_i op_mult_i v m
 
     Assert.Equal(expected, actual)
 
@@ -333,16 +332,16 @@ let ``Simple vxmi_values. 4 * (4x3).`` () =
         let tree =
             Vector.btree.Node(
                 Vector.btree.Node(
-                    vleaf_v (1UL<Vector.index>, 1UL<Matrix.rowindex>, 0UL<Matrix.colindex>),
-                    vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 1UL<Matrix.colindex>)
+                    vleaf_v (1UL<index>, 1UL<rowindex>, 0UL<colindex>),
+                    vleaf_v (0UL<index>, 0UL<rowindex>, 1UL<colindex>)
                 ),
-                Vector.btree.Node(vleaf_v (0UL<Vector.index>, 0UL<Matrix.rowindex>, 2UL<Matrix.colindex>), vleaf_d ())
+                Vector.btree.Node(vleaf_v (0UL<index>, 0UL<rowindex>, 2UL<colindex>), vleaf_d ())
             )
 
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(3UL<dataLength>, 3UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxmi_values op_add_i op_mult_i v m
+    let actual = Operations.vxmi_values op_add_i op_mult_i v m
 
     Assert.Equal(expected, actual)
 
@@ -390,7 +389,7 @@ let ``vxmi_values 3x3 line graph start 0. BFS semantics`` () =
         let store = Vector.Storage(4UL<storageSize>, tree)
         Ok(SparseVector(3UL<dataLength>, 1UL<nvals>, store))
 
-    let actual = LinearAlgebra.vxmi_values op_add op_mult f m
+    let actual = Operations.vxmi_values op_add op_mult f m
 
     Assert.Equal(expected, actual)
 
@@ -425,7 +424,7 @@ let ``Simple mxm`` () =
     let expected =
         SparseMatrix(3UL<nrows>, 3UL<ncols>, 9UL<nvals>, Matrix.Storage(4UL<storageSize>, tree_expected))
 
-    match LinearAlgebra.mxm op_add op_mult m1 m2 with
+    match Operations.mxm op_add op_mult m1 m2 with
     | Ok actual -> Assert.Equal(expected.storage.data, actual.storage.data)
     | Error msg -> Assert.Fail "mxm failed"
 
@@ -455,7 +454,7 @@ let ``Sparse mxm`` () =
         let! expected = mkMatrix 3UL<nrows> 3UL<ncols> dExpected
 
         let! actual =
-            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            match Operations.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
             | Error _ -> Error Matrix.InconsistentSizeOfArguments
 
@@ -502,7 +501,7 @@ let ``Shrinking mxm`` () =
         let! expected = mkMatrix 2UL<nrows> 2UL<ncols> dExpected
 
         let! actual =
-            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            match Operations.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
             | Error _ -> Error Matrix.InconsistentSizeOfArguments
 
@@ -560,7 +559,7 @@ let ``Expanding mxm`` () =
         let! expected = mkMatrix 3UL<nrows> 3UL<ncols> dExpected
 
         let! actual =
-            match LinearAlgebra.mxm op_add op_mult m1 m2 with
+            match Operations.mxm op_add op_mult m1 m2 with
             | Ok x -> Ok x
             | Error _ -> Error Matrix.InconsistentSizeOfArguments
 

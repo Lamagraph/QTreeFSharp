@@ -1,10 +1,12 @@
-namespace QuadTree.Benchmarks.VectorSliceAlign
+namespace LinearAlgebra.Benchmarks.VectorSliceAlign
 
 open System
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
-open Vector
-open Common
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
+open LinearAlgebra.QuadTree.Vector
 
 [<Config(typeof<MyConfig>)>]
 [<MemoryDiagnoser>]

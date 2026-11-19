@@ -2,6 +2,8 @@ namespace Graph.Benchmarks.Triangles
 
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree
 open Graph.Impl.Default.TriangleCount
 
 [<Config(typeof<MyConfig>)>]

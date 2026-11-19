@@ -1,9 +1,12 @@
-namespace QuadTree.Benchmarks.ReduceComparison
+namespace LinearAlgebra.Benchmarks.ReduceComparison
 
 open System
 open System.IO
 open BenchmarkDotNet.Attributes
 open Benchmark.Common.Utils
+open LinearAlgebra.Common
+open LinearAlgebra.QuadTree.Common
+open LinearAlgebra.QuadTree
 
 [<Config(typeof<MyConfig>)>]
 [<MemoryDiagnoser>]

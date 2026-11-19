@@ -2,19 +2,21 @@
 /// Usage: `open Graph.Impl.QuadTree.TriangleCount`, then call e.g. `triangleCount` without an ops record.
 module Graph.Impl.QuadTree.TriangleCount
 
-type Error = Graph.TriangleCount.Error<LinearAlgebra.Error, Matrix.Error>
+open LinearAlgebra.QuadTree
+
+type Error = Graph.TriangleCount.Error<Operations.Error, Matrix.Error>
 
 let triangleCountOps<'edge when 'edge: equality>
     : Graph.TriangleCount.TriangleCountOps<
           'edge,
           Matrix.SparseMatrix<'edge>,
           Matrix.SparseMatrix<uint64>,
-          LinearAlgebra.Error,
+          Operations.Error,
           Matrix.Error
        > =
     { lowerTriangle = Matrix.getLowerTriangle
       transpose = Matrix.transpose
-      mxm = LinearAlgebra.mxm
+      mxm = Operations.mxm
       mask = Matrix.mask
       foldAssociative = Matrix.foldAssociative }
 

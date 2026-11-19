@@ -1,7 +1,4 @@
-module Common
-
-[<Measure>]
-type nvals
+module LinearAlgebra.QuadTree.Common
 
 [<Measure>]
 type storageSize
